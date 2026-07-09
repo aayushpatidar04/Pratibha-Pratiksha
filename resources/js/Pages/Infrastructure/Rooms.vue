@@ -86,7 +86,7 @@ const amenityIcons = [
                 </PrimaryButton>
             </div>
 
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
                 <div class="bg-white rounded-xl border border-gray-100 p-3 text-center">
                     <p class="text-lg font-bold text-gray-900">{{ stats.total }}</p>
                     <p class="text-xs text-gray-400">Total Rooms</p>
@@ -98,6 +98,10 @@ const amenityIcons = [
                 <div class="bg-white rounded-xl border border-gray-100 p-3 text-center">
                     <p class="text-lg font-bold text-blue-600">{{ stats.occupied }}</p>
                     <p class="text-xs text-gray-400">Occupied</p>
+                </div>
+                <div class="bg-white rounded-xl border border-gray-100 p-3 text-center">
+                    <p class="text-lg font-bold text-blue-600">{{ stats.partiallyOccupied }}</p>
+                    <p class="text-xs text-gray-400">Partially Occupied</p>
                 </div>
                 <div class="bg-white rounded-xl border border-gray-100 p-3 text-center">
                     <p class="text-lg font-bold text-amber-600">{{ stats.maintenance }}</p>

@@ -27,11 +27,21 @@ class FeeInvoice extends Model
     protected function casts(): array
     {
         return [
-            'due_date' => 'date'
+            'due_date' => 'date:Y-m-d',
         ];
     }
 
     public function resident() { return $this->belongsTo(Resident::class); }
 
     public function payments() { return $this->hasMany(Payment::class, 'invoice_id'); }
+
+    public function items()
+    {
+        return $this->hasMany(FeeInvoiceItem::class, 'invoice_id');
+    }
+
+    public function stay()
+    {
+        return $this->belongsTo(ResidentStay::class, 'stay_id');
+    }
 }

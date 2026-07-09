@@ -29,15 +29,30 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $user = $request->user();
         return [
             ...parent::share($request),
             'auth' => [
                 'user' => $request->user(),
+                'permissions' => $user ? $this->resolvePermissions($user) : [],
             ],
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),
             ],
         ];
+    }
+
+    protected function resolvePermissions($user): array
+    {
+        $resolved = [];
+ 
+        foreach (config('modules.modules') as $module) {
+            $resolved[$module['key']] = $user->hasFullAccess()
+                ? $module['actions']
+                : array_values(array_intersect($module['actions'], $user->permissions[$module['key']] ?? []));
+        }
+ 
+        return $resolved;
     }
 }

@@ -49,19 +49,48 @@ class Resident extends Model
         ];
     }
 
-    public function stays() { return $this->hasMany(ResidentStay::class); }
+    public function stays()
+    {
+        return $this->hasMany(ResidentStay::class);
+    }
 
-    public function documents() { return $this->hasMany(Document::class); }
+    public function currentStay()
+    {
+        return $this->hasOne(ResidentStay::class)->where('status', 'active')->latestOfMany('check_in_date');
+    }
 
-    public function vehicles() { return $this->hasMany(Vehicle::class); }
+    public function documents()
+    {
+        return $this->hasMany(Document::class);
+    }
 
-    public function invoices() { return $this->hasMany(FeeInvoice::class); }
+    public function vehicles()
+    {
+        return $this->hasMany(Vehicle::class);
+    }
 
-    public function payments() { return $this->hasMany(Payment::class); }
+    public function invoices()
+    {
+        return $this->hasMany(FeeInvoice::class);
+    }
 
-    public function complaints() { return $this->hasMany(Complaint::class); }
+    public function payments()
+    {
+        return $this->hasMany(Payment::class);
+    }
 
-    public function leaves() { return $this->hasMany(Leave::class); }
+    public function complaints()
+    {
+        return $this->hasMany(Complaint::class);
+    }
 
-    public function getFullNameAttribute() { return trim($this->first_name.' '.$this->last_name); }
+    public function leaves()
+    {
+        return $this->hasMany(LeaveRequest::class);
+    }
+
+    public function getFullNameAttribute()
+    {
+        return trim($this->first_name . ' ' . $this->last_name);
+    }
 }
