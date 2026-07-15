@@ -24,11 +24,21 @@ class RoomChangeRequest extends Model
         'reviewed_by',
         'reviewed_at',
         'admin_notes',
+        'effective_from',
+        'new_billing_basis',
+        'new_rent_amount',
+        'new_daily_rate',
+        'new_expected_check_out_date',
+        'new_stay_id',
     ];
 
     protected function casts(): array
     {
         return [
+            'effective_from' => 'date:Y-m-d',
+            'new_expected_check_out_date' => 'date:Y-m-d',
+            'new_rent_amount' => 'decimal:2',
+            'new_daily_rate' => 'decimal:2',
             'reviewed_at' => 'datetime',
         ];
     }
@@ -44,4 +54,12 @@ class RoomChangeRequest extends Model
     public function requestedRoom() { return $this->belongsTo(Room::class, 'requested_room_id'); }
 
     public function requestedBed() { return $this->belongsTo(Bed::class, 'requested_bed_id'); }
+
+    public function newStay()
+    {
+        return $this->belongsTo(
+            ResidentStay::class,
+            'new_stay_id'
+        );
+    }
 }

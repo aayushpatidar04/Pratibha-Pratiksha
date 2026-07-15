@@ -21,7 +21,7 @@ return new class extends Migration
             $table->decimal('rent_amount', 10, 2);
             $table->decimal('deposit_amount', 10, 2)->default(0.00);
             $table->enum('bill_type', ['monthly', 'session'])->default('monthly');
-            $table->enum('status', ['active', 'ended', 'upcoming'])->default('upcoming');
+            $table->enum('status', ['active', 'ended', 'upcoming', 'transferred'])->default('upcoming');
             $table->text('notes')->nullable();
             $table->timestamps();
         });

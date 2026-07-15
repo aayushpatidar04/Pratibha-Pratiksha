@@ -25,9 +25,17 @@ class Inventory extends Model
     protected function casts(): array
     {
         return [
-            
+
         ];
     }
 
-    
+    public function studentAssignments()
+    {
+        return $this->hasMany(
+            ResidentInventoryAssignment::class,
+            'inventory_id'
+        );
+    }
+
+
 }

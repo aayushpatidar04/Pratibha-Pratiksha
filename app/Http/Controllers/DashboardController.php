@@ -85,7 +85,7 @@ class DashboardController extends Controller
             $monthStart = $month->copy()->startOfMonth();
             $monthEnd = $month->copy()->endOfMonth();
 
-            $occupied = ResidentStay::whereDate('check_in_date', '<=', $monthEnd)
+            $occupied = ResidentStay::whereDate('checked_in_at', '<=', $monthEnd)
                 ->where(function ($query) use ($monthStart) {
                     $query->whereNull('actual_check_out_date')
                         ->orWhereDate('actual_check_out_date', '>=', $monthStart);

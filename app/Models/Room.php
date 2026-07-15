@@ -20,29 +20,71 @@ class Room extends Model
         'capacity',
         'occupied_beds',
         'monthly_rent_per_bed',
-        'has_ac',
-        'has_wifi',
-        'has_attached_bath',
-        'has_balcony',
-        'has_study_table',
+        'room_assets',
         'status'
     ];
 
     protected function casts(): array
     {
         return [
-            'has_ac' => 'boolean',
-            'has_wifi' => 'boolean',
-            'has_attached_bath' => 'boolean',
-            'has_balcony' => 'boolean',
-            'has_study_table' => 'boolean',
-            'monthly_rent_per_bed' => 'decimal:2'
+            'room_assets' => 'array',
+            'monthly_rent_per_bed' => 'decimal:2',
+            'capacity' => 'integer',
+            'occupied_beds' => 'integer',
         ];
     }
 
-    public function building() { return $this->belongsTo(Building::class); }
+    protected $appends = [
+        'room_asset_details',
+    ];
 
-    public function floor() { return $this->belongsTo(Floor::class); }
+    public function building()
+    {
+        return $this->belongsTo(Building::class);
+    }
 
-    public function beds() { return $this->hasMany(Bed::class); }
+    public function floor()
+    {
+        return $this->belongsTo(Floor::class);
+    }
+
+    public function beds()
+    {
+        return $this->hasMany(Bed::class);
+    }
+
+    public function getRoomAssetDetailsAttribute(): array
+    {
+        $assets = collect($this->room_assets ?? []);
+
+        if ($assets->isEmpty()) {
+            return [];
+        }
+
+        $inventoryItems = Inventory::whereIn(
+            'id',
+            $assets->pluck('inventory_id')
+        )->get()->keyBy('id');
+
+        return $assets
+            ->map(function ($asset) use ($inventoryItems) {
+                $inventory = $inventoryItems->get(
+                    $asset['inventory_id']
+                );
+
+                if (!$inventory) {
+                    return null;
+                }
+
+                return [
+                    'inventory_id' => $inventory->id,
+                    'item_name' => $inventory->item_name,
+                    'quantity' => (int) ($asset['quantity'] ?? 0),
+                    'unit' => $inventory->unit,
+                ];
+            })
+            ->filter()
+            ->values()
+            ->all();
+    }
 }

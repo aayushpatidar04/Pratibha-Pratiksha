@@ -9,9 +9,16 @@ class FeeInvoiceItem extends Model
     protected $fillable = [
         'invoice_id',
         'item_type',
+        'amenity_type',
         'title',
         'amount',
         'description',
+        'is_late_fee',
+    ];
+
+    protected $casts = [
+        'is_late_fee' => 'boolean',
+        'amount' => 'decimal:2',
     ];
 
     public function invoice()

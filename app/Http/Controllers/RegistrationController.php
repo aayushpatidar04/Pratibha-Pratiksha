@@ -4,9 +4,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Building;
+use App\Models\FeeInvoice;
 use App\Models\Floor;
+use App\Models\Payment;
 use App\Models\RegistrationApplication;
 use App\Models\Resident;
+use App\Models\ResidentStay;
 use App\Models\Room;
 use App\Models\Vehicle;
 use App\Services\RoomAllotmentService;
@@ -120,6 +123,10 @@ class RegistrationController extends Controller
 
         // If cash payment, mark as pending admin approval
         if ($validated['payment_method'] === 'cash') {
+            $application->update([
+                'status' => 'pending',
+                'payment_status' => 'pending_verification',
+            ]);
             return redirect()->route('register.success', $application)
                 ->with('message', 'Application submitted. Please pay registration fee at the office.');
         }
@@ -143,7 +150,10 @@ class RegistrationController extends Controller
                 $application->update([
                     'status' => 'paid',
                     'paid_at' => now(),
+                    'payment_status' => 'paid',
                 ]);
+
+                $this->createRegistrationFeeReceipt($application);
 
                 return redirect()->route('register.success', $application)
                     ->with('message', 'Registration successful! Your application number is: ' . $application->application_no);
@@ -212,12 +222,22 @@ class RegistrationController extends Controller
      * Admin: Show single registration, plus everything needed to allot a room
      * right from this screen (buildings/floors/rooms/beds with amenities).
      */
-    public function show(RegistrationApplication $registrationApplication): Response
+    public function show(RegistrationApplication $application): Response
     {
-        $registrationApplication->load(['approvedBy', 'resident', 'allottedBuilding', 'allottedRoom', 'allottedBed']);
+        $application->load([
+            'approvedBy',
+            'resident',
+            'allottedBuilding',
+            'allottedRoom',
+            'allottedBed',
+            'resident.invoices' => fn($q) => $q->where('fee_type', 'registration_fee')->with('payments'),
+        ]);
 
+        $registrationFeePayment = $application->resident?->invoices
+            ->first()?->payments->first();
         return Inertia::render('Admin/Registrations/Show', [
-            'application' => $registrationApplication,
+            'application' => $application,
+            'registrationFeePaymentId' => $registrationFeePayment?->id,
             'buildings' => Building::orderBy('name')->get(['id', 'name']),
             'floors' => Floor::orderBy('floor_number')->get(['id', 'name', 'building_id']),
             'rooms' => Room::with('beds')->orderBy('room_number')->get([
@@ -244,9 +264,9 @@ class RegistrationController extends Controller
      * Can be called from pending, paid, OR rejected (a rejection isn't final —
      * re-approving afterwards is allowed).
      */
-    public function approve(Request $request, RegistrationApplication $registrationApplication): RedirectResponse
+    public function approve(Request $request, RegistrationApplication $application): RedirectResponse
     {
-        if ($registrationApplication->status === 'approved') {
+        if ($application->status === 'approved') {
             return back()->with('error', 'This application has already been approved.');
         }
 
@@ -259,16 +279,18 @@ class RegistrationController extends Controller
             'rent_amount' => 'nullable|numeric',
             'deposit_amount' => 'nullable|numeric',
             'remarks' => 'nullable|string',
+            'billing_basis' => [ 'required', 'in:monthly,daily'],
+            'daily_rate' => [ 'nullable', 'numeric', 'min:0', 'required_if:billing_basis,daily'],
         ]);
 
         try {
-            DB::transaction(function () use ($registrationApplication, $validated, $request) {
+            DB::transaction(function () use ($application, $validated, $request) {
                 // Reuse the resident if this application was somehow approved
                 // once already (defensive — normally resident_id is null here).
-                $resident = $registrationApplication->resident;
+                $resident = $application->resident;
 
                 if (!$resident) {
-                    [$firstName, $lastName] = $this->splitName($registrationApplication->student_name);
+                    [$firstName, $lastName] = $this->splitName($application->student_name);
 
                     $year = now()->year;
                     $seq = Resident::whereYear('created_at', $year)->count() + 1;
@@ -277,49 +299,72 @@ class RegistrationController extends Controller
                         'resident_code' => sprintf('PP-%d-%04d', $year, $seq),
                         'first_name' => $firstName,
                         'last_name' => $lastName,
-                        'email' => $registrationApplication->email,
-                        'phone' => $registrationApplication->student_mobile,
-                        'whatsapp_number' => $registrationApplication->student_mobile,
-                        'date_of_birth' => $registrationApplication->dob,
-                        'gender' => 'other', // not collected on the application form; editable afterwards
-                        'blood_group' => $registrationApplication->blood_group,
-                        'address' => $registrationApplication->permanent_address,
+                        'email' => $application->email,
+                        'phone' => $application->student_mobile,
+                        'whatsapp_number' => $application->student_mobile,
+                        'date_of_birth' => $application->dob,
+                        'gender' => 'female',
+                        'blood_group' => $application->blood_group,
+                        'address' => $application->permanent_address,
                         'country' => 'India',
-                        'course' => $registrationApplication->course_name,
-                        'institute' => $registrationApplication->institution_name,
-                        'father_name' => $registrationApplication->father_name,
-                        'father_phone' => $registrationApplication->father_mobile,
-                        'mother_name' => $registrationApplication->mother_name,
-                        'mother_phone' => $registrationApplication->mother_mobile,
+                        'course' => $application->course_name,
+                        'institute' => $application->institution_name,
+                        'father_name' => $application->father_name,
+                        'father_phone' => $application->father_mobile,
+                        'mother_name' => $application->mother_name,
+                        'mother_phone' => $application->mother_mobile,
                         'status' => 'upcoming',
-                        'photo_url' => $registrationApplication->student_photo,
+                        'photo_url' => $application->student_photo,
                         'created_by' => $request->user()?->id,
                     ]);
                 }
 
-                RoomAllotmentService::allot($resident, [
+                $stay = RoomAllotmentService::allot($resident, [
                     'building_id' => $validated['building_id'],
                     'floor_id' => $validated['floor_id'],
                     'room_id' => $validated['room_id'],
                     'bed_id' => $validated['bed_id'],
-                    'check_in_date' => $validated['check_in_date'] ?? $registrationApplication->stay_duration_from,
-                    'expected_check_out_date' => $registrationApplication->stay_duration_to,
+                    'check_in_date' => $validated['check_in_date'] ?? $application->stay_duration_from,
+                    'expected_check_out_date' => $application->stay_duration_to,
                     'rent_amount' => $validated['rent_amount'] ?? null,
                     'deposit_amount' => $validated['deposit_amount'] ?? null,
+                    'billing_basis' => $validated['billing_basis'] ?? null,
+                    'daily_rate' => $validated['daily_rate'] ?? null,
                 ]);
 
-                if ($registrationApplication->vehicle_number) {
+                if ($application->vehicle_number) {
+                    $validVehicleTypes = ['two_wheeler', 'four_wheeler', 'bicycle', 'other'];
+                    $vehicleType = in_array($application->vehicle_type, $validVehicleTypes, true)
+                        ? $application->vehicle_type
+                        : 'other';
+
                     Vehicle::firstOrCreate(
-                        ['resident_id' => $resident->id, 'vehicle_number' => $registrationApplication->vehicle_number],
-                        ['vehicle_type' => $registrationApplication->vehicle_type ?: 'other']
+                        ['resident_id' => $resident->id, 'vehicle_number' => $application->vehicle_number],
+                        ['vehicle_type' => $vehicleType]
                     );
                 }
 
-                $registrationApplication->update([
+                // The registration fee was collected (or is at least owed) at
+                // application time — turn it into a real invoice + receipt now that
+                // there's a resident/stay to attach it to, whichever way it was paid.
+                // $this->createRegistrationFeeReceipt($application, $resident, $stay);
+
+                FeeInvoice::where('application_id', $application->id)
+                    ->update([
+                        'resident_id' => $resident->id,
+                        'stay_id' => $stay->id,
+                    ]);
+
+                Payment::where('application_id', $application->id)
+                    ->update([
+                        'resident_id' => $resident->id,
+                    ]);
+
+                $application->update([
                     'status' => 'approved',
                     'approved_by' => Auth::id(),
                     'approved_at' => now(),
-                    'admin_remarks' => $validated['remarks'] ?? $registrationApplication->admin_remarks,
+                    'admin_remarks' => $validated['remarks'] ?? $application->admin_remarks,
                     'resident_id' => $resident->id,
                     'allotted_building_id' => $validated['building_id'],
                     'allotted_floor_id' => $validated['floor_id'],
@@ -331,7 +376,7 @@ class RegistrationController extends Controller
             return back()->with('error', $e->getMessage());
         }
 
-        return back()->with('success', 'Application approved, resident created, and room allotted.');
+        return back()->with('success', 'Application approved, resident created, room allotted, and receipt generated.');
     }
 
     /**
@@ -339,17 +384,17 @@ class RegistrationController extends Controller
      * record and room allotment exist by then — undo that from the Residents
      * module instead, not by rejecting the application).
      */
-    public function reject(Request $request, RegistrationApplication $registrationApplication): RedirectResponse
+    public function reject(Request $request, RegistrationApplication $application): RedirectResponse
     {
-        if ($registrationApplication->status === 'approved') {
+        if ($application->status === 'approved') {
             return back()->with('error', "This application is already approved and has a resident record — reject isn't available anymore.");
         }
 
         $validated = $request->validate(['remarks' => 'nullable|string']);
 
-        $registrationApplication->update([
+        $application->update([
             'status' => 'rejected',
-            'admin_remarks' => $validated['remarks'] ?? $registrationApplication->admin_remarks,
+            'admin_remarks' => $validated['remarks'] ?? $application->admin_remarks,
         ]);
 
         return back()->with('success', 'Application rejected.');
@@ -359,19 +404,79 @@ class RegistrationController extends Controller
      * Admin: Mark a cash payment as received. Only meaningful for cash applications
      * still awaiting verification.
      */
-    public function markCashPaid(RegistrationApplication $registrationApplication): RedirectResponse
+    public function markCashPaid(RegistrationApplication $application): RedirectResponse
     {
-        if ($registrationApplication->payment_method !== 'cash') {
+        if ($application->payment_method !== 'cash') {
             return back()->with('error', 'This application was not paid via cash.');
         }
 
-        $registrationApplication->update([
-            'status' => $registrationApplication->status === 'pending' ? 'paid' : $registrationApplication->status,
+        $application->update([
+            'status' => $application->status === 'pending' ? 'paid' : $application->status,
             'payment_status' => 'paid',
             'paid_at' => now(),
         ]);
 
+        $this->createRegistrationFeeReceipt($application);
+
         return back()->with('success', 'Cash payment marked as received.');
+    }
+
+    protected function createRegistrationFeeReceipt(RegistrationApplication $application): ?FeeInvoice
+    {
+        if (!$application->registration_fee || $application->registration_fee <= 0) {
+            return null;
+        }
+
+        $isPaid = $application->payment_status === 'paid';
+
+        $invoice = FeeInvoice::updateOrCreate(
+
+            [
+                'application_id' => $application->id,
+                'fee_type' => 'registration_fee',
+            ],
+            [
+                'resident_id' => $application->resident_id,
+                'stay_id' => optional($application->resident)?->activeStay?->id,
+                'invoice_number' => 'INV-' . now()->format('Ym') . '-' . str_pad((string) (FeeInvoice::count() + 1), 5, '0', STR_PAD_LEFT),
+                'amount' => $application->registration_fee,
+                'paid_amount' => $application->registration_fee,
+                'status' => 'paid',
+                'due_date' => $application->paid_at,
+                'description' => "Registration Fee - {$application->application_no}",
+
+            ]
+
+        );
+
+        $invoice->items()->updateOrCreate(
+            [
+                'item_type' => 'registration_fee',
+            ],
+            [
+                'amenity_type' => null,
+                'title' => 'Registration Fee',
+                'amount' => $application->registration_fee,
+                'description' => "Application registration fee for {$application->application_no}",
+                'is_late_fee' => false,
+            ]
+        );
+
+        if ($isPaid) {
+            Payment::create([
+                'invoice_id' => $invoice->id,
+                'application_id' => $application->id,
+                'resident_id' => $application->resident_id,
+                'amount' => $application->registration_fee,
+                'payment_mode' => $application->payment_method === 'razorpay' ? 'card' : 'cash',
+                'transaction_id' => $application->razorpay_payment_id,
+                'payment_date' => $application->paid_at ?? now(),
+                'notes' => "Auto-generated on approval of application payment {$application->application_no}",
+                'receipt_number' => 'RCPT-' . now()->format('Ymd') . '-' . str_pad((string) (Payment::count() + 1), 5, '0', STR_PAD_LEFT),
+            ]);
+        }
+
+        return $invoice;
     }
 
     protected function splitName(string $fullName): array

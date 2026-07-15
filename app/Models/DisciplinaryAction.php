@@ -30,8 +30,8 @@ class DisciplinaryAction extends Model
     protected function casts(): array
     {
         return [
-            'incident_date' => 'date',
-            'follow_up_date' => 'date',
+            'incident_date' => 'date:Y-m-d',
+            'follow_up_date' => 'date:Y-m-d',
             'notified_at' => 'datetime',
             'parent_notified' => 'boolean'
         ];

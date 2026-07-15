@@ -2,6 +2,8 @@
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import Modal from "@/Components/Modal.vue";
 import InputLabel from "@/Components/InputLabel.vue";
+import TextInput from "@/Components/TextInput.vue";
+import InputError from "@/Components/InputError.vue";
 import PrimaryButton from "@/Components/PrimaryButton.vue";
 import DangerButton from "@/Components/DangerButton.vue";
 import Badge from "@/Components/Badge.vue";
@@ -72,17 +74,58 @@ const submitCreate = () =>
 const reviewOpen = ref(false);
 const reviewing = ref(null);
 const reviewAction = ref("approve");
-const reviewForm = useForm({ admin_notes: "" });
+const reviewForm = useForm({
+    admin_notes: "",
+
+    effective_from: new Date().toISOString().slice(0, 10),
+
+    new_billing_basis: "monthly",
+    new_rent_amount: "",
+    new_daily_rate: 350,
+    new_expected_check_out_date: "",
+});
 
 const openReview = (req, action) => {
     reviewing.value = req;
     reviewAction.value = action;
+
+    reviewForm.reset();
+    reviewForm.clearErrors();
+
     reviewForm.admin_notes = "";
+    reviewForm.effective_from = new Date().toISOString().slice(0, 10);
+
+    reviewForm.new_billing_basis = req.current_stay?.billing_basis || "monthly";
+
+    reviewForm.new_rent_amount =
+        req.requested_room?.monthly_rent_per_bed ??
+        req.current_stay?.rent_amount ??
+        "";
+
+    reviewForm.new_daily_rate = req.current_stay?.daily_rate || 350;
+
+    reviewForm.new_expected_check_out_date =
+        req.current_stay?.expected_check_out_date || "";
+
     reviewOpen.value = true;
 };
+
 const submitReview = () => {
-    const url = `/residents/room-change-requests/${reviewing.value.id}/${reviewAction.value}`;
-    reviewForm.put(url, { onSuccess: () => (reviewOpen.value = false) });
+    if (!reviewing.value) return;
+
+    const url =
+        `/residents/room-change-requests/` +
+        `${reviewing.value.id}/${reviewAction.value}`;
+
+    reviewForm.put(url, {
+        preserveScroll: true,
+
+        onSuccess: () => {
+            reviewOpen.value = false;
+            reviewing.value = null;
+            reviewForm.reset();
+        },
+    });
 };
 </script>
 
@@ -388,61 +431,289 @@ const submitReview = () => {
         </Modal>
 
         <!-- Approve / Reject -->
-        <Modal :show="reviewOpen" @close="reviewOpen = false">
+        <Modal :show="reviewOpen" @close="reviewOpen = false" maxWidth="2xl">
             <form
-                @submit.prevent="submitReview"
-                class="p-6 space-y-4"
                 v-if="reviewing"
+                @submit.prevent="submitReview"
+                class="flex max-h-[90vh] flex-col overflow-hidden"
             >
-                <h2 class="text-lg font-semibold text-gray-900">
-                    {{
-                        reviewAction === "approve" ? "Approve" : "Reject"
-                    }}
-                    Request — {{ reviewing.resident?.first_name }}
-                </h2>
-                <p
-                    v-if="reviewAction === 'approve'"
-                    class="text-sm text-gray-500"
-                >
-                    This will check the resident out of their current bed (if
-                    any) and allot them
-                    <b v-if="reviewing.requested_room"
-                        >{{ reviewing.requested_building?.name }} -
-                        {{ reviewing.requested_room?.room_number }} ({{
-                            reviewing.requested_bed?.bed_number
-                        }})</b
-                    >
-                    <span v-else class="text-red-500"
-                        >— no specific bed was requested, so pick one before
-                        approving.</span
-                    >
-                </p>
-                <div>
-                    <InputLabel value="Notes" /><textarea
-                        v-model="reviewForm.admin_notes"
-                        rows="2"
-                        class="w-full rounded-lg border-gray-300 text-sm"
-                    ></textarea>
+                <div class="shrink-0 border-b border-gray-100 px-6 py-4">
+                    <h2 class="text-lg font-semibold text-gray-900">
+                        {{
+                            reviewAction === "approve"
+                                ? "Approve Room Change"
+                                : "Reject Room Change"
+                        }}
+                    </h2>
+
+                    <p class="mt-1 text-sm text-gray-500">
+                        {{ reviewing.resident?.first_name }}
+                        {{ reviewing.resident?.last_name }}
+                    </p>
                 </div>
-                <div class="flex justify-end gap-2 pt-2">
+
+                <div class="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-5">
+                    <template v-if="reviewAction === 'approve'">
+                        <div
+                            class="grid grid-cols-1 gap-4 rounded-xl border border-gray-200 bg-gray-50 p-4 sm:grid-cols-2"
+                        >
+                            <div>
+                                <p class="text-xs font-medium text-gray-400">
+                                    Current Room
+                                </p>
+
+                                <p
+                                    class="mt-1 text-sm font-semibold text-gray-900"
+                                >
+                                    {{
+                                        reviewing.current_stay?.building
+                                            ?.name || "—"
+                                    }}
+                                    · Room
+                                    {{
+                                        reviewing.current_stay?.room
+                                            ?.room_number || "—"
+                                    }}
+                                    · Bed
+                                    {{
+                                        reviewing.current_stay?.bed
+                                            ?.bed_number || "—"
+                                    }}
+                                </p>
+
+                                <p class="mt-1 text-xs text-gray-500">
+                                    Current rent: ₹{{
+                                        Number(
+                                            reviewing.current_stay
+                                                ?.rent_amount || 0,
+                                        ).toLocaleString("en-IN")
+                                    }}
+                                </p>
+                            </div>
+
+                            <div>
+                                <p class="text-xs font-medium text-gray-400">
+                                    New Room
+                                </p>
+
+                                <p
+                                    v-if="reviewing.requested_bed"
+                                    class="mt-1 text-sm font-semibold text-blue-700"
+                                >
+                                    {{
+                                        reviewing.requested_building?.name ||
+                                        "—"
+                                    }}
+                                    · Room
+                                    {{
+                                        reviewing.requested_room?.room_number ||
+                                        "—"
+                                    }}
+                                    · Bed
+                                    {{
+                                        reviewing.requested_bed?.bed_number ||
+                                        "—"
+                                    }}
+                                </p>
+
+                                <p
+                                    v-else
+                                    class="mt-1 text-sm font-semibold text-red-600"
+                                >
+                                    No specific bed has been selected.
+                                </p>
+
+                                <p class="mt-1 text-xs text-gray-500">
+                                    Standard room rent: ₹{{
+                                        Number(
+                                            reviewing.requested_room
+                                                ?.monthly_rent_per_bed || 0,
+                                        ).toLocaleString("en-IN")
+                                    }}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div
+                            class="rounded-xl border border-blue-100 bg-blue-50 p-4"
+                        >
+                            <p class="text-sm font-semibold text-blue-900">
+                                Student assets will remain assigned
+                            </p>
+
+                            <p class="mt-1 text-xs text-blue-700">
+                                This is an internal room transfer, not a hostel
+                                checkout. Student inventory will continue under
+                                the new active stay.
+                            </p>
+                        </div>
+
+                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <div>
+                                <InputLabel value="Move Effective From *" />
+
+                                <TextInput
+                                    v-model="reviewForm.effective_from"
+                                    type="date"
+                                    required
+                                    class="w-full"
+                                />
+
+                                <InputError
+                                    :message="reviewForm.errors.effective_from"
+                                />
+                            </div>
+
+                            <div>
+                                <InputLabel value="New Billing Basis *" />
+
+                                <select
+                                    v-model="reviewForm.new_billing_basis"
+                                    required
+                                    class="w-full rounded-lg border-gray-300 text-sm"
+                                >
+                                    <option value="monthly">Monthly</option>
+
+                                    <option value="daily">
+                                        Daily Short Stay
+                                    </option>
+                                </select>
+
+                                <InputError
+                                    :message="
+                                        reviewForm.errors.new_billing_basis
+                                    "
+                                />
+                            </div>
+                        </div>
+
+                        <div v-if="reviewForm.new_billing_basis === 'monthly'">
+                            <InputLabel value="New Monthly Rent (₹) *" />
+
+                            <TextInput
+                                v-model="reviewForm.new_rent_amount"
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                required
+                                class="w-full"
+                            />
+
+                            <p class="mt-1 text-xs text-gray-500">
+                                Future monthly invoices will use this rent.
+                            </p>
+
+                            <InputError
+                                :message="reviewForm.errors.new_rent_amount"
+                            />
+                        </div>
+
+                        <div
+                            v-else
+                            class="grid grid-cols-1 gap-4 sm:grid-cols-2"
+                        >
+                            <div>
+                                <InputLabel value="New Daily Rate (₹) *" />
+
+                                <TextInput
+                                    v-model="reviewForm.new_daily_rate"
+                                    type="number"
+                                    min="0.01"
+                                    step="0.01"
+                                    required
+                                    class="w-full"
+                                />
+
+                                <InputError
+                                    :message="reviewForm.errors.new_daily_rate"
+                                />
+                            </div>
+
+                            <div>
+                                <InputLabel value="Expected Check-out Date *" />
+
+                                <TextInput
+                                    v-model="
+                                        reviewForm.new_expected_check_out_date
+                                    "
+                                    type="date"
+                                    :min="reviewForm.effective_from"
+                                    required
+                                    class="w-full"
+                                />
+
+                                <InputError
+                                    :message="
+                                        reviewForm.errors
+                                            .new_expected_check_out_date
+                                    "
+                                />
+                            </div>
+                        </div>
+                    </template>
+
+                    <div>
+                        <InputLabel
+                            :value="
+                                reviewAction === 'approve'
+                                    ? 'Approval Notes'
+                                    : 'Rejection Reason *'
+                            "
+                        />
+
+                        <textarea
+                            v-model="reviewForm.admin_notes"
+                            rows="3"
+                            :required="reviewAction === 'reject'"
+                            class="w-full rounded-lg border-gray-300 text-sm"
+                            :placeholder="
+                                reviewAction === 'approve'
+                                    ? 'Optional transfer notes'
+                                    : 'Explain why the request is rejected'
+                            "
+                        ></textarea>
+
+                        <InputError :message="reviewForm.errors.admin_notes" />
+                    </div>
+                </div>
+
+                <div
+                    class="flex shrink-0 justify-end gap-2 border-t border-gray-100 bg-white px-6 py-4"
+                >
                     <button
                         type="button"
-                        class="px-4 py-2 text-sm rounded-lg border border-gray-300"
+                        class="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                        :disabled="reviewForm.processing"
                         @click="reviewOpen = false"
                     >
                         Cancel
                     </button>
+
                     <PrimaryButton
                         v-if="reviewAction === 'approve'"
-                        :disabled="reviewForm.processing"
-                        >Approve & Move</PrimaryButton
+                        type="submit"
+                        :disabled="
+                            reviewForm.processing || !reviewing.requested_bed_id
+                        "
                     >
+                        {{
+                            reviewForm.processing
+                                ? "Moving..."
+                                : "Approve & Transfer"
+                        }}
+                    </PrimaryButton>
+
                     <DangerButton
                         v-else
                         type="submit"
                         :disabled="reviewForm.processing"
-                        >Reject</DangerButton
                     >
+                        {{
+                            reviewForm.processing
+                                ? "Rejecting..."
+                                : "Reject Request"
+                        }}
+                    </DangerButton>
                 </div>
             </form>
         </Modal>

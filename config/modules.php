@@ -25,5 +25,6 @@ return [
         ['key' => 'reports', 'label' => 'Reports', 'actions' => ['view']],
         ['key' => 'analytics', 'label' => 'Analytics', 'actions' => ['view']],
         ['key' => 'admin_users', 'label' => 'Admin: User & Permission Management', 'actions' => ['view', 'create', 'edit', 'delete']],
+        ['key' => 'registrations', 'label' => 'Registration Applications', 'actions' => ['view', 'edit']],
     ],
 ];

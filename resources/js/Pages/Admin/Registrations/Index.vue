@@ -1,29 +1,18 @@
-<!-- resources/js/Pages/Admin/Registrations/Index.vue -->
 <script setup>
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { Head, Link, router } from "@inertiajs/vue3";
 import {
     Search,
-    Filter,
     Eye,
     CheckCircle,
     XCircle,
     Banknote,
-    QrCode,
-    Download,
-    Calendar,
-    Phone,
-    MapPin,
-    User,
-    GraduationCap,
-    Building2,
-    AlertTriangle,
     IndianRupee,
-    ChevronLeft,
-    ChevronRight,
-    MoreHorizontal,
+    AlertTriangle,
+    Phone,
+    User,
 } from "lucide-vue-next";
-import { ref, computed } from "vue";
+import { ref } from "vue";
 
 const props = defineProps({
     applications: Object,
@@ -49,50 +38,36 @@ const paymentStatusColors = {
 
 const applyFilters = () => {
     router.get(
-        route("admin.registrations.index"),
-        {
-            search: search.value,
-            status: statusFilter.value,
-        },
+        "/registrations",
+        { search: search.value, status: statusFilter.value },
         { preserveState: true, replace: true },
     );
 };
 
+let searchTimeout = null;
 const debounceSearch = () => {
-    clearTimeout(window.searchTimeout);
-    window.searchTimeout = setTimeout(applyFilters, 400);
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(applyFilters, 400);
 };
 
-const approve = (id) => {
-    if (!confirm("Approve this registration?")) return;
-    router.post(
-        route("admin.registrations.approve", id),
-        {},
-        {
-            preserveScroll: true,
-        },
-    );
-};
-
+// Rejecting can be done right from the list. Approving needs a room/bed picked,
+// so that always happens on the detail page instead of a one-click action here.
 const reject = (id) => {
-    const reason = prompt("Rejection reason (optional):");
+    const remarks = prompt("Rejection reason (optional):");
+    if (remarks === null) return; // cancelled
     router.post(
-        route("admin.registrations.reject", id),
-        { reason },
-        {
-            preserveScroll: true,
-        },
+        `/registrations/${id}/reject`,
+        { remarks },
+        { preserveScroll: true },
     );
 };
 
-const verifyCash = (id) => {
-    if (!confirm("Mark cash payment as verified?")) return;
+const markCashPaid = (id) => {
+    if (!confirm("Mark this cash payment as received?")) return;
     router.post(
-        route("admin.registrations.verify-cash", id),
+        `/registrations/${id}/mark-cash-paid`,
         {},
-        {
-            preserveScroll: true,
-        },
+        { preserveScroll: true },
     );
 };
 
@@ -105,29 +80,22 @@ const formatDate = (date) => {
     });
 };
 
-const formatCurrency = (amount) => {
-    return (
-        "₹" +
-        Number(amount || 0).toLocaleString("en-IN", {
-            minimumFractionDigits: 2,
-        })
-    );
-};
+const formatCurrency = (amount) =>
+    "₹" +
+    Number(amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 });
 </script>
 
 <template>
     <Head title="Registration Applications" />
     <AuthenticatedLayout>
         <template #header>
-            <div class="flex items-center justify-between">
-                <div>
-                    <h2 class="text-xl font-semibold text-gray-900">
-                        Registration Applications
-                    </h2>
-                    <p class="text-sm text-gray-500 mt-0.5">
-                        QR-based resident registrations
-                    </p>
-                </div>
+            <div>
+                <h2 class="text-xl font-semibold text-gray-900">
+                    Registration Applications
+                </h2>
+                <p class="text-sm text-gray-500 mt-0.5">
+                    Review and process incoming resident registrations
+                </p>
             </div>
         </template>
 
@@ -224,7 +192,7 @@ const formatCurrency = (amount) => {
                     <select
                         v-model="statusFilter"
                         @change="applyFilters"
-                        class="px-3 py-2 w-32 rounded-lg border border-gray-200 text-sm focus:border-blue-500 focus:ring-blue-500"
+                        class="px-3 py-2 rounded-lg border border-gray-200 text-sm focus:border-blue-500 focus:ring-blue-500 w-32"
                     >
                         <option value="all">All Status</option>
                         <option value="pending">Pending</option>
@@ -264,20 +232,19 @@ const formatCurrency = (amount) => {
                                 <td class="px-4 py-3">
                                     <span
                                         class="font-mono text-xs font-semibold text-gray-900 bg-gray-100 px-2 py-1 rounded"
+                                        >{{ app.application_no }}</span
                                     >
-                                        {{ app.application_no }}
-                                    </span>
                                 </td>
                                 <td class="px-4 py-3">
                                     <div class="flex items-center gap-2">
                                         <img
                                             v-if="app.student_photo"
                                             :src="`/storage/${app.student_photo}`"
-                                            class="w-8 h-8 rounded-full object-cover border border-gray-200"
+                                            class="w-16 h-16 rounded-full object-cover border border-gray-200"
                                         />
                                         <div
                                             v-else
-                                            class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center"
+                                            class="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center"
                                         >
                                             <User
                                                 class="w-4 h-4 text-gray-400"
@@ -299,8 +266,9 @@ const formatCurrency = (amount) => {
                                     <div
                                         class="flex items-center gap-1 text-gray-600"
                                     >
-                                        <Phone class="w-3.5 h-3.5" />
-                                        <span>{{ app.student_mobile }}</span>
+                                        <Phone class="w-3.5 h-3.5" /><span>{{
+                                            app.student_mobile
+                                        }}</span>
                                     </div>
                                 </td>
                                 <td class="px-4 py-3">
@@ -311,12 +279,11 @@ const formatCurrency = (amount) => {
                                                 'razorpay'
                                             "
                                             class="text-blue-600"
-                                        >
-                                            <IndianRupee class="w-3.5 h-3.5" />
-                                        </span>
-                                        <span v-else class="text-green-600">
-                                            <Banknote class="w-3.5 h-3.5" />
-                                        </span>
+                                            ><IndianRupee class="w-3.5 h-3.5"
+                                        /></span>
+                                        <span v-else class="text-green-600"
+                                            ><Banknote class="w-3.5 h-3.5"
+                                        /></span>
                                         <span class="text-xs capitalize">{{
                                             app.payment_method
                                         }}</span>
@@ -344,9 +311,8 @@ const formatCurrency = (amount) => {
                                     <span
                                         class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border"
                                         :class="statusColors[app.status]"
+                                        >{{ app.status }}</span
                                     >
-                                        {{ app.status }}
-                                    </span>
                                 </td>
                                 <td class="px-4 py-3 text-gray-500 text-xs">
                                     {{ formatDate(app.created_at) }}
@@ -356,46 +322,36 @@ const formatCurrency = (amount) => {
                                         class="flex items-center justify-end gap-1"
                                     >
                                         <Link
-                                            :href="
-                                                route(
-                                                    'admin.registrations.show',
-                                                    app.id,
-                                                )
-                                            "
+                                            :href="`/registrations/${app.id}`"
                                             class="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-blue-600"
                                             title="View Details"
                                         >
                                             <Eye class="w-4 h-4" />
                                         </Link>
 
-                                        <!-- Verify Cash -->
                                         <button
                                             v-if="
-                                                app.payment_mode === 'cash' &&
+                                                app.payment_method === 'cash' &&
                                                 app.payment_status ===
                                                     'pending_verification'
                                             "
-                                            @click="verifyCash(app.id)"
+                                            @click="markCashPaid(app.id)"
                                             class="p-1.5 rounded-lg hover:bg-green-50 text-green-600"
-                                            title="Verify Cash Payment"
+                                            title="Mark Cash Paid"
                                         >
                                             <Banknote class="w-4 h-4" />
                                         </button>
 
-                                        <!-- Approve -->
-                                        <button
-                                            v-if="
-                                                app.status === 'pending' ||
-                                                app.status === 'paid'
-                                            "
-                                            @click="approve(app.id)"
+                                        <!-- Approve always goes through the detail page — a room/bed has to be picked -->
+                                        <Link
+                                            v-if="app.status !== 'approved'"
+                                            :href="`/registrations/${app.id}`"
                                             class="p-1.5 rounded-lg hover:bg-green-50 text-green-600"
-                                            title="Approve"
+                                            title="Review & Approve"
                                         >
                                             <CheckCircle class="w-4 h-4" />
-                                        </button>
+                                        </Link>
 
-                                        <!-- Reject -->
                                         <button
                                             v-if="
                                                 app.status !== 'rejected' &&
@@ -438,19 +394,27 @@ const formatCurrency = (amount) => {
                         {{ applications.total }} entries
                     </div>
                     <div class="flex items-center gap-1">
-                        <Link
+                        <template
                             v-for="(link, i) in applications.links"
                             :key="i"
-                            :href="link.url"
-                            :class="[
-                                'px-3 py-1 rounded-lg text-xs font-medium',
-                                link.active
-                                    ? 'bg-blue-600 text-white'
-                                    : 'text-gray-600 hover:bg-gray-100',
-                                !link.url && 'opacity-50 cursor-not-allowed',
-                            ]"
-                            v-html="link.label"
-                        />
+                        >
+                            <Link
+                                v-if="link.url"
+                                :href="link.url"
+                                v-html="link.label"
+                                class="px-3 py-1 rounded-lg text-xs font-medium"
+                                :class="
+                                    link.active
+                                        ? 'bg-blue-600 text-white'
+                                        : 'text-gray-600 hover:bg-gray-100'
+                                "
+                            />
+                            <span
+                                v-else
+                                v-html="link.label"
+                                class="px-3 py-1 rounded-lg text-xs font-medium opacity-50"
+                            />
+                        </template>
                     </div>
                 </div>
             </div>

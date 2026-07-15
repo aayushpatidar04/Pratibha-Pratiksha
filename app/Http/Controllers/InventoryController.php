@@ -7,6 +7,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Illuminate\Validation\ValidationException;
 
 class InventoryController extends Controller
 {
@@ -34,19 +35,77 @@ class InventoryController extends Controller
         return back()->with('success', 'Inventory item added.');
     }
 
-    public function update(Request $request, Inventory $inventory): RedirectResponse
-    {
+    public function update(
+        Request $request,
+        Inventory $inventory
+    ): RedirectResponse {
         $validated = $request->validate([
-            'total_quantity' => 'sometimes|integer|min:0',
-            'in_use' => 'sometimes|integer|min:0',
-            'damaged' => 'sometimes|integer|min:0',
+            'total_quantity' => [
+                'sometimes',
+                'integer',
+                'min:0',
+            ],
+
+            'in_use' => [
+                'sometimes',
+                'integer',
+                'min:0',
+            ],
+
+            'damaged' => [
+                'sometimes',
+                'integer',
+                'min:0',
+            ],
         ]);
 
-        $inventory->fill($validated);
-        $inventory->available = max(0, $inventory->total_quantity - $inventory->in_use - $inventory->damaged);
-        $inventory->save();
+        $newTotal = (int) (
+            $validated['total_quantity']
+            ?? $inventory->total_quantity
+        );
 
-        return back()->with('success', 'Inventory updated.');
+        $newInUse = (int) (
+            $validated['in_use']
+            ?? $inventory->in_use
+        );
+
+        $newDamaged = (int) (
+            $validated['damaged']
+            ?? $inventory->damaged
+        );
+
+        $missing = (int) ($inventory->missing ?? 0);
+
+        if (
+            $newInUse +
+            $newDamaged +
+            $missing >
+            $newTotal
+        ) {
+            throw ValidationException::withMessages([
+                'total_quantity' =>
+                    'Total quantity cannot be less than the combined in-use, damaged, and missing quantities.',
+            ]);
+        }
+
+        $inventory->update([
+            'total_quantity' => $newTotal,
+            'in_use' => $newInUse,
+            'damaged' => $newDamaged,
+
+            'available' => max(
+                0,
+                $newTotal -
+                $newInUse -
+                $newDamaged -
+                $missing
+            ),
+        ]);
+
+        return back()->with(
+            'success',
+            'Inventory updated successfully.'
+        );
     }
 
     public function destroy(Inventory $inventory): RedirectResponse

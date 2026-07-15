@@ -6,12 +6,17 @@ use App\Models\Building;
 use App\Models\Floor;
 use App\Models\Resident;
 use App\Models\Room;
+use App\Models\ResidentStay;
 use App\Services\RoomAllotmentService;
+use App\Services\ShortStayBillingService;
+use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
+use Illuminate\Validation\ValidationException;
 
 class ResidentController extends Controller
 {
@@ -59,7 +64,7 @@ class ResidentController extends Controller
         $tab = $request->string('tab')->toString() ?: 'residents';
         $sub = $request->string('sub')->toString() ?: 'active';
 
-        $query = Resident::with(['currentStay.room', 'currentStay.building', 'currentStay.bed']);
+        $query = Resident::with(['currentStay.room', 'currentStay.building', 'currentStay.bed', 'currentStay.floor',]);
 
         match ($tab) {
             'upcoming_bookings' => $query->where('status', 'upcoming'),
@@ -242,42 +247,107 @@ class ResidentController extends Controller
             'check_in_date' => 'nullable|date',
             'rent_amount' => 'nullable|numeric',
             'deposit_amount' => 'nullable|numeric',
+            'billing_basis' => ['nullable', 'in:monthly,daily',],
+            'daily_rate' => ['nullable', 'numeric', 'min:0', 'required_if:billing_basis,daily',],
+            'expected_check_out_date' => ['nullable', 'date', 'after_or_equal:check_in_date', 'required_if:billing_basis,daily',],
         ];
     }
 
     public function store(Request $request): RedirectResponse
     {
-        $validated = $request->validate($this->baseRules(true));
+        $validated = $request->validate(
+            $this->baseRules(true)
+        );
 
-        $validated['whatsapp_number'] = $validated['whatsapp_number'] ?? $validated['phone'];
-        $validated['country'] = $validated['country'] ?? 'India';
-        $validated['status'] = $validated['status'] ?? 'upcoming';
+        $validated['whatsapp_number'] =
+            $validated['whatsapp_number']
+            ?? $validated['phone'];
+
+        $validated['country'] =
+            $validated['country']
+            ?? 'India';
+
+        $validated['status'] =
+            $validated['status']
+            ?? 'upcoming';
 
         $year = now()->year;
-        $seq = Resident::whereYear('created_at', $year)->count() + 1;
-        $validated['resident_code'] = sprintf('PP-%d-%04d', $year, $seq);
-        $validated['created_by'] = $request->user()?->id;
+
+        $seq = Resident::whereYear(
+            'created_at',
+            $year
+        )->count() + 1;
+
+        $validated['resident_code'] = sprintf(
+            'PP-%d-%04d',
+            $year,
+            $seq
+        );
+
+        $validated['created_by'] =
+            $request->user()?->id;
 
         if ($request->hasFile('photo')) {
-            $validated['photo_url'] = Storage::disk('public')->url(
-                $request->file('photo')->store('residents', 'public')
-            );
+            $validated['photo_url'] = $request
+                ->file('photo')
+                ->store('residents', 'public');
         }
 
-        $allotment = collect($validated)->only(['building_id', 'floor_id', 'room_id', 'bed_id', 'check_in_date', 'rent_amount', 'deposit_amount'])->toArray();
-        $residentData = collect($validated)->except(['building_id', 'floor_id', 'room_id', 'bed_id', 'check_in_date', 'rent_amount', 'deposit_amount', 'photo'])->toArray();
+        $allotmentFields = [
+            'building_id',
+            'floor_id',
+            'room_id',
+            'bed_id',
+            'check_in_date',
+            'expected_check_out_date',
+            'rent_amount',
+            'deposit_amount',
+            'billing_basis',
+            'daily_rate',
+        ];
 
-        $resident = Resident::create($residentData);
+        $allotment = collect($validated)
+            ->only($allotmentFields)
+            ->toArray();
 
-        if (!empty($allotment['bed_id'])) {
-            try {
-                RoomAllotmentService::allot($resident, $allotment);
-            } catch (\RuntimeException $e) {
-                return back()->with('error', 'Resident created, but room allotment failed: ' . $e->getMessage());
+        $residentData = collect($validated)
+            ->except([
+                ...$allotmentFields,
+                'photo',
+            ])
+            ->toArray();
+
+        DB::beginTransaction();
+
+        try {
+            $resident = Resident::create($residentData);
+
+            if (!empty($allotment['bed_id'])) {
+                RoomAllotmentService::allot(
+                    $resident,
+                    $allotment
+                );
             }
+
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            report($e);
+
+            return back()
+                ->withInput()
+                ->with(
+                    'error',
+                    'Resident could not be created: '
+                    . $e->getMessage()
+                );
         }
 
-        return back()->with('success', 'Resident added successfully.');
+        return back()->with(
+            'success',
+            'Resident added successfully.'
+        );
     }
 
     public function update(Request $request, Resident $resident): RedirectResponse
@@ -359,5 +429,188 @@ class ResidentController extends Controller
         fclose($handle);
 
         return back()->with('success', "Bulk upload complete: {$created} residents created, {$skipped} rows skipped.");
+    }
+
+    public function updateStayDates(
+        Request $request,
+        Resident $resident
+    ): RedirectResponse {
+        $stay = ResidentStay::query()
+            ->where('resident_id', $resident->id)
+            ->whereIn('status', ['upcoming', 'active'])
+            ->latest('id')
+            ->first();
+
+        if (!$stay) {
+            return back()->with(
+                'error',
+                'No active or upcoming stay was found for this resident.'
+            );
+        }
+
+        $validated = $request->validate([
+            'check_in_date' => [
+                'required',
+                'date',
+            ],
+
+            'expected_check_out_date' => [
+                'nullable',
+                'date',
+                'after_or_equal:check_in_date',
+            ],
+
+            'reason' => [
+                'nullable',
+                'string',
+                'max:1000',
+            ],
+        ]);
+
+        try {
+            DB::transaction(function () use ($stay, $validated, $request) {
+                $newCheckInDate = Carbon::parse(
+                    $validated['check_in_date']
+                )->startOfDay();
+
+                $newExpectedCheckOutDate = !empty(
+                    $validated['expected_check_out_date']
+                )
+                    ? Carbon::parse(
+                        $validated['expected_check_out_date']
+                    )->startOfDay()
+                    : null;
+
+                /*
+                 * Completed stays should not be changed here.
+                 */
+                if (
+                    $stay->actual_check_out_date ||
+                    in_array(
+                        $stay->status,
+                        ['ended', 'completed', 'transferred'],
+                        true
+                    )
+                ) {
+                    throw ValidationException::withMessages([
+                        'check_in_date' =>
+                            'Dates of a completed stay cannot be changed from this action.',
+                    ]);
+                }
+
+                /*
+                 * Daily stays need an expected checkout date because
+                 * invoice amount depends on the number of days.
+                 */
+                if (
+                    $stay->billing_basis === 'daily' &&
+                    !$newExpectedCheckOutDate
+                ) {
+                    throw ValidationException::withMessages([
+                        'expected_check_out_date' =>
+                            'Expected checkout date is required for a daily stay.',
+                    ]);
+                }
+
+                /*
+                 * If already physically checked in, prevent moving
+                 * check-in date into the future.
+                 */
+                if (
+                    $stay->check_in_status &&
+                    $newCheckInDate->gt(now()->startOfDay())
+                ) {
+                    throw ValidationException::withMessages([
+                        'check_in_date' =>
+                            'The check-in date cannot be in the future because this resident is already checked in.',
+                    ]);
+                }
+
+                $oldCheckInDate = optional(
+                    $stay->check_in_date
+                )?->toDateString();
+
+                $oldExpectedCheckOutDate = optional(
+                    $stay->expected_check_out_date
+                )?->toDateString();
+
+                $reason = trim(
+                    (string) ($validated['reason'] ?? '')
+                );
+
+                $dateChangeNote =
+                    'Stay dates updated from check-in '
+                    . ($oldCheckInDate ?: '-')
+                    . ' / expected checkout '
+                    . ($oldExpectedCheckOutDate ?: '-')
+                    . ' to check-in '
+                    . $newCheckInDate->toDateString()
+                    . ' / expected checkout '
+                    . (
+                        $newExpectedCheckOutDate
+                        ? $newExpectedCheckOutDate->toDateString()
+                        : '-'
+                    )
+                    . '.';
+
+                if ($reason !== '') {
+                    $dateChangeNote .= ' Reason: ' . $reason;
+                }
+
+                $existingNotes = trim(
+                    (string) ($stay->notes ?? '')
+                );
+
+                $stay->update([
+                    'check_in_date' =>
+                        $newCheckInDate->toDateString(),
+
+                    'expected_check_out_date' =>
+                        $newExpectedCheckOutDate
+                        ? $newExpectedCheckOutDate->toDateString()
+                        : null,
+
+                    'notes' => trim(
+                        $existingNotes
+                        . ($existingNotes !== '' ? "\n" : '')
+                        . '['
+                        . now()->format('d-m-Y h:i A')
+                        . '] '
+                        . $dateChangeNote
+                        . ' Updated by user #'
+                        . ($request->user()?->id ?? '-')
+                    ),
+                ]);
+
+                /*
+                 * Recalculate the same short-stay invoice only when
+                 * the resident has physically checked in.
+                 *
+                 * Before actual check-in, no short-stay invoice should
+                 * exist in the revised workflow.
+                 */
+                if (
+                    $stay->billing_basis === 'daily' &&
+                    $stay->check_in_status
+                ) {
+                    app(ShortStayBillingService::class)
+                        ->createOrUpdateInvoice(
+                            $stay->fresh()
+                        );
+                }
+            });
+        } catch (ValidationException $e) {
+            throw $e;
+        } catch (\RuntimeException $e) {
+            return back()->with(
+                'error',
+                $e->getMessage()
+            );
+        }
+
+        return back()->with(
+            'success',
+            'Stay dates updated successfully.'
+        );
     }
 }

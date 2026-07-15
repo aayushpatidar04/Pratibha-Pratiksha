@@ -45,7 +45,7 @@ class Resident extends Model
     protected function casts(): array
     {
         return [
-            'date_of_birth' => 'date'
+            'date_of_birth' => 'date:Y-m-d'
         ];
     }
 
@@ -56,7 +56,7 @@ class Resident extends Model
 
     public function currentStay()
     {
-        return $this->hasOne(ResidentStay::class)->where('status', 'active')->latestOfMany('check_in_date');
+        return $this->hasOne(ResidentStay::class)->whereIn('status', ['upcoming', 'active'])->latestOfMany();
     }
 
     public function documents()
@@ -92,5 +92,32 @@ class Resident extends Model
     public function getFullNameAttribute()
     {
         return trim($this->first_name . ' ' . $this->last_name);
+    }
+
+    public function amenityOverride()
+    {
+        return $this->hasOne(ResidentAmenityOverride::class, 'resident_id');
+    }
+
+    // Get effective amenity config (override or default)
+    public function getEffectiveAmenity(string $amenity, MonthlyBillingConfig $config = null): array
+    {
+        $override = $this->amenityOverride;
+
+        $enabled = $override?->$amenity ?? $config?->$amenity ?? false;
+
+        // Custom amounts
+        $customField = match ($amenity) {
+            'rent_enabled' => 'custom_rent',
+            'mess_enabled' => 'custom_mess',
+            default => null,
+        };
+
+        $customAmount = $customField ? ($override?->$customField ?? null) : null;
+
+        return [
+            'enabled' => $enabled,
+            'custom_amount' => $customAmount,
+        ];
     }
 }

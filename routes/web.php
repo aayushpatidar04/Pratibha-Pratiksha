@@ -20,6 +20,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RazorpayController;
 use App\Http\Controllers\RegistrationController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\ResidentAmenityOverrideController;
 use App\Http\Controllers\ResidentController;
 use App\Http\Controllers\RoomChangeRequestController;
 use App\Http\Controllers\RoomController;
@@ -101,16 +102,44 @@ Route::middleware(['auth'])->group(function () {
 
     // Check-In / Check-Out (room allotment)
     Route::get('/checkinout', [CheckInOutController::class, 'index'])->name('checkinout.index')->middleware('permission:checkinout,view');
-    Route::post('/checkinout/checkin', [CheckInOutController::class, 'checkin'])->name('checkinout.checkin')->middleware('permission:checkinout,create');
-    Route::post('/checkinout/{stay}/checkout', [CheckInOutController::class, 'checkout'])->name('checkinout.checkout')->middleware('permission:checkinout,edit');
+    Route::post('/checkinout/allot-room', [CheckInOutController::class, 'allotRoom'])->name('checkinout.allot');
+    Route::post('/checkinout/{stay}/confirm-checkin', [CheckInOutController::class, 'confirmCheckin'])->name('checkinout.confirm-checkin');
+    Route::post('/checkinout/{stay}/checkout-review', [CheckInOutController::class, 'reviewCheckout'])->name('checkinout.checkout-review');
+
+    Route::put('/residents/{resident}/stay-dates', [ResidentController::class, 'updateStayDates'])->name('residents.stay-dates.update')->middleware('permission:residents,edit');
 
     // Billing
-    Route::get('/billing', [BillingController::class, 'index'])->name('billing.index')->middleware('permission:billing,view');
-    Route::post('/billing', [BillingController::class, 'store'])->name('billing.store')->middleware('permission:billing,create');
-    Route::post('/billing/{invoice}/payments', [BillingController::class, 'recordPayment'])->name('billing.payments.store')->middleware('permission:billing,edit');
-    Route::delete('/billing/{invoice}', [BillingController::class, 'destroy'])->name('billing.destroy')->middleware('permission:billing,delete');
-    Route::get('/billing/{invoice}/pdf/en', [BillingController::class, 'exportPdfEnglish'])->name('billing.pdf.en');
-    Route::get('/billing/{invoice}/pdf/hi', [BillingController::class, 'exportPdfHindi'])->name('billing.pdf.hi');
+    Route::prefix('billing')->group(function () {
+        // Main billing
+        Route::get('/', [BillingController::class, 'index'])->name('billing.index')->middleware('permission:billing,view');
+        Route::post('/', [BillingController::class, 'store'])->name('billing.store')->middleware('permission:billing,create');
+        Route::post('/{invoice}/payments', [BillingController::class, 'recordPayment'])->name('billing.payments.store')->middleware('permission:billing,edit');
+        Route::post('/{invoice}/waive-late-fee', [BillingController::class, 'waiveLateFee'])->name('billing.waive-late-fee')->middleware('permission:billing,edit');
+        Route::delete('/{invoice}', [BillingController::class, 'destroy'])->name('billing.destroy')->middleware('permission:billing,delete');
+        Route::patch('/{invoice}/restore', [BillingController::class, 'restore'])->name('billing.restore')->middleware('permission:billing,delete');
+        Route::get('/{invoice}/pdf/en', [BillingController::class, 'exportPdfEnglish'])->name('billing.pdf.en');
+        Route::get('/{invoice}/pdf/hi', [BillingController::class, 'exportPdfHindi'])->name('billing.pdf.hi');
+        Route::get('/{invoice}/print/hi', [BillingController::class, 'previewHindi'])->name('billing.print.hi');
+        Route::get('/payments/{payment}/receipt', [BillingController::class, 'paymentReceipt'])->name('billing.payments.receipt')->middleware('permission:billing,view');
+
+        // Resident payment history
+        Route::get('/resident/{resident}/history', [BillingController::class, 'residentHistory'])->name('billing.resident.history')->middleware('permission:billing,view');
+
+        // Monthly config
+        Route::get('/config', [BillingController::class, 'configIndex'])->name('billing.config.index')->middleware('permission:billing,view');
+        Route::get('/config/create', [BillingController::class, 'configCreate'])->name('billing.config.create')->middleware('permission:billing,create');
+        Route::post('/config', [BillingController::class, 'configStore'])->name('billing.config.store')->middleware('permission:billing,create');
+        Route::delete('/config/{config}', [BillingController::class, 'destroyConfig'])->name('billing.config.destroy')->middleware('permission:billing,delete');
+
+        // Auto generate
+        Route::get('/config/{config}/preview', [BillingController::class, 'autoGenerate'])->name('billing.config.preview')->middleware('permission:billing,create');
+        Route::post('/config/{config}/generate', [BillingController::class, 'confirmGenerate'])->name('billing.config.confirm-generate')->middleware('permission:billing,create');
+    });
+
+    Route::prefix('residents')->group(function () {
+        Route::get('/{resident}/amenities', [ResidentAmenityOverrideController::class, 'edit'])->name('residents.amenity-override.edit')->middleware('permission:residents,edit');
+        Route::put('/{resident}/amenities', [ResidentAmenityOverrideController::class, 'update'])->name('residents.amenity-override.update')->middleware('permission:residents,edit');
+    });
 
     // Hostel Mess
     Route::get('/mess', [MessMenuController::class, 'index'])->name('mess.index')->middleware('permission:mess,view');

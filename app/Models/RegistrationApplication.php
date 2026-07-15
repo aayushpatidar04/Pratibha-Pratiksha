@@ -71,9 +71,9 @@ class RegistrationApplication extends Model
     ];
 
     protected $casts = [
-        'dob' => 'date',
-        'stay_duration_from' => 'date',
-        'stay_duration_to' => 'date',
+        'dob' => 'date:Y-m-d',
+        'stay_duration_from' => 'date:Y-m-d',
+        'stay_duration_to' => 'date:Y-m-d',
         'has_driving_license' => 'boolean',
         'paid_at' => 'datetime',
         'approved_at' => 'datetime',

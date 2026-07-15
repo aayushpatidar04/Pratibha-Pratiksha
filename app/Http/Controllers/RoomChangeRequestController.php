@@ -8,10 +8,13 @@ use App\Models\Resident;
 use App\Models\Room;
 use App\Models\RoomChangeRequest;
 use App\Services\RoomAllotmentService;
+use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class RoomChangeRequestController extends Controller
 {
@@ -75,41 +78,150 @@ class RoomChangeRequestController extends Controller
      * any) and allot the requested bed, via the same RoomAllotmentService used by
      * Check-In/Check-Out — so occupancy counters stay correct everywhere.
      */
-    public function approve(Request $request, RoomChangeRequest $roomChangeRequest): RedirectResponse
-    {
+    public function approve(
+        Request $request,
+        RoomChangeRequest $roomChangeRequest
+    ): RedirectResponse {
+        $currentStay = $roomChangeRequest->currentStay;
+
         $validated = $request->validate([
-            'admin_notes' => 'nullable|string',
+            'effective_from' => [
+                'required',
+                'date',
+                $currentStay
+                ? 'after_or_equal:' .
+                $currentStay->check_in_date->toDateString()
+                : 'date',
+            ],
+
+            'new_billing_basis' => [
+                'required',
+                Rule::in([
+                    'monthly',
+                    'daily',
+                ]),
+            ],
+
+            'new_rent_amount' => [
+                'nullable',
+                'required_if:new_billing_basis,monthly',
+                'numeric',
+                'min:0',
+            ],
+
+            'new_daily_rate' => [
+                'nullable',
+                'required_if:new_billing_basis,daily',
+                'numeric',
+                'min:0.01',
+            ],
+
+            'new_expected_check_out_date' => [
+                'nullable',
+                'required_if:new_billing_basis,daily',
+                'date',
+                'after_or_equal:effective_from',
+            ],
+
+            'admin_notes' => [
+                'nullable',
+                'string',
+                'max:2000',
+            ],
         ]);
 
-        if (!$roomChangeRequest->requested_bed_id) {
-            return back()->with('error', 'Pick a specific bed for this request before approving it.');
+        if ($roomChangeRequest->status !== 'pending') {
+            return back()->with(
+                'error',
+                'This request has already been reviewed.'
+            );
         }
 
-        $resident = $roomChangeRequest->resident;
+        if (!$roomChangeRequest->requested_bed_id) {
+            return back()->with(
+                'error',
+                'Select a specific bed before approving the request.'
+            );
+        }
 
-        if ($roomChangeRequest->currentStay && $roomChangeRequest->currentStay->status === 'active') {
-            RoomAllotmentService::checkout($roomChangeRequest->currentStay);
+        if (!$currentStay) {
+            return back()->with(
+                'error',
+                'The resident does not have a current stay.'
+            );
         }
 
         try {
-            RoomAllotmentService::allot($resident, [
-                'building_id' => $roomChangeRequest->requested_building_id,
-                'floor_id' => $roomChangeRequest->requested_floor_id,
-                'room_id' => $roomChangeRequest->requested_room_id,
-                'bed_id' => $roomChangeRequest->requested_bed_id,
-            ]);
+            $newStay = RoomAllotmentService::transferRoom(
+                currentStay: $currentStay,
+                data: [
+                    'building_id' =>
+                        $roomChangeRequest->requested_building_id,
+
+                    'floor_id' =>
+                        $roomChangeRequest->requested_floor_id,
+
+                    'room_id' =>
+                        $roomChangeRequest->requested_room_id,
+
+                    'bed_id' =>
+                        $roomChangeRequest->requested_bed_id,
+
+                    'effective_from' =>
+                        $validated['effective_from'],
+
+                    'billing_basis' =>
+                        $validated['new_billing_basis'],
+
+                    'rent_amount' =>
+                        $validated['new_rent_amount'] ?? null,
+
+                    'daily_rate' =>
+                        $validated['new_daily_rate'] ?? null,
+
+                    'expected_check_out_date' =>
+                        $validated[
+                            'new_expected_check_out_date'
+                        ] ?? null,
+
+                    'notes' =>
+                        $validated['admin_notes'] ?? null,
+
+                    'transferred_by' =>
+                        $request->user()?->id,
+                ]
+            );
         } catch (\RuntimeException $e) {
-            return back()->with('error', $e->getMessage());
+            return back()->with(
+                'error',
+                $e->getMessage()
+            );
         }
 
         $roomChangeRequest->update([
             'status' => 'approved',
+            'effective_from' => $validated['effective_from'],
+            'new_billing_basis' =>
+                $validated['new_billing_basis'],
+            'new_rent_amount' =>
+                $validated['new_rent_amount'] ?? null,
+            'new_daily_rate' =>
+                $validated['new_daily_rate'] ?? null,
+            'new_expected_check_out_date' =>
+                $validated[
+                    'new_expected_check_out_date'
+                ] ?? null,
+            'new_stay_id' => $newStay->id,
             'reviewed_by' => $request->user()?->id,
             'reviewed_at' => now(),
-            'admin_notes' => $validated['admin_notes'] ?? null,
+            'admin_notes' =>
+                $validated['admin_notes'] ?? null,
         ]);
 
-        return back()->with('success', 'Room change approved and resident moved.');
+        return back()->with(
+            'success',
+            'Room change approved. The resident has been transferred and future billing will use the new room charges.'
+        );
     }
 
     public function reject(Request $request, RoomChangeRequest $roomChangeRequest): RedirectResponse

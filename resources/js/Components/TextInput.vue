@@ -2,8 +2,8 @@
 import { onMounted, ref } from 'vue';
 
 const model = defineModel({
-    type: String,
-    required: true,
+    type: [String, Number, null],
+    required: false,
 });
 
 const input = ref(null);
