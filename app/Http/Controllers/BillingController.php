@@ -69,7 +69,7 @@ class BillingController extends Controller
 
         $stats = [
             'totalBilled' => (float) FeeInvoice::sum('amount'),
-            'totalLateFees' => (float) FeeInvoice::where('late_fee_waived', false)->sum('effective_late_fee_amount'),
+            'totalLateFees' => FeeInvoice::where('late_fee_waived', false)->get()->sum(fn ($invoice) => $invoice->effective_late_fee_amount),
             'paidAmount' => (float) FeeInvoice::sum('paid_amount'),
             'pendingCount' => FeeInvoice::where('status', 'pending')->count(),
             'partialCount' => FeeInvoice::where('status', 'partial')->count(),
