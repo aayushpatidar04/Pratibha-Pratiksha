@@ -6,7 +6,7 @@ import TextInput from "@/Components/TextInput.vue";
 import InputError from "@/Components/InputError.vue";
 import PrimaryButton from "@/Components/PrimaryButton.vue";
 import Badge from "@/Components/Badge.vue";
-import { Head, useForm, router, Link } from "@inertiajs/vue3";
+import { Head, useForm, router, Link, usePage } from "@inertiajs/vue3";
 import {
     ref,
     reactive,
@@ -60,6 +60,25 @@ const props = defineProps({
     rooms: Array,
 });
 
+const page = usePage();
+
+const bulkResultOpen = ref(false);
+
+const bulkSummary = computed(() => page.props.flash?.bulk_upload_summary ?? {});
+
+const bulkFailures = computed(
+    () => page.props.flash?.bulk_upload_failures ?? [],
+);
+
+watch(
+    () => page.props.flash?.bulk_upload_summary,
+    (summary) => {
+        if (summary) {
+            bulkResultOpen.value = true;
+        }
+    },
+    { immediate: true },
+);
 // ------------------------------------------------------------------
 // Tabs / view / filters — every change round-trips to the server since
 // the dataset (and even which prop is populated) differs per view.
@@ -367,6 +386,7 @@ const createForm = useForm({
     institute: "",
     father_name: "",
     father_phone: "",
+    father_email: "",
     mother_name: "",
     mother_phone: "",
     status: "upcoming",
@@ -426,16 +446,45 @@ const submitCreate = () => {
 // Bulk upload modal
 // ------------------------------------------------------------------
 const bulkOpen = ref(false);
-const bulkForm = useForm({ file: null });
-const onBulkFileChange = (e) => {
-    bulkForm.file = e.target.files[0] || null;
+
+const bulkFileInput = ref(null);
+
+const bulkForm = useForm({
+    file: null,
+});
+
+const onBulkFileChange = (event) => {
+    bulkForm.clearErrors("file");
+    bulkForm.file = event.target.files?.[0] || null;
 };
+
+const closeBulkModal = () => {
+    if (bulkForm.processing) {
+        return;
+    }
+
+    bulkOpen.value = false;
+    bulkForm.reset();
+    bulkForm.clearErrors();
+
+    if (bulkFileInput.value) {
+        bulkFileInput.value.value = "";
+    }
+};
+
 const submitBulk = () => {
+    if (!bulkForm.file) {
+        bulkForm.setError("file", "Please select a CSV file.");
+
+        return;
+    }
+
     bulkForm.post("/residents/bulk-upload", {
         forceFormData: true,
+        preserveScroll: true,
+
         onSuccess: () => {
-            bulkOpen.value = false;
-            bulkForm.reset();
+            closeBulkModal();
         },
     });
 };
@@ -2864,94 +2913,465 @@ const submitStayDates = () => {
                         </div>
 
                         <p
-                            class="text-xs font-semibold text-gray-400 uppercase pt-1"
+                            class="pt-1 text-xs font-semibold uppercase text-gray-400"
                         >
                             Personal Details
                         </p>
-                        <div class="grid grid-cols-2 gap-4">
+
+                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <div>
-                                <InputLabel value="First Name *" /><TextInput
+                                <InputLabel
+                                    for="create_first_name"
+                                    value="First Name *"
+                                />
+
+                                <TextInput
+                                    id="create_first_name"
                                     v-model="createForm.first_name"
+                                    type="text"
                                     required
-                                /><InputError
+                                    class="w-full"
+                                />
+
+                                <InputError
                                     :message="createForm.errors.first_name"
                                 />
                             </div>
+
                             <div>
-                                <InputLabel value="Last Name" /><TextInput
+                                <InputLabel
+                                    for="create_last_name"
+                                    value="Last Name"
+                                />
+
+                                <TextInput
+                                    id="create_last_name"
                                     v-model="createForm.last_name"
+                                    type="text"
+                                    class="w-full"
+                                />
+
+                                <InputError
+                                    :message="createForm.errors.last_name"
                                 />
                             </div>
-                        </div>
-                        <div class="grid grid-cols-2 gap-4">
+
                             <div>
-                                <InputLabel value="Phone *" /><TextInput
-                                    v-model="createForm.phone"
-                                    required
-                                /><InputError
-                                    :message="createForm.errors.phone"
+                                <InputLabel
+                                    for="create_gender"
+                                    value="Gender *"
                                 />
-                            </div>
-                            <div>
-                                <InputLabel value="Email" /><TextInput
-                                    type="email"
-                                    v-model="createForm.email"
-                                />
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <InputLabel value="Gender *" />
+
                                 <select
+                                    id="create_gender"
                                     v-model="createForm.gender"
+                                    required
                                     class="w-full rounded-lg border-gray-300 text-sm"
                                 >
                                     <option value="male">Male</option>
                                     <option value="female">Female</option>
                                     <option value="other">Other</option>
                                 </select>
+
+                                <InputError
+                                    :message="createForm.errors.gender"
+                                />
                             </div>
+
                             <div>
-                                <InputLabel value="Date of Birth" /><TextInput
-                                    type="date"
+                                <InputLabel
+                                    for="create_date_of_birth"
+                                    value="Date of Birth"
+                                />
+
+                                <TextInput
+                                    id="create_date_of_birth"
                                     v-model="createForm.date_of_birth"
+                                    type="date"
+                                    class="w-full"
+                                />
+
+                                <InputError
+                                    :message="createForm.errors.date_of_birth"
+                                />
+                            </div>
+
+                            <div>
+                                <InputLabel
+                                    for="create_blood_group"
+                                    value="Blood Group"
+                                />
+
+                                <select
+                                    id="create_blood_group"
+                                    v-model="createForm.blood_group"
+                                    class="w-full rounded-lg border-gray-300 text-sm"
+                                >
+                                    <option value="">Select blood group</option>
+                                    <option value="A+">A+</option>
+                                    <option value="A-">A-</option>
+                                    <option value="B+">B+</option>
+                                    <option value="B-">B-</option>
+                                    <option value="AB+">AB+</option>
+                                    <option value="AB-">AB-</option>
+                                    <option value="O+">O+</option>
+                                    <option value="O-">O-</option>
+                                </select>
+
+                                <InputError
+                                    :message="createForm.errors.blood_group"
+                                />
+                            </div>
+
+                            <div>
+                                <InputLabel
+                                    for="create_status"
+                                    value="Resident Status *"
+                                />
+
+                                <select
+                                    id="create_status"
+                                    v-model="createForm.status"
+                                    required
+                                    class="w-full rounded-lg border-gray-300 text-sm"
+                                >
+                                    <option value="upcoming">Upcoming</option>
+                                    <option value="active">Active</option>
+                                    <option value="inactive">Inactive</option>
+                                    <option value="suspended">Suspended</option>
+                                    <option value="left">Left</option>
+                                </select>
+
+                                <InputError
+                                    :message="createForm.errors.status"
                                 />
                             </div>
                         </div>
 
-                        <p
-                            class="text-xs font-semibold text-gray-400 uppercase pt-1"
-                        >
-                            Academic
+                        <p class="pt-1 text-xs font-semibold uppercase text-gray-400">
+                            Contact Details
                         </p>
-                        <div class="grid grid-cols-2 gap-4">
+
+                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <div>
-                                <InputLabel value="Course" /><TextInput
-                                    v-model="createForm.course"
+                                <InputLabel
+                                    for="create_phone"
+                                    value="Phone *"
                                 />
+
+                                <TextInput
+                                    id="create_phone"
+                                    v-model="createForm.phone"
+                                    type="text"
+                                    required
+                                    class="w-full"
+                                />
+
+                                <InputError :message="createForm.errors.phone" />
                             </div>
+
                             <div>
-                                <InputLabel value="Institute" /><TextInput
+                                <InputLabel
+                                    for="create_whatsapp_number"
+                                    value="WhatsApp Number"
+                                />
+
+                                <TextInput
+                                    id="create_whatsapp_number"
+                                    v-model="createForm.whatsapp_number"
+                                    type="text"
+                                    class="w-full"
+                                    placeholder="Defaults to phone number"
+                                />
+
+                                <InputError :message="createForm.errors.whatsapp_number" />
+                            </div>
+
+                            <div class="sm:col-span-2">
+                                <InputLabel
+                                    for="create_email"
+                                    value="Email"
+                                />
+
+                                <TextInput
+                                    id="create_email"
+                                    v-model="createForm.email"
+                                    type="email"
+                                    class="w-full"
+                                />
+
+                                <InputError :message="createForm.errors.email" />
+                            </div>
+
+                            <div class="sm:col-span-2">
+                                <InputLabel
+                                    for="create_address"
+                                    value="Permanent Address"
+                                />
+
+                                <textarea
+                                    id="create_address"
+                                    v-model="createForm.address"
+                                    rows="3"
+                                    class="w-full rounded-lg border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                    placeholder="Enter complete permanent address"
+                                ></textarea>
+
+                                <InputError :message="createForm.errors.address" />
+                            </div>
+
+                            <div>
+                                <InputLabel
+                                    for="create_city"
+                                    value="City"
+                                />
+
+                                <TextInput
+                                    id="create_city"
+                                    v-model="createForm.city"
+                                    type="text"
+                                    class="w-full"
+                                />
+
+                                <InputError :message="createForm.errors.city" />
+                            </div>
+
+                            <div>
+                                <InputLabel
+                                    for="create_state"
+                                    value="State"
+                                />
+
+                                <TextInput
+                                    id="create_state"
+                                    v-model="createForm.state"
+                                    type="text"
+                                    class="w-full"
+                                />
+
+                                <InputError :message="createForm.errors.state" />
+                            </div>
+
+                            <div>
+                                <InputLabel
+                                    for="create_country"
+                                    value="Country"
+                                />
+
+                                <TextInput
+                                    id="create_country"
+                                    v-model="createForm.country"
+                                    type="text"
+                                    class="w-full"
+                                />
+
+                                <InputError :message="createForm.errors.country" />
+                            </div>
+
+                            <div>
+                                <InputLabel
+                                    for="create_pincode"
+                                    value="Pincode"
+                                />
+
+                                <TextInput
+                                    id="create_pincode"
+                                    v-model="createForm.pincode"
+                                    type="text"
+                                    class="w-full"
+                                />
+
+                                <InputError :message="createForm.errors.pincode" />
+                            </div>
+                        </div>
+
+                        <p class="pt-1 text-xs font-semibold uppercase text-gray-400">
+                            Academic Details
+                        </p>
+
+                        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            <div class="sm:col-span-2">
+                                <InputLabel
+                                    for="create_institute"
+                                    value="Institute"
+                                />
+
+                                <TextInput
+                                    id="create_institute"
                                     v-model="createForm.institute"
+                                    type="text"
+                                    class="w-full"
                                 />
+
+                                <InputError :message="createForm.errors.institute" />
+                            </div>
+
+                            <div class="sm:col-span-2">
+                                <InputLabel
+                                    for="create_course"
+                                    value="Course"
+                                />
+
+                                <TextInput
+                                    id="create_course"
+                                    v-model="createForm.course"
+                                    type="text"
+                                    class="w-full"
+                                />
+
+                                <InputError :message="createForm.errors.course" />
+                            </div>
+
+                            <div>
+                                <InputLabel
+                                    for="create_year"
+                                    value="Academic Year"
+                                />
+
+                                <TextInput
+                                    id="create_year"
+                                    v-model="createForm.year"
+                                    type="number"
+                                    min="1"
+                                    max="20"
+                                    class="w-full"
+                                    placeholder="Example: 1, 2, 3"
+                                />
+
+                                <InputError :message="createForm.errors.year" />
+                            </div>
+
+                            <div>
+                                <InputLabel
+                                    for="create_batch"
+                                    value="Batch"
+                                />
+
+                                <TextInput
+                                    id="create_batch"
+                                    v-model="createForm.batch"
+                                    type="text"
+                                    class="w-full"
+                                    placeholder="Example: 2026-2029"
+                                />
+
+                                <InputError :message="createForm.errors.batch" />
+                            </div>
+
+                            <div class="sm:col-span-2">
+                                <InputLabel
+                                    for="create_roll_number"
+                                    value="Roll Number"
+                                />
+
+                                <TextInput
+                                    id="create_roll_number"
+                                    v-model="createForm.roll_number"
+                                    type="text"
+                                    class="w-full"
+                                />
+
+                                <InputError :message="createForm.errors.roll_number" />
                             </div>
                         </div>
 
-                        <p
-                            class="text-xs font-semibold text-gray-400 uppercase pt-1"
-                        >
-                            Parent / Guardian
+                        <p class="pt-1 text-xs font-semibold uppercase text-gray-400">
+                            Parent / Guardian Details
                         </p>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <InputLabel value="Father's Name" /><TextInput
-                                    v-model="createForm.father_name"
-                                />
+
+                        <div class="rounded-xl border border-gray-200 p-4">
+                            <h3 class="mb-4 text-sm font-semibold text-gray-900">
+                                Father Details
+                            </h3>
+
+                            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                <div>
+                                    <InputLabel
+                                        for="create_father_name"
+                                        value="Father's Name"
+                                    />
+
+                                    <TextInput
+                                        id="create_father_name"
+                                        v-model="createForm.father_name"
+                                        type="text"
+                                        class="w-full"
+                                    />
+
+                                    <InputError :message="createForm.errors.father_name" />
+                                </div>
+
+                                <div>
+                                    <InputLabel
+                                        for="create_father_phone"
+                                        value="Father's Phone"
+                                    />
+
+                                    <TextInput
+                                        id="create_father_phone"
+                                        v-model="createForm.father_phone"
+                                        type="text"
+                                        class="w-full"
+                                    />
+
+                                    <InputError :message="createForm.errors.father_phone" />
+                                </div>
+
+                                <div class="sm:col-span-2">
+                                    <InputLabel
+                                        for="create_father_email"
+                                        value="Father's Email"
+                                    />
+
+                                    <TextInput
+                                        id="create_father_email"
+                                        v-model="createForm.father_email"
+                                        type="email"
+                                        class="w-full"
+                                    />
+
+                                    <InputError :message="createForm.errors.father_email" />
+                                </div>
                             </div>
-                            <div>
-                                <InputLabel value="Father's Phone" /><TextInput
-                                    v-model="createForm.father_phone"
-                                />
+                        </div>
+
+                        <div class="rounded-xl border border-gray-200 p-4">
+                            <h3 class="mb-4 text-sm font-semibold text-gray-900">
+                                Mother Details
+                            </h3>
+
+                            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                <div>
+                                    <InputLabel
+                                        for="create_mother_name"
+                                        value="Mother's Name"
+                                    />
+
+                                    <TextInput
+                                        id="create_mother_name"
+                                        v-model="createForm.mother_name"
+                                        type="text"
+                                        class="w-full"
+                                    />
+
+                                    <InputError :message="createForm.errors.mother_name" />
+                                </div>
+
+                                <div>
+                                    <InputLabel
+                                        for="create_mother_phone"
+                                        value="Mother's Phone"
+                                    />
+
+                                    <TextInput
+                                        id="create_mother_phone"
+                                        v-model="createForm.mother_phone"
+                                        type="text"
+                                        class="w-full"
+                                    />
+
+                                    <InputError :message="createForm.errors.mother_phone" />
+                                </div>
                             </div>
                         </div>
 
@@ -3338,37 +3758,277 @@ const submitStayDates = () => {
         </Modal>
 
         <!-- Bulk Upload modal -->
-        <Modal :show="bulkOpen" @close="bulkOpen = false">
-            <form @submit.prevent="submitBulk" class="p-6 space-y-4">
-                <h2 class="text-lg font-semibold text-gray-900">
-                    Bulk Upload Residents
-                </h2>
-                <p class="text-xs text-gray-500">
-                    CSV with header row:
-                    <code class="bg-gray-100 px-1 rounded"
-                        >first_name,last_name,phone,email,gender,course,institute,batch,year,roll_number,father_name,father_phone</code
-                    >. Photos and room allotment aren't included in bulk upload
-                    — add those individually afterwards.
-                </p>
-                <input
-                    type="file"
-                    accept=".csv,.txt"
-                    @change="onBulkFileChange"
-                    required
-                    class="text-sm"
-                />
-                <InputError :message="bulkForm.errors.file" />
-                <div class="flex justify-end gap-2 pt-2">
+        <Modal :show="bulkOpen" @close="closeBulkModal" maxWidth="2xl">
+            <form
+                @submit.prevent="submitBulk"
+                class="flex max-h-[92vh] flex-col overflow-hidden"
+            >
+                <!-- Header -->
+                <div class="shrink-0 border-b border-gray-100 px-6 py-4">
+                    <h2 class="text-lg font-semibold text-gray-900">
+                        Bulk Upload Residents
+                    </h2>
+
+                    <p class="mt-1 text-sm text-gray-500">
+                        Import resident profiles, current stays, historical
+                        stays and security-deposit records.
+                    </p>
+                </div>
+
+                <!-- Body -->
+                <div class="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-5">
+                    <div
+                        class="rounded-xl border border-blue-200 bg-blue-50 p-4"
+                    >
+                        <h3 class="text-sm font-semibold text-blue-900">
+                            How the importer works
+                        </h3>
+
+                        <div
+                            class="mt-2 space-y-1 text-xs leading-5 text-blue-800"
+                        >
+                            <p>• Resident fields are always imported.</p>
+
+                            <p>
+                                • Stay creation is optional. To create a stay,
+                                provide building, room, bed and check-in date.
+                            </p>
+
+                            <p>
+                                • Active residents are marked physically checked
+                                in and occupy the selected bed.
+                            </p>
+
+                            <p>
+                                • Left residents create a historical completed
+                                stay without changing current bed occupancy.
+                            </p>
+
+                            <p>
+                                • When deposit amount is entered, deposit
+                                payment date is mandatory.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                        <div class="rounded-xl border border-gray-200 p-4">
+                            <h3 class="text-sm font-semibold text-gray-900">
+                                Required resident columns
+                            </h3>
+
+                            <div class="mt-3 flex flex-wrap gap-2">
+                                <span
+                                    v-for="column in [
+                                        'first_name',
+                                        'phone',
+                                        'gender',
+                                    ]"
+                                    :key="column"
+                                    class="rounded-md bg-red-50 px-2 py-1 font-mono text-xs text-red-700"
+                                >
+                                    {{ column }}
+                                </span>
+                            </div>
+
+                            <p class="mt-3 text-xs text-gray-500">
+                                Gender must be male, female or other.
+                            </p>
+                        </div>
+
+                        <div class="rounded-xl border border-gray-200 p-4">
+                            <h3 class="text-sm font-semibold text-gray-900">
+                                Required when creating a stay
+                            </h3>
+
+                            <div class="mt-3 flex flex-wrap gap-2">
+                                <span
+                                    v-for="column in [
+                                        'building',
+                                        'room_number',
+                                        'bed_number',
+                                        'stay_status',
+                                        'check_in_date',
+                                    ]"
+                                    :key="column"
+                                    class="rounded-md bg-amber-50 px-2 py-1 font-mono text-xs text-amber-700"
+                                >
+                                    {{ column }}
+                                </span>
+                            </div>
+
+                            <p class="mt-3 text-xs text-gray-500">
+                                Left residents must also contain
+                                actual_check_out_date.
+                            </p>
+                        </div>
+                    </div>
+
+                    <details class="rounded-xl border border-gray-200">
+                        <summary
+                            class="cursor-pointer select-none px-4 py-3 text-sm font-semibold text-gray-800"
+                        >
+                            View all supported CSV columns
+                        </summary>
+
+                        <div class="border-t border-gray-100 px-4 py-4">
+                            <div class="flex flex-wrap gap-2">
+                                <span
+                                    v-for="column in [
+                                        'first_name',
+                                        'last_name',
+                                        'email',
+                                        'phone',
+                                        'whatsapp_number',
+                                        'date_of_birth',
+                                        'gender',
+                                        'blood_group',
+                                        'address',
+                                        'city',
+                                        'state',
+                                        'country',
+                                        'pincode',
+                                        'course',
+                                        'year',
+                                        'batch',
+                                        'roll_number',
+                                        'institute',
+                                        'father_name',
+                                        'father_phone',
+                                        'father_email',
+                                        'mother_name',
+                                        'mother_phone',
+                                        'status',
+                                        'building',
+                                        'room_number',
+                                        'bed_number',
+                                        'stay_status',
+                                        'check_in_date',
+                                        'expected_check_out_date',
+                                        'actual_check_out_date',
+                                        'check_in_status',
+                                        'checked_in_at',
+                                        'billing_basis',
+                                        'rent_amount',
+                                        'daily_rate',
+                                        'deposit_amount',
+                                        'deposit_payment_date',
+                                        'deposit_payment_mode',
+                                        'deposit_reference',
+                                        'deposit_notes',
+                                        'stay_notes',
+                                    ]"
+                                    :key="column"
+                                    class="rounded-md bg-gray-100 px-2 py-1 font-mono text-xs text-gray-700"
+                                >
+                                    {{ column }}
+                                </span>
+                            </div>
+                        </div>
+                    </details>
+
+                    <div
+                        class="rounded-xl border border-amber-200 bg-amber-50 p-4"
+                    >
+                        <p class="text-sm font-semibold text-amber-900">
+                            Date format
+                        </p>
+
+                        <p class="mt-1 text-xs text-amber-800">
+                            Use
+                            <code
+                                class="rounded bg-white px-1.5 py-0.5 font-mono"
+                            >
+                                YYYY-MM-DD
+                            </code>
+                            for dates. Example:
+                            <code
+                                class="rounded bg-white px-1.5 py-0.5 font-mono"
+                            >
+                                2026-07-21
+                            </code>
+                        </p>
+                    </div>
+
+                    <div class="flex flex-wrap gap-2">
+                        <a
+                            :href="route('residents.bulk.template.csv')"
+                            class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                        >
+                            <Download class="mr-2 h-4 w-4" />
+                            Download Sample CSV
+                        </a>
+
+                        <a
+                            :href="route('residents.bulk.template.xlsx')"
+                            class="inline-flex items-center rounded-lg border border-green-300 bg-green-50 px-4 py-2 text-sm font-medium text-green-700 hover:bg-green-100"
+                        >
+                            <FileSpreadsheet class="mr-2 h-4 w-4" />
+                            Download Excel Template
+                        </a>
+                    </div>
+
+                    <div>
+                        <label
+                            for="resident_bulk_csv"
+                            class="mb-2 block text-sm font-medium text-gray-700"
+                        >
+                            Select CSV file
+                        </label>
+
+                        <input
+                            id="resident_bulk_csv"
+                            ref="bulkFileInput"
+                            type="file"
+                            accept=".csv,.txt,text/csv"
+                            required
+                            class="block w-full rounded-xl border border-gray-300 bg-white px-3 py-3 text-sm text-gray-700 file:mr-4 file:rounded-lg file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-indigo-700 hover:file:bg-indigo-100"
+                            @change="onBulkFileChange"
+                        />
+
+                        <InputError
+                            class="mt-2"
+                            :message="bulkForm.errors.file"
+                        />
+
+                        <p
+                            v-if="bulkForm.file"
+                            class="mt-2 text-xs text-gray-500"
+                        >
+                            Selected:
+                            <span class="font-medium text-gray-700">
+                                {{ bulkForm.file.name }}
+                            </span>
+                            ·
+                            {{ (bulkForm.file.size / 1024).toFixed(1) }}
+                            KB
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div
+                    class="flex shrink-0 justify-end gap-2 border-t border-gray-100 bg-white px-6 py-4"
+                >
                     <button
                         type="button"
-                        class="px-4 py-2 text-sm rounded-lg border border-gray-300"
-                        @click="bulkOpen = false"
+                        class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                        :disabled="bulkForm.processing"
+                        @click="closeBulkModal"
                     >
                         Cancel
                     </button>
-                    <PrimaryButton :disabled="bulkForm.processing">{{
-                        bulkForm.processing ? "Uploading..." : "Upload"
-                    }}</PrimaryButton>
+
+                    <PrimaryButton
+                        type="submit"
+                        :disabled="bulkForm.processing || !bulkForm.file"
+                    >
+                        {{
+                            bulkForm.processing
+                                ? "Importing..."
+                                : "Upload & Import"
+                        }}
+                    </PrimaryButton>
                 </div>
             </form>
         </Modal>
@@ -3653,6 +4313,212 @@ const submitStayDates = () => {
                     </PrimaryButton>
                 </div>
             </form>
+        </Modal>
+
+        <Modal
+            :show="bulkResultOpen"
+            @close="bulkResultOpen = false"
+            maxWidth="3xl"
+        >
+            <div class="flex max-h-[90vh] flex-col overflow-hidden bg-white">
+                <!-- Header -->
+                <div class="border-b border-gray-200 px-6 py-4">
+                    <div class="flex items-center gap-3">
+                        <div
+                            class="flex h-12 w-12 items-center justify-center rounded-full bg-green-100"
+                        >
+                            <UploadCloud class="h-6 w-6 text-green-600" />
+                        </div>
+
+                        <div>
+                            <h2 class="text-lg font-semibold text-gray-900">
+                                Bulk Import Completed
+                            </h2>
+
+                            <p class="text-sm text-gray-500">
+                                Resident import finished successfully.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Body -->
+                <div class="flex-1 overflow-y-auto p-6 space-y-6">
+                    <!-- Summary -->
+                    <div class="grid grid-cols-2 gap-4 md:grid-cols-4">
+                        <div class="rounded-xl border p-4">
+                            <p class="text-xs text-gray-500">Processed</p>
+                            <p class="mt-1 text-2xl font-bold">
+                                {{ bulkSummary.processed ?? 0 }}
+                            </p>
+                        </div>
+
+                        <div class="rounded-xl border p-4">
+                            <p class="text-xs text-gray-500">Created</p>
+                            <p class="mt-1 text-2xl font-bold text-green-600">
+                                {{ bulkSummary.residents_created ?? 0 }}
+                            </p>
+                        </div>
+
+                        <div class="rounded-xl border p-4">
+                            <p class="text-xs text-gray-500">Updated</p>
+                            <p class="mt-1 text-2xl font-bold text-blue-600">
+                                {{ bulkSummary.residents_updated ?? 0 }}
+                            </p>
+                        </div>
+
+                        <div class="rounded-xl border p-4">
+                            <p class="text-xs text-gray-500">Failed</p>
+                            <p class="mt-1 text-2xl font-bold text-red-600">
+                                {{ bulkSummary.failed ?? 0 }}
+                            </p>
+                        </div>
+
+                        <div class="rounded-xl border p-4">
+                            <p class="text-xs text-gray-500">Stays Created</p>
+
+                            <p class="mt-1 text-xl font-semibold">
+                                {{ bulkSummary.stays_created ?? 0 }}
+                            </p>
+                        </div>
+
+                        <div class="rounded-xl border p-4">
+                            <p class="text-xs text-gray-500">Check-ins</p>
+
+                            <p class="mt-1 text-xl font-semibold">
+                                {{ bulkSummary.checkins_completed ?? 0 }}
+                            </p>
+                        </div>
+
+                        <div class="rounded-xl border p-4">
+                            <p class="text-xs text-gray-500">
+                                Deposit Invoices
+                            </p>
+
+                            <p class="mt-1 text-xl font-semibold">
+                                {{ bulkSummary.deposit_invoices_created ?? 0 }}
+                            </p>
+                        </div>
+
+                        <div class="rounded-xl border p-4">
+                            <p class="text-xs text-gray-500">
+                                Deposit Payments
+                            </p>
+
+                            <p class="mt-1 text-xl font-semibold">
+                                {{ bulkSummary.deposit_payments_created ?? 0 }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Failures -->
+
+                    <div v-if="bulkFailures.length">
+                        <div class="mb-3 flex items-center justify-between">
+                            <div>
+                                <h3
+                                    class="text-base font-semibold text-red-700"
+                                >
+                                    Failed Rows
+                                </h3>
+
+                                <p class="text-xs text-gray-500">
+                                    These rows could not be imported.
+                                </p>
+                            </div>
+
+                            <a
+                                v-if="
+                                    $page.props.flash.bulk_upload_failure_file
+                                "
+                                :href="
+                                    $page.props.flash.bulk_upload_failure_file
+                                "
+                                class="rounded-lg border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50"
+                            >
+                                Download Failure Report
+                            </a>
+                        </div>
+
+                        <div class="overflow-hidden rounded-xl border">
+                            <div class="max-h-[350px] overflow-y-auto">
+                                <table class="min-w-full text-sm">
+                                    <thead
+                                        class="sticky top-0 bg-gray-50 text-xs uppercase text-gray-600"
+                                    >
+                                        <tr>
+                                            <th class="px-4 py-3 text-left">
+                                                Row
+                                            </th>
+
+                                            <th class="px-4 py-3 text-left">
+                                                Resident
+                                            </th>
+
+                                            <th class="px-4 py-3 text-left">
+                                                Phone
+                                            </th>
+
+                                            <th class="px-4 py-3 text-left">
+                                                Reason
+                                            </th>
+                                        </tr>
+                                    </thead>
+
+                                    <tbody class="divide-y">
+                                        <tr
+                                            v-for="failure in bulkFailures"
+                                            :key="failure.row"
+                                        >
+                                            <td class="px-4 py-3">
+                                                {{ failure.row }}
+                                            </td>
+
+                                            <td class="px-4 py-3">
+                                                {{ failure.name || "-" }}
+                                            </td>
+
+                                            <td class="px-4 py-3">
+                                                {{ failure.phone || "-" }}
+                                            </td>
+
+                                            <td class="px-4 py-3 text-red-600">
+                                                {{ failure.reason }}
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div
+                        v-else
+                        class="rounded-xl border border-green-200 bg-green-50 p-5 text-center"
+                    >
+                        <p class="font-semibold text-green-700">
+                            🎉 No failed rows.
+                        </p>
+
+                        <p class="mt-1 text-sm text-green-600">
+                            Every resident was imported successfully.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+
+                <div
+                    class="flex justify-end gap-2 border-t border-gray-200 px-6 py-4"
+                >
+                    <PrimaryButton
+                        type="button"
+                        @click="bulkResultOpen = false"
+                    >
+                        Close
+                    </PrimaryButton>
+                </div>
+            </div>
         </Modal>
     </AuthenticatedLayout>
 </template>

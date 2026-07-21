@@ -107,6 +107,8 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/checkinout/{stay}/checkout-review', [CheckInOutController::class, 'reviewCheckout'])->name('checkinout.checkout-review');
 
     Route::put('/residents/{resident}/stay-dates', [ResidentController::class, 'updateStayDates'])->name('residents.stay-dates.update')->middleware('permission:residents,edit');
+    Route::get('/residents/bulk-upload/template/csv', [ResidentController::class, 'downloadBulkCsvTemplate'])->name('residents.bulk.template.csv');
+    Route::get('/residents/bulk-upload/template/excel', [ResidentController::class, 'downloadBulkExcelTemplate'])->name('residents.bulk.template.xlsx');
 
     // Billing
     Route::prefix('billing')->group(function () {
