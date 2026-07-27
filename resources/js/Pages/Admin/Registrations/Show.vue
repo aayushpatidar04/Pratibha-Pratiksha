@@ -49,14 +49,6 @@ const formatCurrency = (amount) =>
     "₹" +
     Number(amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 });
 
-const amenityIcons = [
-    { key: "has_ac", icon: Snowflake, label: "AC" },
-    { key: "has_wifi", icon: Wifi, label: "WiFi" },
-    { key: "has_attached_bath", icon: Bath, label: "Attached Bath" },
-    { key: "has_balcony", icon: Sun, label: "Balcony" },
-    { key: "has_study_table", icon: Table2, label: "Study Table" },
-];
-
 // --- Approve modal: pick building/floor/room/bed, see amenities + rent ---
 const approveOpen = ref(false);
 const approveForm = useForm({
@@ -716,23 +708,6 @@ watch(
                     </select>
                 </div>
 
-                <!-- Amenities preview for the selected room -->
-                <div v-if="selectedRoom" class="flex flex-wrap gap-1.5">
-                    <span
-                        v-for="a in amenityIcons.filter(
-                            (x) => selectedRoom[x.key],
-                        )"
-                        :key="a.key"
-                        class="inline-flex items-center gap-1 text-[11px] bg-blue-50 text-blue-700 px-2 py-1 rounded-full"
-                    >
-                        <component :is="a.icon" class="h-3 w-3" /> {{ a.label }}
-                    </span>
-                    <span
-                        v-if="!amenityIcons.some((x) => selectedRoom[x.key])"
-                        class="text-xs text-gray-400"
-                        >No listed amenities for this room</span
-                    >
-                </div>
 
                 <div>
                     <InputLabel value="Bed *" />

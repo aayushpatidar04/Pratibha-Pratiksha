@@ -249,11 +249,6 @@ class RegistrationController extends Controller
                 'capacity',
                 'occupied_beds',
                 'monthly_rent_per_bed',
-                'has_ac',
-                'has_wifi',
-                'has_attached_bath',
-                'has_balcony',
-                'has_study_table',
             ]),
         ]);
     }
