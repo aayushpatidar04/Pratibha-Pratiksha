@@ -105,9 +105,38 @@ const reject = () => {
     });
 };
 
-const markCashPaid = () => {
-    if (!confirm("Mark this cash payment as received?")) return;
-    router.post(`/registrations/${props.application.id}/mark-cash-paid`);
+const cashPaymentOpen = ref(false);
+
+const cashPaymentForm = useForm({
+    payment_date: new Date().toISOString().slice(0,10),
+    notes: "",
+    proofs: [],
+});
+
+const openCashPayment = () => {
+    cashPaymentForm.reset();
+    cashPaymentForm.payment_date =
+        new Date().toISOString().slice(0,10);
+
+    cashPaymentOpen.value = true;
+};
+
+const onCashProofChange = (e) => {
+    cashPaymentForm.proofs = [...e.target.files];
+};
+
+const submitCashPayment = () => {
+    cashPaymentForm.post(
+        `/registrations/${props.application.id}/mark-cash-paid`,
+        {
+            forceFormData: true,
+
+            onSuccess: () => {
+                cashPaymentOpen.value = false;
+                cashPaymentForm.reset();
+            },
+        }
+    );
 };
 
 const estimatedStayDays = computed(() => {
@@ -222,13 +251,13 @@ watch(
                     <button
                         v-if="
                             application.payment_method === 'cash' &&
-                            application.payment_status ===
-                                'pending_verification'
+                            application.payment_status === 'pending_verification'
                         "
-                        @click="markCashPaid"
+                        @click="openCashPayment"
                         class="px-3 py-1.5 bg-orange-500 text-white text-xs font-medium rounded-lg hover:bg-orange-600 flex items-center gap-1.5"
                     >
-                        <Banknote class="w-3.5 h-3.5" /> Mark Cash Paid
+                        <Banknote class="w-3.5 h-3.5" />
+                        Mark Cash Paid
                     </button>
                     <button
                         v-if="application.status !== 'approved'"
@@ -994,6 +1023,79 @@ watch(
                             : "Approve & Create Resident"
                     }}</PrimaryButton>
                 </div>
+            </form>
+        </Modal>
+
+        <Modal
+            :show="cashPaymentOpen"
+            @close="cashPaymentOpen=false"
+        >
+            <form
+                @submit.prevent="submitCashPayment"
+                class="p-6 space-y-4"
+            >
+                <h2 class="text-lg font-semibold">
+                    Mark Cash Payment Received
+                </h2>
+
+                <div>
+                    <InputLabel value="Payment Date *"/>
+
+                    <TextInput
+                        type="date"
+                        v-model="cashPaymentForm.payment_date"
+                        required
+                    />
+
+                    <InputError
+                        :message="cashPaymentForm.errors.payment_date"
+                    />
+                </div>
+
+                <div>
+                    <InputLabel value="Payment Proof"/>
+
+                    <input
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        @change="onCashProofChange"
+                        class="block w-full text-sm"
+                    />
+
+                    <InputError
+                        :message="cashPaymentForm.errors.proofs"
+                    />
+                </div>
+
+                <div>
+                    <InputLabel value="Notes"/>
+
+                    <textarea
+                        rows="3"
+                        v-model="cashPaymentForm.notes"
+                        class="w-full rounded-lg border-gray-300 text-sm"
+                    />
+                </div>
+
+                <div class="flex justify-end gap-2">
+
+                    <button
+                        type="button"
+                        class="px-4 py-2 border rounded-lg"
+                        @click="cashPaymentOpen=false"
+                    >
+                        Cancel
+                    </button>
+
+                    <PrimaryButton
+                        :disabled="cashPaymentForm.processing"
+                    >
+                        Mark Paid
+                    </PrimaryButton>
+
+                </div>
+
             </form>
         </Modal>
     </AuthenticatedLayout>

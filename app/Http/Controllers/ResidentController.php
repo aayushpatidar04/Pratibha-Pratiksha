@@ -25,7 +25,6 @@ use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Throwable;
-
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
@@ -33,6 +32,9 @@ use PhpOffice\PhpSpreadsheet\Style\Font;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Cell\DataValidation;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Contracts\View\View;
+use Symfony\Component\HttpFoundation\Response as HttpResponse;
 
 class ResidentController extends Controller
 {
@@ -1982,9 +1984,9 @@ class ResidentController extends Controller
                 $handle = fopen('php://output', 'w');
 
                 /*
-                * UTF-8 BOM so Excel correctly displays Hindi or other
-                * Unicode characters.
-                */
+                 * UTF-8 BOM so Excel correctly displays Hindi or other
+                 * Unicode characters.
+                 */
                 fwrite($handle, "\xEF\xBB\xBF");
 
                 fputcsv($handle, $headers);
@@ -2007,8 +2009,8 @@ class ResidentController extends Controller
         $spreadsheet = new Spreadsheet();
 
         /*
-        * Residents sheet
-        */
+         * Residents sheet
+         */
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Residents');
 
@@ -2029,8 +2031,8 @@ class ResidentController extends Controller
                         'deposit_notes',
                         'stay_notes',
                     ], true)
-                        ? 35
-                        : 20
+                    ? 35
+                    : 20
                 );
         }
 
@@ -2057,8 +2059,8 @@ class ResidentController extends Controller
         $sheet->setAutoFilter("A1:{$lastColumn}1");
 
         /*
-        * Highlight required columns.
-        */
+         * Highlight required columns.
+         */
         $requiredColumns = [
             'first_name',
             'phone',
@@ -2080,8 +2082,8 @@ class ResidentController extends Controller
         }
 
         /*
-        * Dropdown validations.
-        */
+         * Dropdown validations.
+         */
         $this->addExcelDropdown(
             $sheet,
             $headers,
@@ -2147,8 +2149,8 @@ class ResidentController extends Controller
         );
 
         /*
-        * Instructions sheet.
-        */
+         * Instructions sheet.
+         */
         $instructionSheet = $spreadsheet->createSheet();
         $instructionSheet->setTitle('Instructions');
 
@@ -2289,8 +2291,8 @@ class ResidentController extends Controller
             ->setVertical(Alignment::VERTICAL_TOP);
 
         /*
-        * Save and download.
-        */
+         * Save and download.
+         */
         $temporaryFile = tempnam(
             sys_get_temp_dir(),
             'resident_import_'
@@ -2426,8 +2428,8 @@ class ResidentController extends Controller
         $column = $this->excelColumnName($index + 1);
 
         /*
-        * Add validation to rows 2 through 1000.
-        */
+         * Add validation to rows 2 through 1000.
+         */
         for ($row = 2; $row <= 1000; $row++) {
             $validation = $sheet
                 ->getCell("{$column}{$row}")
@@ -2471,6 +2473,42 @@ class ResidentController extends Controller
         }
 
         return $column;
+    }
+
+    public function profilePrint(Resident $resident): View
+    {
+        $resident = $this->loadResidentProfile($resident);
+
+        return view('residents.profile-print', [
+            'resident' => $resident,
+            'application' => $resident->latestRegistrationApplication,
+            'stays' => $resident->stays,
+            'isPdf' => false,
+        ]);
+    }
+
+    protected function loadResidentProfile(
+        Resident $resident
+    ): Resident {
+        return $resident->load([
+            'currentStay.building:id,name',
+            'currentStay.floor:id,name,floor_number',
+            'currentStay.room:id,room_number',
+            'currentStay.bed:id,bed_number',
+
+            'stays' => fn($query) => $query
+                ->with([
+                    'building:id,name',
+                    'floor:id,name,floor_number',
+                    'room:id,room_number',
+                    'bed:id,bed_number',
+                    'checkedInByUser:id,name',
+                    'checkoutReviewedBy:id,name',
+                ])
+                ->orderByDesc('check_in_date'),
+
+            'latestRegistrationApplication.approvedBy:id,name',
+        ]);
     }
 
 }

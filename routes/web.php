@@ -84,6 +84,8 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/documents/{document}', [DocumentController::class, 'updateStatus'])->name('documents.update')->middleware('permission:kyc,edit');
     Route::delete('/documents/{document}', [DocumentController::class, 'destroy'])->name('documents.destroy')->middleware('permission:kyc,edit');
 
+    Route::get('/residents/{resident}/profile-print', [ResidentController::class, 'profilePrint'])->name('residents.profile.print');
+
     // Residents > Academic Details
     Route::get('/residents/academic-details', [AcademicDetailsController::class, 'index'])->name('academics.index')->middleware('permission:academics,view');
     Route::put('/residents/academic-details/{resident}', [AcademicDetailsController::class, 'update'])->name('academics.update')->middleware('permission:academics,edit');

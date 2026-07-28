@@ -45,6 +45,7 @@ import {
     AlertTriangle,
     Calendar,
     Clock3,
+    Printer,
 } from "lucide-vue-next";
 
 const props = defineProps({
@@ -69,6 +70,17 @@ const bulkSummary = computed(() => page.props.flash?.bulk_upload_summary ?? {});
 const bulkFailures = computed(
     () => page.props.flash?.bulk_upload_failures ?? [],
 );
+
+const printResidentProfile = (resident) => {
+    openActionsFor.value = null;
+
+    window.open(
+        route("residents.profile.print", {
+            resident: resident.id,
+        }),
+        "_blank",
+    );
+};
 
 watch(
     () => page.props.flash?.bulk_upload_summary,
@@ -1072,6 +1084,14 @@ const submitStayDates = () => {
                                         ><Bike class="h-3.5 w-3.5" /> Vehicle
                                         Info</Link
                                     >
+                                    <button
+                                        type="button"
+                                        class="flex w-full items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50"
+                                        @click="printResidentProfile(r)"
+                                    >
+                                        <Printer class="h-3.5 w-3.5" />
+                                        Print Resident Details
+                                    </button>
                                     <div
                                         class="border-t border-gray-200 my-1"
                                     ></div>

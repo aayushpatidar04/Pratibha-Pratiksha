@@ -59,6 +59,22 @@ class Resident extends Model
         return $this->hasOne(ResidentStay::class)->whereIn('status', ['upcoming', 'active'])->latestOfMany();
     }
 
+    public function registrationApplications()
+    {
+        return $this->hasMany(
+            RegistrationApplication::class,
+            'resident_id'
+        );
+    }
+
+    public function latestRegistrationApplication()
+    {
+        return $this->hasOne(
+            RegistrationApplication::class,
+            'resident_id'
+        )->latestOfMany();
+    }
+
     public function documents()
     {
         return $this->hasMany(Document::class);

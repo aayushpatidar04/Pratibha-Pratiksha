@@ -88,9 +88,9 @@ const fieldLabels = computed(() => ({
     dob: t.value.dob.replace(" *", ""),
     age: t.value.age.replace(" *", ""),
     student_mobile: t.value.studentMobile.replace(" *", ""),
-    father_mobile: t.value.fatherMobile,
+    father_mobile: t.value.fatherMobile.replace(" *", ""),
     mother_mobile: t.value.motherMobile,
-    email: t.value.email,
+    email: t.value.email.replace(" *", ""),
     permanent_address: t.value.permanentAddress.replace(" *", ""),
     current_address: t.value.currentAddress,
     father_photo: t.value.fatherPhoto,
@@ -228,10 +228,10 @@ const t = computed(() => ({
     studentMobile:
         props.lang === "hi" ? "छात्र का मोबाइल नंबर *" : "Student Mobile No. *",
     fatherMobile:
-        props.lang === "hi" ? "पिता का मोबाइल नंबर" : "Father's Mobile No.",
+        props.lang === "hi" ? "पिता का मोबाइल नंबर *" : "Father's Mobile No. *",
     motherMobile:
         props.lang === "hi" ? "माता का मोबाइल नंबर" : "Mother's Mobile No.",
-    email: props.lang === "hi" ? "ईमेल" : "Email",
+    email: props.lang === "hi" ? "ईमेल *" : "Email *",
     permanentAddress:
         props.lang === "hi" ? "स्थायी पता *" : "Permanent Address *",
     currentAddress: props.lang === "hi" ? "वर्तमान पता" : "Current Address",
@@ -318,7 +318,7 @@ const t = computed(() => ({
     cashPayment:
         props.lang === "hi"
             ? "नकद भुगतान (कार्यालय में)"
-            : "Cash Payment (At Office)",
+            : "Cash Payment (At Office) Or UPI",
     registrationFee: props.lang === "hi" ? "पंजीकरण शुल्क" : "Registration Fee",
     payNow: props.lang === "hi" ? "अब भुगतान करें" : "Pay Now",
     submitApplication:
@@ -995,6 +995,7 @@ const handleSubmit = async () => {
                                 id="father_mobile"
                                 v-model="form.father_mobile"
                                 type="tel"
+                                required
                                 class="w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
                             />
                         </div>
@@ -1021,6 +1022,7 @@ const handleSubmit = async () => {
                                 id="email"
                                 v-model="form.email"
                                 type="email"
+                                required
                                 class="w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
                             />
                             <p

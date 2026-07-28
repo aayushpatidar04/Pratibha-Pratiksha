@@ -7,6 +7,7 @@ use App\Models\Building;
 use App\Models\FeeInvoice;
 use App\Models\Floor;
 use App\Models\Payment;
+use App\Models\PaymentProof;
 use App\Models\RegistrationApplication;
 use App\Models\Resident;
 use App\Models\ResidentStay;
@@ -71,10 +72,10 @@ class RegistrationController extends Controller
             'dob' => 'required|date|before:today',
             'age' => 'required|integer|min:10|max:100',
             'blood_group' => 'nullable|string|max:10',
-            'student_mobile' => 'required|string|max:15',
-            'father_mobile' => 'nullable|string|max:15',
+            'student_mobile' => 'required|string|max:10',
+            'father_mobile' => 'required|string|max:10',
             'mother_mobile' => 'nullable|string|max:15',
-            'email' => 'nullable|email|max:255',
+            'email' => 'required|email|max:255',
             'permanent_address' => 'required|string',
             'current_address' => 'nullable|string',
             'institution_name' => 'required|string|max:255',
@@ -399,8 +400,15 @@ class RegistrationController extends Controller
      * Admin: Mark a cash payment as received. Only meaningful for cash applications
      * still awaiting verification.
      */
-    public function markCashPaid(RegistrationApplication $application): RedirectResponse
+    public function markCashPaid(Request $request, RegistrationApplication $application): RedirectResponse
     {
+        $validated = $request->validate([
+            'payment_date' => ['required','date'],
+            'notes' => ['nullable','string'],
+            'proofs' => ['nullable','array'],
+            'proofs.*' => ['image','max:5120'],
+        ]);
+
         if ($application->payment_method !== 'cash') {
             return back()->with('error', 'This application was not paid via cash.');
         }
@@ -408,15 +416,15 @@ class RegistrationController extends Controller
         $application->update([
             'status' => $application->status === 'pending' ? 'paid' : $application->status,
             'payment_status' => 'paid',
-            'paid_at' => now(),
+            'paid_at' => $validated['payment_date'],
         ]);
 
-        $this->createRegistrationFeeReceipt($application);
+        $this->createRegistrationFeeReceipt($application, $validated, $request);
 
         return back()->with('success', 'Cash payment marked as received.');
     }
 
-    protected function createRegistrationFeeReceipt(RegistrationApplication $application): ?FeeInvoice
+    protected function createRegistrationFeeReceipt(RegistrationApplication $application, array $data = [], ?Request $request = null): ?FeeInvoice
     {
         if (!$application->registration_fee || $application->registration_fee <= 0) {
             return null;
@@ -469,6 +477,53 @@ class RegistrationController extends Controller
                 'notes' => "Auto-generated on approval of application payment {$application->application_no}",
                 'receipt_number' => 'RCPT-' . now()->format('Ymd') . '-' . str_pad((string) (Payment::count() + 1), 5, '0', STR_PAD_LEFT),
             ]);
+            $payment = Payment::create([
+                'invoice_id' => $invoice->id,
+                'application_id' => $application->id,
+                'resident_id' => $application->resident_id,
+                'amount' => $application->registration_fee,
+
+                'payment_mode' => $application->payment_method === 'razorpay'
+                    ? 'card'
+                    : 'cash',
+
+                'transaction_id' => $application->razorpay_payment_id,
+
+                'payment_date' => $data['payment_date']
+                    ?? $application->paid_at
+                    ?? now(),
+
+                'notes' => $data['notes']
+                    ?? "Registration fee payment",
+
+                'receipt_number' => 'RCPT-'
+                    . now()->format('Ymd')
+                    . '-'
+                    . str_pad(
+                        Payment::count() + 1,
+                        5,
+                        '0',
+                        STR_PAD_LEFT
+                    ),
+            ]);
+
+            if ($request && $request->hasFile('proofs')) {
+
+                foreach ($request->file('proofs') as $file) {
+
+                    $path = $file->store(
+                        'payment_proofs',
+                        'public'
+                    );
+
+                    PaymentProof::create([
+                        'payment_id' => $payment->id,
+                        'file_path' => $path,
+                        'file_type' => $file->getClientOriginalExtension(),
+                        'original_name' => $file->getClientOriginalName(),
+                    ]);
+                }
+            }
         }
 
         return $invoice;
