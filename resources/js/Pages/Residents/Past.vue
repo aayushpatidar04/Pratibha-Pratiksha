@@ -35,7 +35,7 @@ const onSearch = () => {
                     >
                         <History class="h-6 w-6 text-blue-600" /> Past Residents
                     </h1>
-                    <p class="text-sm text-gray-500 mt-0.5">
+                    <p class="text-sm text-gray-700 mt-0.5">
                         Residents whose stay has ended (checked out)
                     </p>
                 </div>
@@ -49,7 +49,7 @@ const onSearch = () => {
 
             <div class="relative w-80">
                 <Search
-                    class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400"
+                    class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-600"
                 />
                 <input
                     v-model="search"
@@ -63,7 +63,7 @@ const onSearch = () => {
                 class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden"
             >
                 <table class="w-full text-sm">
-                    <thead class="bg-gray-50 text-gray-500 text-xs uppercase">
+                    <thead class="bg-gray-50 text-gray-700 text-xs uppercase">
                         <tr>
                             <th class="text-left px-4 py-3">Resident</th>
                             <th class="text-left px-4 py-3">Last Room</th>
@@ -82,7 +82,7 @@ const onSearch = () => {
                                     />
                                     <div
                                         v-else
-                                        class="h-16 w-16 rounded-full bg-gray-100 flex items-center justify-center text-xs text-gray-400"
+                                        class="h-16 w-16 rounded-full bg-gray-100 flex items-center justify-center text-xs text-gray-600"
                                     >
                                         {{ r.first_name?.charAt(0) }}
                                     </div>
@@ -90,7 +90,7 @@ const onSearch = () => {
                                         <p class="font-medium text-gray-900">
                                             {{ r.first_name }} {{ r.last_name }}
                                         </p>
-                                        <p class="text-xs text-gray-400">
+                                        <p class="text-xs text-gray-600">
                                             {{ r.resident_code }}
                                         </p>
                                     </div>
@@ -107,7 +107,7 @@ const onSearch = () => {
                                 {{ r.stays?.[0]?.actual_check_out_date || "—" }}
                             </td>
                             <td
-                                class="px-4 py-3 text-xs capitalize text-gray-500"
+                                class="px-4 py-3 text-xs capitalize text-gray-700"
                             >
                                 {{ r.status }}
                             </td>
@@ -115,7 +115,7 @@ const onSearch = () => {
                         <tr v-if="!residents.data.length">
                             <td
                                 colspan="4"
-                                class="px-4 py-10 text-center text-gray-400"
+                                class="px-4 py-10 text-center text-gray-600"
                             >
                                 No past residents yet
                             </td>

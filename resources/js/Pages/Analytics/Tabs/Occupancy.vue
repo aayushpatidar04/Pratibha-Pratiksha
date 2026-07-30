@@ -246,7 +246,7 @@ const exportUnitSummary = () => {
         <!-- Filters -->
         <div class="flex flex-wrap gap-3 items-end">
             <div>
-                <label class="block text-xs text-gray-500 mb-1">Gender</label>
+                <label class="block text-xs text-gray-700 mb-1">Gender</label>
                 <select
                     v-model="filters.gender"
                     class="rounded-lg border-gray-300 text-sm"
@@ -258,7 +258,7 @@ const exportUnitSummary = () => {
                 </select>
             </div>
             <div>
-                <label class="block text-xs text-gray-500 mb-1">Course</label>
+                <label class="block text-xs text-gray-700 mb-1">Course</label>
                 <select
                     v-model="filters.course"
                     class="rounded-lg border-gray-300 text-sm"
@@ -274,7 +274,7 @@ const exportUnitSummary = () => {
                 </select>
             </div>
             <div>
-                <label class="block text-xs text-gray-500 mb-1"
+                <label class="block text-xs text-gray-700 mb-1"
                     >Institute</label
                 >
                 <select
@@ -292,7 +292,7 @@ const exportUnitSummary = () => {
                 </select>
             </div>
             <div>
-                <label class="block text-xs text-gray-500 mb-1">Batch</label>
+                <label class="block text-xs text-gray-700 mb-1">Batch</label>
                 <select
                     v-model="filters.batch"
                     class="rounded-lg border-gray-300 text-sm"
@@ -308,7 +308,7 @@ const exportUnitSummary = () => {
                 </select>
             </div>
             <div>
-                <label class="block text-xs text-gray-500 mb-1">Year</label>
+                <label class="block text-xs text-gray-700 mb-1">Year</label>
                 <select
                     v-model="filters.year"
                     class="rounded-lg border-gray-300 text-sm"
@@ -343,19 +343,19 @@ const exportUnitSummary = () => {
                 <p class="text-2xl font-bold text-gray-900">
                     {{ occupancy.summary.total_capacity }}
                 </p>
-                <p class="text-xs text-gray-400">Total Capacity</p>
+                <p class="text-xs text-gray-600">Total Capacity</p>
             </div>
             <div class="bg-white rounded-xl border border-gray-100 p-4">
                 <p class="text-2xl font-bold text-blue-600">
                     {{ occupancy.summary.filled_capacity }}
                 </p>
-                <p class="text-xs text-gray-400">Filled Capacity</p>
+                <p class="text-xs text-gray-600">Filled Capacity</p>
             </div>
             <div class="bg-white rounded-xl border border-gray-100 p-4">
                 <p class="text-2xl font-bold text-green-600">
                     {{ occupancy.summary.vacant_capacity }}
                 </p>
-                <p class="text-xs text-gray-400">Vacant Capacity</p>
+                <p class="text-xs text-gray-600">Vacant Capacity</p>
             </div>
             <div
                 class="bg-white rounded-xl border border-gray-100 p-4 flex items-center gap-3"
@@ -371,11 +371,11 @@ const exportUnitSummary = () => {
                     :center-label="occupancy.summary.occupancy_percent + '%'"
                 />
                 <div>
-                    <p class="text-xs text-gray-400">Occupancy (Capacity) %</p>
-                    <p class="text-xs text-gray-500 mt-1">
+                    <p class="text-xs text-gray-600">Occupancy (Capacity) %</p>
+                    <p class="text-xs text-gray-700 mt-1">
                         Active <b>{{ occupancy.summary.filled_capacity }}</b>
                     </p>
-                    <p class="text-xs text-gray-500">
+                    <p class="text-xs text-gray-700">
                         Available <b>{{ occupancy.summary.vacant_capacity }}</b>
                     </p>
                 </div>
@@ -469,7 +469,7 @@ const exportUnitSummary = () => {
                 <div class="flex flex-wrap items-center gap-2">
                     <div class="relative">
                         <Search
-                            class="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400"
+                            class="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-600"
                         />
                         <input
                             v-model="search"
@@ -523,7 +523,7 @@ const exportUnitSummary = () => {
                     </div>
                 </div>
             </div>
-            <p class="text-xs text-gray-400">
+            <p class="text-xs text-gray-600">
                 Click on a Hostel to check detailed occupancy!
             </p>
 
@@ -557,17 +557,17 @@ const exportUnitSummary = () => {
                                         {{ b.name }}
                                     </p>
                                     <div
-                                        class="flex gap-4 mt-1.5 text-xs text-gray-500"
+                                        class="flex gap-4 mt-1.5 text-xs text-gray-700"
                                     >
                                         <span
                                             >{{ b.capacity }}<br /><span
-                                                class="text-[10px] text-gray-400"
+                                                class="text-[10px] text-gray-600"
                                                 >Capacity</span
                                             ></span
                                         >
                                         <span
                                             >{{ b.vacant }}<br /><span
-                                                class="text-[10px] text-gray-400"
+                                                class="text-[10px] text-gray-600"
                                                 >Vacant</span
                                             ></span
                                         >
@@ -595,7 +595,7 @@ const exportUnitSummary = () => {
                                             ? ChevronUp
                                             : ChevronDown
                                     "
-                                    class="h-4 w-4 text-gray-400"
+                                    class="h-4 w-4 text-gray-600"
                                 />
                             </div>
                         </button>
@@ -666,7 +666,7 @@ const exportUnitSummary = () => {
                     >
                         <table class="w-full text-sm">
                             <thead
-                                class="bg-gray-50 text-gray-500 text-xs uppercase"
+                                class="bg-gray-50 text-gray-700 text-xs uppercase"
                             >
                                 <tr>
                                     <th class="text-left px-3 py-2">
@@ -751,7 +751,7 @@ const exportUnitSummary = () => {
                                 >
                                     <td
                                         colspan="9"
-                                        class="px-3 py-6 text-center text-gray-400"
+                                        class="px-3 py-6 text-center text-gray-600"
                                     >
                                         No rooms of any type in this building
                                         yet
@@ -768,7 +768,7 @@ const exportUnitSummary = () => {
                     >
                         <table class="w-full text-sm">
                             <thead
-                                class="bg-gray-50 text-gray-500 text-xs uppercase"
+                                class="bg-gray-50 text-gray-700 text-xs uppercase"
                             >
                                 <tr>
                                     <th class="text-left px-3 py-2">
@@ -851,7 +851,7 @@ const exportUnitSummary = () => {
                                 >
                                     <td
                                         colspan="8"
-                                        class="px-3 py-6 text-center text-gray-400"
+                                        class="px-3 py-6 text-center text-gray-600"
                                     >
                                         No rooms of any type in this building
                                         yet
@@ -902,7 +902,7 @@ const exportUnitSummary = () => {
                                     ? ChevronUp
                                     : ChevronDown
                             "
-                            class="h-4 w-4 text-gray-400"
+                            class="h-4 w-4 text-gray-600"
                         />
                     </button>
                     <div
@@ -917,7 +917,7 @@ const exportUnitSummary = () => {
                             <p class="text-sm font-medium text-gray-900">
                                 {{ b.name }}
                             </p>
-                            <div class="flex gap-4 mt-1 text-xs text-gray-500">
+                            <div class="flex gap-4 mt-1 text-xs text-gray-700">
                                 <span
                                     >{{ b.occupied }} / {{ b.capacity
                                     }}<br /><span class="text-[10px]"

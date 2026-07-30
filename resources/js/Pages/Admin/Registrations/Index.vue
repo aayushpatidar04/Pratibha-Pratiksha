@@ -93,7 +93,7 @@ const formatCurrency = (amount) =>
                 <h2 class="text-xl font-semibold text-gray-900">
                     Registration Applications
                 </h2>
-                <p class="text-sm text-gray-500 mt-0.5">
+                <p class="text-sm text-gray-700 mt-0.5">
                     Review and process incoming resident registrations
                 </p>
             </div>
@@ -107,7 +107,7 @@ const formatCurrency = (amount) =>
                 >
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-xs text-gray-500">Pending Review</p>
+                            <p class="text-xs text-gray-700">Pending Review</p>
                             <p class="text-2xl font-bold text-gray-900 mt-1">
                                 {{ stats.pending }}
                             </p>
@@ -124,7 +124,7 @@ const formatCurrency = (amount) =>
                 >
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-xs text-gray-500">Paid (Online)</p>
+                            <p class="text-xs text-gray-700">Paid (Online)</p>
                             <p class="text-2xl font-bold text-gray-900 mt-1">
                                 {{ stats.paid }}
                             </p>
@@ -141,7 +141,7 @@ const formatCurrency = (amount) =>
                 >
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-xs text-gray-500">Approved</p>
+                            <p class="text-xs text-gray-700">Approved</p>
                             <p class="text-2xl font-bold text-gray-900 mt-1">
                                 {{ stats.approved }}
                             </p>
@@ -158,7 +158,7 @@ const formatCurrency = (amount) =>
                 >
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-xs text-gray-500">Cash Pending</p>
+                            <p class="text-xs text-gray-700">Cash Pending</p>
                             <p class="text-2xl font-bold text-gray-900 mt-1">
                                 {{ stats.cash_pending }}
                             </p>
@@ -179,7 +179,7 @@ const formatCurrency = (amount) =>
                 <div class="flex flex-col sm:flex-row gap-3">
                     <div class="relative flex-1">
                         <Search
-                            class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
+                            class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600"
                         />
                         <input
                             v-model="search"
@@ -247,7 +247,7 @@ const formatCurrency = (amount) =>
                                             class="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center"
                                         >
                                             <User
-                                                class="w-4 h-4 text-gray-400"
+                                                class="w-4 h-4 text-gray-600"
                                             />
                                         </div>
                                         <div>
@@ -256,7 +256,7 @@ const formatCurrency = (amount) =>
                                             >
                                                 {{ app.student_name }}
                                             </p>
-                                            <p class="text-xs text-gray-500">
+                                            <p class="text-xs text-gray-700">
                                                 {{ app.institution_name }}
                                             </p>
                                         </div>
@@ -314,7 +314,7 @@ const formatCurrency = (amount) =>
                                         >{{ app.status }}</span
                                     >
                                 </td>
-                                <td class="px-4 py-3 text-gray-500 text-xs">
+                                <td class="px-4 py-3 text-gray-700 text-xs">
                                     {{ formatDate(app.created_at) }}
                                 </td>
                                 <td class="px-4 py-3">
@@ -323,7 +323,7 @@ const formatCurrency = (amount) =>
                                     >
                                         <Link
                                             :href="`/registrations/${app.id}`"
-                                            class="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-blue-600"
+                                            class="p-1.5 rounded-lg hover:bg-gray-100 text-gray-700 hover:text-blue-600"
                                             title="View Details"
                                         >
                                             <Eye class="w-4 h-4" />
@@ -369,7 +369,7 @@ const formatCurrency = (amount) =>
                             <tr v-if="!applications.data.length">
                                 <td
                                     colspan="8"
-                                    class="px-4 py-12 text-center text-gray-400"
+                                    class="px-4 py-12 text-center text-gray-600"
                                 >
                                     <div
                                         class="flex flex-col items-center gap-2"
@@ -388,7 +388,7 @@ const formatCurrency = (amount) =>
                     v-if="applications.links?.length > 3"
                     class="px-4 py-3 border-t border-gray-100 flex items-center justify-between"
                 >
-                    <div class="text-xs text-gray-500">
+                    <div class="text-xs text-gray-700">
                         Showing {{ applications.from }} to
                         {{ applications.to }} of
                         {{ applications.total }} entries

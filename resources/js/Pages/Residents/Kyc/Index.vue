@@ -118,7 +118,7 @@ const setDocStatus = (document, status) => {
                         <ShieldCheck class="h-6 w-6 text-blue-600" /> KYC
                         Verification
                     </h1>
-                    <p class="text-sm text-gray-500 mt-0.5">
+                    <p class="text-sm text-gray-700 mt-0.5">
                         Track document submission and verification per resident
                     </p>
                 </div>
@@ -147,7 +147,7 @@ const setDocStatus = (document, status) => {
                     <p class="text-lg font-bold text-green-600">
                         {{ counts.complete }}
                     </p>
-                    <p class="text-xs text-gray-400">Complete</p>
+                    <p class="text-xs text-gray-600">Complete</p>
                 </div>
                 <div
                     class="bg-white rounded-xl border border-gray-100 p-3 text-center"
@@ -155,7 +155,7 @@ const setDocStatus = (document, status) => {
                     <p class="text-lg font-bold text-amber-600">
                         {{ counts.pending_verification }}
                     </p>
-                    <p class="text-xs text-gray-400">Pending Verification</p>
+                    <p class="text-xs text-gray-600">Pending Verification</p>
                 </div>
                 <div
                     class="bg-white rounded-xl border border-gray-100 p-3 text-center"
@@ -163,13 +163,13 @@ const setDocStatus = (document, status) => {
                     <p class="text-lg font-bold text-red-600">
                         {{ counts.incomplete }}
                     </p>
-                    <p class="text-xs text-gray-400">Incomplete</p>
+                    <p class="text-xs text-gray-600">Incomplete</p>
                 </div>
             </div>
 
             <div class="relative w-80">
                 <Search
-                    class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400"
+                    class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-600"
                 />
                 <input
                     v-model="search"
@@ -183,7 +183,7 @@ const setDocStatus = (document, status) => {
                 class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden"
             >
                 <table class="w-full text-sm">
-                    <thead class="bg-gray-50 text-gray-500 text-xs uppercase">
+                    <thead class="bg-gray-50 text-gray-700 text-xs uppercase">
                         <tr>
                             <th class="text-left px-4 py-3">Resident</th>
                             <th class="text-left px-4 py-3">KYC Status</th>
@@ -202,7 +202,7 @@ const setDocStatus = (document, status) => {
                                     />
                                     <div
                                         v-else
-                                        class="h-16 w-16 rounded-full bg-gray-100 flex items-center justify-center text-xs text-gray-400"
+                                        class="h-16 w-16 rounded-full bg-gray-100 flex items-center justify-center text-xs text-gray-600"
                                     >
                                         {{ r.first_name?.charAt(0) }}
                                     </div>
@@ -210,7 +210,7 @@ const setDocStatus = (document, status) => {
                                         <p class="font-medium text-gray-900">
                                             {{ r.first_name }} {{ r.last_name }}
                                         </p>
-                                        <p class="text-xs text-gray-400">
+                                        <p class="text-xs text-gray-600">
                                             {{ r.resident_code }}
                                         </p>
                                     </div>
@@ -222,7 +222,7 @@ const setDocStatus = (document, status) => {
                                     >{{ statusMeta[r.kyc_status].label }}</Badge
                                 >
                             </td>
-                            <td class="px-4 py-3 text-xs text-gray-500">
+                            <td class="px-4 py-3 text-xs text-gray-700">
                                 {{ r.documents?.length || 0 }} uploaded
                             </td>
                             <td class="px-4 py-3 text-right">
@@ -238,7 +238,7 @@ const setDocStatus = (document, status) => {
                         <tr v-if="!residents.data.length">
                             <td
                                 colspan="4"
-                                class="px-4 py-10 text-center text-gray-400"
+                                class="px-4 py-10 text-center text-gray-600"
                             >
                                 No residents found
                             </td>
@@ -323,7 +323,7 @@ const setDocStatus = (document, status) => {
                                     >View file</a
                                 >
                             </div>
-                            <p v-else class="text-xs text-gray-400 mt-1">
+                            <p v-else class="text-xs text-gray-600 mt-1">
                                 Not uploaded
                             </p>
                         </div>

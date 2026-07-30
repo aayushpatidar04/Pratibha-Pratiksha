@@ -70,7 +70,7 @@ const setStatus = (p, status) => router.put(`/gate/${p.id}`, { status });
                         <ShieldCheck class="h-6 w-6 text-blue-600" /> Gate
                         Passes
                     </h1>
-                    <p class="text-sm text-gray-500 mt-0.5">
+                    <p class="text-sm text-gray-700 mt-0.5">
                         Day outs, night passes, visitor entries and late entries
                     </p>
                 </div>
@@ -86,7 +86,7 @@ const setStatus = (p, status) => router.put(`/gate/${p.id}`, { status });
                     <p class="text-lg font-bold text-amber-600">
                         {{ stats.pending }}
                     </p>
-                    <p class="text-xs text-gray-400">Pending</p>
+                    <p class="text-xs text-gray-600">Pending</p>
                 </div>
                 <div
                     class="bg-white rounded-xl border border-gray-100 p-3 text-center"
@@ -94,7 +94,7 @@ const setStatus = (p, status) => router.put(`/gate/${p.id}`, { status });
                     <p class="text-lg font-bold text-green-600">
                         {{ stats.approved }}
                     </p>
-                    <p class="text-xs text-gray-400">Approved</p>
+                    <p class="text-xs text-gray-600">Approved</p>
                 </div>
                 <div
                     class="bg-white rounded-xl border border-gray-100 p-3 text-center"
@@ -102,7 +102,7 @@ const setStatus = (p, status) => router.put(`/gate/${p.id}`, { status });
                     <p class="text-lg font-bold text-blue-600">
                         {{ stats.used }}
                     </p>
-                    <p class="text-xs text-gray-400">Used</p>
+                    <p class="text-xs text-gray-600">Used</p>
                 </div>
             </div>
 
@@ -124,7 +124,7 @@ const setStatus = (p, status) => router.put(`/gate/${p.id}`, { status });
                 class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden"
             >
                 <table class="w-full text-sm">
-                    <thead class="bg-gray-50 text-gray-500 text-xs uppercase">
+                    <thead class="bg-gray-50 text-gray-700 text-xs uppercase">
                         <tr>
                             <th class="text-left px-4 py-3">Resident</th>
                             <th class="text-left px-4 py-3">Type</th>
@@ -180,7 +180,7 @@ const setStatus = (p, status) => router.put(`/gate/${p.id}`, { status });
                         <tr v-if="!passes.data.length">
                             <td
                                 colspan="5"
-                                class="px-4 py-10 text-center text-gray-400"
+                                class="px-4 py-10 text-center text-gray-600"
                             >
                                 No gate passes found
                             </td>

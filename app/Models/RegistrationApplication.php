@@ -54,6 +54,7 @@ class RegistrationApplication extends Model
         'family_photo2',
         'guardian_photo',
         'payment_method',
+        'registration_payment_proof',
         'razorpay_order_id',
         'razorpay_payment_id',
         'razorpay_signature',
@@ -124,5 +125,9 @@ class RegistrationApplication extends Model
     public function allottedBed()
     {
         return $this->belongsTo(Bed::class, 'allotted_bed_id');
+    }
+
+    public function invoices(){
+        return $this->hasMany(FeeInvoice::class, 'application_id');
     }
 }

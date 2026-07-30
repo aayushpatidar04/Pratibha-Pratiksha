@@ -16,7 +16,7 @@ import ApplicationLogo from '@/Components/ApplicationLogo.vue';
             </div>
             <div>
                 <p class="font-bold text-gray-900 text-lg">Pratibha Pratiksha</p>
-                <p class="text-sm text-gray-500 text-thin">Hostel Management</p>
+                <p class="text-sm text-gray-700 text-thin">Hostel Management</p>
             </div>
         </Link>
 

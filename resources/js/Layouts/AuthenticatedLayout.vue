@@ -250,7 +250,7 @@ const logout = () => router.post("/logout");
                     <ApplicationLogo :width="200" />
                 </Link>
                 <button
-                    class="lg:hidden text-gray-500"
+                    class="lg:hidden text-gray-700"
                     @click="mobileOpen = false"
                 >
                     <X class="h-5 w-5" />
@@ -267,7 +267,7 @@ const logout = () => router.post("/logout");
                             <span class="flex items-center gap-2">
                                 <component
                                     :is="item.icon"
-                                    class="h-4 w-4 text-gray-500"
+                                    class="h-4 w-4 text-gray-700"
                                 />
                                 {{ item.label }}
                             </span>
@@ -277,7 +277,7 @@ const logout = () => router.post("/logout");
                                         ? ChevronDown
                                         : ChevronRight
                                 "
-                                class="h-3.5 w-3.5 text-gray-400"
+                                class="h-3.5 w-3.5 text-gray-600"
                             />
                         </button>
                         <div
@@ -319,7 +319,7 @@ const logout = () => router.post("/logout");
                             :class="
                                 isActive(item.path)
                                     ? 'text-blue-600'
-                                    : 'text-gray-500'
+                                    : 'text-gray-700'
                             "
                         />
                         {{ item.label }}
@@ -332,7 +332,7 @@ const logout = () => router.post("/logout");
                     href="/profile"
                     class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-100"
                 >
-                    <Settings class="h-4 w-4 text-gray-500" /> Settings
+                    <Settings class="h-4 w-4 text-gray-700" /> Settings
                 </Link>
                 <button
                     @click="logout"
@@ -354,7 +354,7 @@ const logout = () => router.post("/logout");
                 >
                     <Menu class="h-5 w-5" />
                 </button>
-                <div class="hidden lg:block text-sm text-gray-500">
+                <div class="hidden lg:block text-sm text-gray-700">
                     <slot name="header" />
                 </div>
                 <div class="relative ml-auto">
@@ -371,7 +371,7 @@ const logout = () => router.post("/logout");
                             class="hidden sm:block font-medium text-gray-700"
                             >{{ user?.name }}</span
                         >
-                        <ChevronDown class="h-3.5 w-3.5 text-gray-400" />
+                        <ChevronDown class="h-3.5 w-3.5 text-gray-600" />
                     </button>
                     <div
                         v-if="userMenuOpen"

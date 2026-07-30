@@ -108,15 +108,14 @@ const reject = () => {
 const cashPaymentOpen = ref(false);
 
 const cashPaymentForm = useForm({
-    payment_date: new Date().toISOString().slice(0,10),
+    payment_date: new Date().toISOString().slice(0, 10),
     notes: "",
     proofs: [],
 });
 
 const openCashPayment = () => {
     cashPaymentForm.reset();
-    cashPaymentForm.payment_date =
-        new Date().toISOString().slice(0,10);
+    cashPaymentForm.payment_date = new Date().toISOString().slice(0, 10);
 
     cashPaymentOpen.value = true;
 };
@@ -135,7 +134,7 @@ const submitCashPayment = () => {
                 cashPaymentOpen.value = false;
                 cashPaymentForm.reset();
             },
-        }
+        },
     );
 };
 
@@ -180,7 +179,9 @@ watch(
     (basis) => {
         if (basis === "monthly") {
             approveForm.daily_rate = 350;
-            approveForm.expected_check_out_date = props.application.stay_duration_to?.slice(0, 10) || new Date().toISOString().slice(0, 10);
+            approveForm.expected_check_out_date =
+                props.application.stay_duration_to?.slice(0, 10) ||
+                new Date().toISOString().slice(0, 10);
         } else {
             approveForm.rent_amount = "";
             approveForm.daily_rate = approveForm.daily_rate || 350;
@@ -202,14 +203,14 @@ watch(
             <div class="flex items-center gap-3">
                 <Link
                     href="/registrations"
-                    class="p-2 rounded-lg hover:bg-gray-100 text-gray-500"
+                    class="p-2 rounded-lg hover:bg-gray-100 text-gray-700"
                     ><ArrowLeft class="w-5 h-5"
                 /></Link>
                 <div>
                     <h2 class="text-xl font-semibold text-gray-900">
                         Application Details
                     </h2>
-                    <p class="text-sm text-gray-500">
+                    <p class="text-sm text-gray-700">
                         {{ application.application_no }}
                     </p>
                 </div>
@@ -246,12 +247,21 @@ watch(
                         class="font-normal"
                         >— can still be approved later</span
                     >
+                    <a
+                        v-if="registrationFeePaymentId"
+                        :href="`/billing/payments/${registrationFeePaymentId}/receipt`"
+                        target="_blank"
+                        class="text-xs text-green-700 hover:underline mt-1 ml-4 inline-block"
+                    >
+                        View payment receipt →
+                    </a>
                 </span>
                 <div class="flex gap-2">
                     <button
                         v-if="
                             application.payment_method === 'cash' &&
-                            application.payment_status === 'pending_verification'
+                            application.payment_status ===
+                                'pending_verification'
                         "
                         @click="openCashPayment"
                         class="px-3 py-1.5 bg-orange-500 text-white text-xs font-medium rounded-lg hover:bg-orange-600 flex items-center gap-1.5"
@@ -319,7 +329,7 @@ watch(
                     <h3 class="text-sm font-semibold text-gray-900">Photos</h3>
                     <div class="space-y-3">
                         <div>
-                            <p class="text-xs text-gray-500 mb-1">Student</p>
+                            <p class="text-xs text-gray-700 mb-1">Student</p>
                             <img
                                 v-if="application.student_photo"
                                 :src="`/storage/${application.student_photo}`"
@@ -334,7 +344,7 @@ watch(
                         </div>
                         <div class="grid grid-cols-2 gap-2">
                             <div>
-                                <p class="text-xs text-gray-500 mb-1">Father</p>
+                                <p class="text-xs text-gray-700 mb-1">Father</p>
                                 <img
                                     v-if="application.father_photo"
                                     :src="`/storage/${application.father_photo}`"
@@ -348,7 +358,7 @@ watch(
                                 </div>
                             </div>
                             <div>
-                                <p class="text-xs text-gray-500 mb-1">Mother</p>
+                                <p class="text-xs text-gray-700 mb-1">Mother</p>
                                 <img
                                     v-if="application.mother_photo"
                                     :src="`/storage/${application.mother_photo}`"
@@ -379,43 +389,43 @@ watch(
                         <div class="grid grid-cols-2 gap-4 text-sm">
                             <div>
                                 <span class="font-medium">Name: </span>
-                                <span class="text-gray-500">{{
+                                <span class="text-gray-700">{{
                                     application.student_name
                                 }}</span>
                             </div>
                             <div>
                                 <span class="font-medium">Father: </span>
-                                <span class="text-gray-500">{{
+                                <span class="text-gray-700">{{
                                     application.father_name || "-"
                                 }}</span>
                             </div>
                             <div>
                                 <span class="font-medium">Mother: </span>
-                                <span class="text-gray-500">{{
+                                <span class="text-gray-700">{{
                                     application.mother_name || "-"
                                 }}</span>
                             </div>
                             <div>
                                 <span class="font-medium">DOB: </span>
-                                <span class="text-gray-500">{{
+                                <span class="text-gray-700">{{
                                     formatDate(application.dob)
                                 }}</span>
                             </div>
                             <div>
                                 <span class="font-medium">Age: </span>
-                                <span class="text-gray-500">{{
+                                <span class="text-gray-700">{{
                                     application.age || "-"
                                 }}</span>
                             </div>
                             <div>
                                 <span class="font-medium">Blood Group: </span>
-                                <span class="text-gray-500">{{
+                                <span class="text-gray-700">{{
                                     application.blood_group || "-"
                                 }}</span>
                             </div>
                             <div class="col-span-2">
                                 <span class="font-medium">Address: </span>
-                                <span class="text-gray-500">{{
+                                <span class="text-gray-700">{{
                                     application.permanent_address || "-"
                                 }}</span>
                             </div>
@@ -433,19 +443,19 @@ watch(
                         <div class="grid grid-cols-3 gap-4 text-sm">
                             <div>
                                 <span class="font-medium">Student: </span>
-                                <span class="text-gray-500">{{
+                                <span class="text-gray-700">{{
                                     application.student_mobile
                                 }}</span>
                             </div>
                             <div>
                                 <span class="font-medium">Father: </span>
-                                <span class="text-gray-500">{{
+                                <span class="text-gray-700">{{
                                     application.father_mobile || "-"
                                 }}</span>
                             </div>
                             <div>
                                 <span class="font-medium">Mother: </span>
-                                <span class="text-gray-500">{{
+                                <span class="text-gray-700">{{
                                     application.mother_mobile || "-"
                                 }}</span>
                             </div>
@@ -464,19 +474,19 @@ watch(
                         <div class="grid grid-cols-3 gap-4 text-sm">
                             <div>
                                 <span class="font-medium">Institution: </span>
-                                <span class="text-gray-500">{{
+                                <span class="text-gray-700">{{
                                     application.institution_name || "-"
                                 }}</span>
                             </div>
                             <div>
                                 <span class="font-medium">Course: </span>
-                                <span class="text-gray-500">{{
+                                <span class="text-gray-700">{{
                                     application.course_name || "-"
                                 }}</span>
                             </div>
                             <div>
                                 <span class="font-medium">Duration: </span>
-                                <span class="text-gray-500">{{
+                                <span class="text-gray-700">{{
                                     application.course_duration || "-"
                                 }}</span>
                             </div>
@@ -495,7 +505,7 @@ watch(
                         <div class="grid grid-cols-2 gap-4 text-sm">
                             <div>
                                 <span class="font-medium">Stay Duration: </span>
-                                <span class="text-gray-500"
+                                <span class="text-gray-700"
                                     >{{
                                         formatDate(
                                             application.stay_duration_from,
@@ -511,7 +521,7 @@ watch(
                                 <span class="font-medium"
                                     >Room Preference:
                                 </span>
-                                <span class="text-gray-500">{{
+                                <span class="text-gray-700">{{
                                     application.room_type?.replace("_", " ") ||
                                     "Any"
                                 }}</span>
@@ -535,7 +545,7 @@ watch(
                             </div>
                             <div>
                                 <span class="font-medium">Number: </span>
-                                <span class="text-gray-500">{{
+                                <span class="text-gray-700">{{
                                     application.vehicle_number
                                 }}</span>
                             </div>
@@ -556,14 +566,14 @@ watch(
                                 <p class="font-medium text-sm">
                                     {{ application.guardian1_name }}
                                 </p>
-                                <p class="text-xs text-gray-500">
+                                <p class="text-xs text-gray-700">
                                     {{ application.guardian1_mobile }} •
                                     {{
                                         application.guardian1_occupation ||
                                         "N/A"
                                     }}
                                 </p>
-                                <p class="text-xs text-gray-500">
+                                <p class="text-xs text-gray-700">
                                     {{ application.guardian1_address }}
                                 </p>
                             </div>
@@ -574,14 +584,14 @@ watch(
                                 <p class="font-medium text-sm">
                                     {{ application.guardian2_name }}
                                 </p>
-                                <p class="text-xs text-gray-500">
+                                <p class="text-xs text-gray-700">
                                     {{ application.guardian2_mobile }} •
                                     {{
                                         application.guardian2_occupation ||
                                         "N/A"
                                     }}
                                 </p>
-                                <p class="text-xs text-gray-500">
+                                <p class="text-xs text-gray-700">
                                     {{ application.guardian2_address }}
                                 </p>
                             </div>
@@ -590,7 +600,7 @@ watch(
                                     !application.guardian1_name &&
                                     !application.guardian2_name
                                 "
-                                class="text-sm text-gray-400"
+                                class="text-sm text-gray-600"
                             >
                                 No guardians listed
                             </p>
@@ -610,7 +620,7 @@ watch(
                             <div class="flex">
                                 <span class="font-medium me-5">Mode: </span>
                                 <span
-                                    class="text-gray-500 flex items-center gap-1"
+                                    class="text-gray-700 flex items-center gap-1"
                                 >
                                     <CreditCard
                                         v-if="
@@ -625,13 +635,13 @@ watch(
                             </div>
                             <div>
                                 <span class="font-medium">Amount: </span>
-                                <span class="text-gray-500">{{
+                                <span class="text-gray-700">{{
                                     formatCurrency(application.registration_fee)
                                 }}</span>
                             </div>
                             <div>
                                 <span class="font-medium">Status: </span>
-                                <span class="text-gray-500 capitalize">{{
+                                <span class="text-gray-700 capitalize">{{
                                     application.payment_status?.replace(
                                         "_",
                                         " ",
@@ -668,7 +678,7 @@ watch(
                 <h2 class="text-lg font-semibold text-gray-900">
                     Approve & Allot Room
                 </h2>
-                <p class="text-sm text-gray-500">
+                <p class="text-sm text-gray-700">
                     This creates a resident record for
                     <b>{{ application.student_name }}</b> and allots the bed you
                     pick below. Gender wasn't collected on the application form,
@@ -737,7 +747,6 @@ watch(
                     </select>
                 </div>
 
-
                 <div>
                     <InputLabel value="Bed *" />
                     <select
@@ -764,7 +773,7 @@ watch(
                         <h3 class="text-sm font-semibold text-gray-900">
                             Stay & Billing Details
                         </h3>
-                        <p class="mt-0.5 text-xs text-gray-500">
+                        <p class="mt-0.5 text-xs text-gray-700">
                             Choose monthly billing for regular residents or
                             daily billing for short stays.
                         </p>
@@ -796,7 +805,7 @@ watch(
                                             approveForm.billing_basis ===
                                             'monthly'
                                                 ? 'bg-blue-100 text-blue-700'
-                                                : 'bg-gray-100 text-gray-500'
+                                                : 'bg-gray-100 text-gray-700'
                                         "
                                     >
                                         <Calendar class="h-4 w-4" />
@@ -808,7 +817,7 @@ watch(
                                         >
                                             Monthly
                                         </p>
-                                        <p class="mt-0.5 text-xs text-gray-500">
+                                        <p class="mt-0.5 text-xs text-gray-700">
                                             Regular resident billed month-wise.
                                         </p>
                                     </div>
@@ -837,7 +846,7 @@ watch(
                                             approveForm.billing_basis ===
                                             'daily'
                                                 ? 'bg-emerald-100 text-emerald-700'
-                                                : 'bg-gray-100 text-gray-500'
+                                                : 'bg-gray-100 text-gray-700'
                                         "
                                     >
                                         <Clock3 class="h-4 w-4" />
@@ -849,7 +858,7 @@ watch(
                                         >
                                             Daily Short Stay
                                         </p>
-                                        <p class="mt-0.5 text-xs text-gray-500">
+                                        <p class="mt-0.5 text-xs text-gray-700">
                                             Charged per occupied day.
                                         </p>
                                     </div>
@@ -991,9 +1000,9 @@ watch(
                             class="w-full"
                         />
 
-                        <p class="mt-1 text-xs text-gray-400">
-                            One-time refundable deposit for this stay. It will not be included in
-                            monthly billing.
+                        <p class="mt-1 text-xs text-gray-600">
+                            One-time refundable deposit for this stay. It will
+                            not be included in monthly billing.
                         </p>
 
                         <InputError
@@ -1026,20 +1035,14 @@ watch(
             </form>
         </Modal>
 
-        <Modal
-            :show="cashPaymentOpen"
-            @close="cashPaymentOpen=false"
-        >
-            <form
-                @submit.prevent="submitCashPayment"
-                class="p-6 space-y-4"
-            >
+        <Modal :show="cashPaymentOpen" @close="cashPaymentOpen = false">
+            <form @submit.prevent="submitCashPayment" class="p-6 space-y-4">
                 <h2 class="text-lg font-semibold">
                     Mark Cash Payment Received
                 </h2>
 
                 <div>
-                    <InputLabel value="Payment Date *"/>
+                    <InputLabel value="Payment Date *" />
 
                     <TextInput
                         type="date"
@@ -1053,7 +1056,7 @@ watch(
                 </div>
 
                 <div>
-                    <InputLabel value="Payment Proof"/>
+                    <InputLabel value="Payment Proof" />
 
                     <input
                         type="file"
@@ -1063,13 +1066,11 @@ watch(
                         class="block w-full text-sm"
                     />
 
-                    <InputError
-                        :message="cashPaymentForm.errors.proofs"
-                    />
+                    <InputError :message="cashPaymentForm.errors.proofs" />
                 </div>
 
                 <div>
-                    <InputLabel value="Notes"/>
+                    <InputLabel value="Notes" />
 
                     <textarea
                         rows="3"
@@ -1079,23 +1080,18 @@ watch(
                 </div>
 
                 <div class="flex justify-end gap-2">
-
                     <button
                         type="button"
                         class="px-4 py-2 border rounded-lg"
-                        @click="cashPaymentOpen=false"
+                        @click="cashPaymentOpen = false"
                     >
                         Cancel
                     </button>
 
-                    <PrimaryButton
-                        :disabled="cashPaymentForm.processing"
-                    >
+                    <PrimaryButton :disabled="cashPaymentForm.processing">
                         Mark Paid
                     </PrimaryButton>
-
                 </div>
-
             </form>
         </Modal>
     </AuthenticatedLayout>

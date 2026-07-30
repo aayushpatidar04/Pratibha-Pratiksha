@@ -76,7 +76,7 @@ const deleteAccount = () => deleteForm.delete('/profile', { onFinish: () => (con
 
             <div class="bg-white rounded-xl border border-red-100 shadow-sm p-6">
                 <h2 class="text-base font-semibold text-red-700 mb-2">Delete Account</h2>
-                <p class="text-sm text-gray-500 mb-4">Once deleted, all resources will be permanently removed.</p>
+                <p class="text-sm text-gray-700 mb-4">Once deleted, all resources will be permanently removed.</p>
                 <DangerButton @click="confirmDelete">Delete Account</DangerButton>
             </div>
         </div>
@@ -84,7 +84,7 @@ const deleteAccount = () => deleteForm.delete('/profile', { onFinish: () => (con
         <Modal :show="confirmingDeletion" @close="confirmingDeletion = false">
             <div class="p-6">
                 <h2 class="text-lg font-semibold text-gray-900">Are you sure?</h2>
-                <p class="text-sm text-gray-500 mt-1 mb-4">Enter your password to confirm account deletion.</p>
+                <p class="text-sm text-gray-700 mt-1 mb-4">Enter your password to confirm account deletion.</p>
                 <TextInput type="password" v-model="deleteForm.password" placeholder="Password" />
                 <InputError :message="deleteForm.errors.password" />
                 <div class="mt-6 flex justify-end gap-2">

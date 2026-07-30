@@ -56,7 +56,7 @@ const resolve = (a) =>
                         <Gavel class="h-6 w-6 text-blue-600" /> Disciplinary
                         Records
                     </h1>
-                    <p class="text-sm text-gray-500 mt-0.5">
+                    <p class="text-sm text-gray-700 mt-0.5">
                         Log incidents and warnings issued to residents
                     </p>
                 </div>
@@ -72,7 +72,7 @@ const resolve = (a) =>
                     <p class="text-lg font-bold text-amber-600">
                         {{ stats.open }}
                     </p>
-                    <p class="text-xs text-gray-400">Open</p>
+                    <p class="text-xs text-gray-600">Open</p>
                 </div>
                 <div
                     class="bg-white rounded-xl border border-gray-100 p-3 text-center"
@@ -80,7 +80,7 @@ const resolve = (a) =>
                     <p class="text-lg font-bold text-green-600">
                         {{ stats.resolved }}
                     </p>
-                    <p class="text-xs text-gray-400">Resolved</p>
+                    <p class="text-xs text-gray-600">Resolved</p>
                 </div>
             </div>
 
@@ -88,7 +88,7 @@ const resolve = (a) =>
                 class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden"
             >
                 <table class="w-full text-sm">
-                    <thead class="bg-gray-50 text-gray-500 text-xs uppercase">
+                    <thead class="bg-gray-50 text-gray-700 text-xs uppercase">
                         <tr>
                             <th class="text-left px-4 py-3">Resident</th>
                             <th class="text-left px-4 py-3">Incident</th>
@@ -107,7 +107,7 @@ const resolve = (a) =>
                                 class="px-4 py-3 text-gray-600 max-w-xs truncate"
                             >
                                 {{ a.description }}
-                                <span class="text-xs text-gray-400"
+                                <span class="text-xs text-gray-600"
                                     >({{ a.incident_date }})</span
                                 >
                             </td>
@@ -134,7 +134,7 @@ const resolve = (a) =>
                         <tr v-if="!actions.data.length">
                             <td
                                 colspan="5"
-                                class="px-4 py-10 text-center text-gray-400"
+                                class="px-4 py-10 text-center text-gray-600"
                             >
                                 No disciplinary records
                             </td>

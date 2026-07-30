@@ -131,10 +131,10 @@ const currentWeekLabel = computed(() => {
                         <UtensilsCrossed class="h-6 w-6 text-blue-600" />
                         Mess Menu
                     </h1>
-                    <p class="text-sm text-gray-500 mt-0.5">
+                    <p class="text-sm text-gray-700 mt-0.5">
                         Plan and publish the weekly mess menu
                     </p>
-                    <p class="text-xs text-gray-400 mt-1">
+                    <p class="text-xs text-gray-600 mt-1">
                         {{ currentWeekLabel }}
                     </p>
                 </div>
@@ -159,7 +159,7 @@ const currentWeekLabel = computed(() => {
                 class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-x-auto"
             >
                 <table class="w-full text-sm min-w-[1000px]">
-                    <thead class="bg-gray-50 text-gray-500 text-xs uppercase">
+                    <thead class="bg-gray-50 text-gray-700 text-xs uppercase">
                         <tr>
                             <th class="text-left px-3 py-3 w-28">Meal</th>
                             <th

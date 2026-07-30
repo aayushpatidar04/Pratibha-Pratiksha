@@ -19,7 +19,7 @@ const submit = () => {
         <Head title="Register" />
 
         <h1 class="text-xl font-bold text-gray-900 mb-1">Create an account</h1>
-        <p class="text-sm text-gray-500 mb-6">Set up your admin account to get started</p>
+        <p class="text-sm text-gray-700 mb-6">Set up your admin account to get started</p>
 
         <form @submit.prevent="submit" class="space-y-4">
             <div>
@@ -51,7 +51,7 @@ const submit = () => {
                 Register
             </PrimaryButton>
 
-            <p class="text-center text-sm text-gray-500">
+            <p class="text-center text-sm text-gray-700">
                 Already have an account?
                 <Link href="/login" class="text-blue-600 hover:underline">Log in</Link>
             </p>

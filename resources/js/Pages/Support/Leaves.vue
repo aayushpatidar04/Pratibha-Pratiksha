@@ -81,7 +81,7 @@ const destroy = (l) => {
                         <CalendarDays class="h-6 w-6 text-blue-600" /> Leave
                         Requests
                     </h1>
-                    <p class="text-sm text-gray-500 mt-0.5">
+                    <p class="text-sm text-gray-700 mt-0.5">
                         Approve or reject resident leave / gate pass requests
                     </p>
                 </div>
@@ -97,7 +97,7 @@ const destroy = (l) => {
                     <p class="text-lg font-bold text-amber-600">
                         {{ stats.pending }}
                     </p>
-                    <p class="text-xs text-gray-400">Pending</p>
+                    <p class="text-xs text-gray-600">Pending</p>
                 </div>
                 <div
                     class="bg-white rounded-xl border border-gray-100 p-3 text-center"
@@ -105,7 +105,7 @@ const destroy = (l) => {
                     <p class="text-lg font-bold text-green-600">
                         {{ stats.approved }}
                     </p>
-                    <p class="text-xs text-gray-400">Approved</p>
+                    <p class="text-xs text-gray-600">Approved</p>
                 </div>
                 <div
                     class="bg-white rounded-xl border border-gray-100 p-3 text-center"
@@ -113,7 +113,7 @@ const destroy = (l) => {
                     <p class="text-lg font-bold text-red-600">
                         {{ stats.rejected }}
                     </p>
-                    <p class="text-xs text-gray-400">Rejected</p>
+                    <p class="text-xs text-gray-600">Rejected</p>
                 </div>
             </div>
 
@@ -134,7 +134,7 @@ const destroy = (l) => {
                 class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden"
             >
                 <table class="w-full text-sm">
-                    <thead class="bg-gray-50 text-gray-500 text-xs uppercase">
+                    <thead class="bg-gray-50 text-gray-700 text-xs uppercase">
                         <tr>
                             <th class="text-left px-4 py-3">Resident</th>
                             <th class="text-left px-4 py-3">Type</th>
@@ -188,7 +188,7 @@ const destroy = (l) => {
                         <tr v-if="!leaves.data.length">
                             <td
                                 colspan="5"
-                                class="px-4 py-10 text-center text-gray-400"
+                                class="px-4 py-10 text-center text-gray-600"
                             >
                                 No leave requests found
                             </td>

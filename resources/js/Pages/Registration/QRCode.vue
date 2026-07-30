@@ -22,7 +22,7 @@ const props = defineProps({
                 <h2 class="text-lg font-semibold text-gray-900 mb-1">
                     Scan to Register
                 </h2>
-                <p class="text-sm text-gray-500">
+                <p class="text-sm text-gray-700">
                     Use your phone camera to scan
                 </p>
             </div>
@@ -40,7 +40,7 @@ const props = defineProps({
                     />
                     <div v-else class="text-center p-4">
                         <QrCode class="w-16 h-16 text-gray-300 mx-auto mb-2" />
-                        <p class="text-xs text-gray-400">QR Code</p>
+                        <p class="text-xs text-gray-600">QR Code</p>
                     </div>
                 </div>
 
@@ -59,7 +59,7 @@ const props = defineProps({
                         <p class="text-sm font-medium text-gray-900">
                             Open Camera
                         </p>
-                        <p class="text-xs text-gray-500">
+                        <p class="text-xs text-gray-700">
                             Point at the QR code above
                         </p>
                     </div>
@@ -68,7 +68,7 @@ const props = defineProps({
 
             <!-- Direct Link -->
             <div class="pt-4 border-t border-gray-100">
-                <p class="text-xs text-gray-400 mb-2">Or visit directly:</p>
+                <p class="text-xs text-gray-600 mb-2">Or visit directly:</p>
                 <a
                     :href="registrationUrl"
                     class="text-sm text-blue-600 font-medium break-all hover:underline"
@@ -79,7 +79,7 @@ const props = defineProps({
         </div>
 
         <!-- Footer -->
-        <p class="text-center text-xs text-gray-400 mt-6">
+        <p class="text-center text-xs text-gray-600 mt-6">
             प्रतिभा-प्रतीक्षा छात्रावास, इंदौर
         </p>
     </GuestLayout>

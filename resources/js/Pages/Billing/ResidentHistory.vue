@@ -44,7 +44,7 @@ const formatCurrency = (amount) => {
             <div class="flex items-center gap-3">
                 <Link
                     :href="route('billing.index')"
-                    class="p-2 rounded-lg hover:bg-gray-100 text-gray-500"
+                    class="p-2 rounded-lg hover:bg-gray-100 text-gray-700"
                 >
                     <ArrowLeft class="h-5 w-5" />
                 </Link>
@@ -52,7 +52,7 @@ const formatCurrency = (amount) => {
                     <h1 class="text-xl font-semibold text-gray-900">
                         Payment History
                     </h1>
-                    <p class="text-sm text-gray-500">
+                    <p class="text-sm text-gray-700">
                         {{ resident.first_name }} {{ resident.last_name }} ({{
                             resident.resident_code
                         }})
@@ -70,7 +70,7 @@ const formatCurrency = (amount) => {
                     <p class="text-lg font-bold">
                         {{ formatCurrency(summary.totalBilled) }}
                     </p>
-                    <p class="text-xs text-gray-400">Total Billed</p>
+                    <p class="text-xs text-gray-600">Total Billed</p>
                 </div>
                 <div
                     class="bg-white rounded-xl border border-gray-100 p-4 text-center"
@@ -78,7 +78,7 @@ const formatCurrency = (amount) => {
                     <p class="text-lg font-bold text-green-600">
                         {{ formatCurrency(summary.totalPaid) }}
                     </p>
-                    <p class="text-xs text-gray-400">Total Paid</p>
+                    <p class="text-xs text-gray-600">Total Paid</p>
                 </div>
                 <div
                     class="bg-white rounded-xl border border-gray-100 p-4 text-center"
@@ -86,7 +86,7 @@ const formatCurrency = (amount) => {
                     <p class="text-lg font-bold text-purple-600">
                         {{ formatCurrency(summary.totalLateFees) }}
                     </p>
-                    <p class="text-xs text-gray-400">Late Fees</p>
+                    <p class="text-xs text-gray-600">Late Fees</p>
                 </div>
                 <div
                     class="bg-white rounded-xl border border-gray-100 p-4 text-center"
@@ -94,7 +94,7 @@ const formatCurrency = (amount) => {
                     <p class="text-lg font-bold text-amber-600">
                         {{ summary.pendingInvoices }}
                     </p>
-                    <p class="text-xs text-gray-400">Pending Invoices</p>
+                    <p class="text-xs text-gray-600">Pending Invoices</p>
                 </div>
             </div>
 
@@ -117,20 +117,20 @@ const formatCurrency = (amount) => {
                             <p class="text-sm font-medium text-gray-900">
                                 {{ formatCurrency(payment.amount) }}
                             </p>
-                            <p class="text-xs text-gray-500">
+                            <p class="text-xs text-gray-700">
                                 {{ payment.payment_date }} •
                                 {{ payment.payment_mode }} •
                                 {{ payment.receipt_number }}
                             </p>
                             <p
                                 v-if="payment.transaction_id"
-                                class="text-xs text-gray-400"
+                                class="text-xs text-gray-600"
                             >
                                 TXN: {{ payment.transaction_id }}
                             </p>
                             <p
                                 v-if="payment.notes"
-                                class="text-xs text-gray-400 italic"
+                                class="text-xs text-gray-600 italic"
                             >
                                 {{ payment.notes }}
                             </p>
@@ -159,14 +159,14 @@ const formatCurrency = (amount) => {
                                     class="p-1.5 rounded bg-white border hover:bg-gray-50"
                                     title="View Proof"
                                 >
-                                    <Receipt class="h-3 w-3 text-gray-500" />
+                                    <Receipt class="h-3 w-3 text-gray-700" />
                                 </a>
                             </div>
                         </div>
                     </div>
                     <p
                         v-if="!payments.length"
-                        class="text-sm text-gray-400 text-center py-4"
+                        class="text-sm text-gray-600 text-center py-4"
                     >
                         No payments recorded
                     </p>
@@ -183,7 +183,7 @@ const formatCurrency = (amount) => {
                     <Receipt class="h-4 w-4 text-blue-600" /> Invoice History
                 </h2>
                 <table class="w-full text-sm">
-                    <thead class="bg-gray-50 text-gray-500 text-xs uppercase">
+                    <thead class="bg-gray-50 text-gray-700 text-xs uppercase">
                         <tr>
                             <th class="text-left px-4 py-3">Invoice</th>
                             <th class="text-left px-4 py-3">Period</th>
@@ -199,7 +199,7 @@ const formatCurrency = (amount) => {
                             <td class="px-4 py-3 font-medium text-gray-900">
                                 {{ inv.invoice_number }}
                             </td>
-                            <td class="px-4 py-3 text-xs text-gray-500">
+                            <td class="px-4 py-3 text-xs text-gray-700">
                                 {{ inv.monthly_config?.full_label || "-" }}
                             </td>
                             <td class="px-4 py-3">
@@ -249,7 +249,7 @@ const formatCurrency = (amount) => {
                         <tr v-if="!invoices.data.length">
                             <td
                                 colspan="7"
-                                class="px-4 py-10 text-center text-gray-400"
+                                class="px-4 py-10 text-center text-gray-600"
                             >
                                 No invoices found
                             </td>

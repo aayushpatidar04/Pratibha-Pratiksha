@@ -553,7 +553,7 @@ const formatDate = (date) => {
                         Check-In / Check-Out
                     </h1>
 
-                    <p class="mt-1 text-sm text-gray-500">
+                    <p class="mt-1 text-sm text-gray-700">
                         Reserve rooms, confirm physical check-in, assign student
                         assets, and manage checkout.
                     </p>
@@ -658,7 +658,7 @@ const formatDate = (date) => {
                                     Awaiting Room Allotment
                                 </h2>
 
-                                <p class="mt-1 text-xs text-gray-500">
+                                <p class="mt-1 text-xs text-gray-700">
                                     Residents who do not have an active or
                                     upcoming stay.
                                 </p>
@@ -675,7 +675,7 @@ const formatDate = (date) => {
                     <div class="p-4">
                         <div class="relative mb-3">
                             <Search
-                                class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+                                class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-600"
                             />
 
                             <input
@@ -702,7 +702,7 @@ const formatDate = (date) => {
 
                                     <div
                                         v-else
-                                        class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gray-100 text-sm font-semibold text-gray-500"
+                                        class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gray-100 text-sm font-semibold text-gray-700"
                                     >
                                         {{
                                             resident.first_name
@@ -720,7 +720,7 @@ const formatDate = (date) => {
                                         </p>
 
                                         <p
-                                            class="mt-0.5 truncate text-xs text-gray-500"
+                                            class="mt-0.5 truncate text-xs text-gray-700"
                                         >
                                             {{ resident.resident_code }} ·
                                             {{ resident.phone }}
@@ -790,7 +790,7 @@ const formatDate = (date) => {
                     <div class="p-4">
                         <div class="relative mb-3">
                             <Search
-                                class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+                                class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-600"
                             />
 
                             <input
@@ -817,7 +817,7 @@ const formatDate = (date) => {
 
                                     <div
                                         v-else
-                                        class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white text-sm font-semibold text-gray-500"
+                                        class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white text-sm font-semibold text-gray-700"
                                     >
                                         {{
                                             stay.resident?.first_name
@@ -835,7 +835,7 @@ const formatDate = (date) => {
                                         </p>
 
                                         <p
-                                            class="mt-0.5 truncate text-xs text-gray-500"
+                                            class="mt-0.5 truncate text-xs text-gray-700"
                                         >
                                             {{ stay.resident?.resident_code }}
                                         </p>
@@ -846,7 +846,7 @@ const formatDate = (date) => {
                                     class="mt-3 grid grid-cols-2 gap-2 rounded-lg bg-white p-3 text-xs"
                                 >
                                     <div>
-                                        <p class="text-gray-400">Room</p>
+                                        <p class="text-gray-600">Room</p>
                                         <p
                                             class="mt-0.5 font-medium text-gray-800"
                                         >
@@ -857,7 +857,7 @@ const formatDate = (date) => {
                                     </div>
 
                                     <div>
-                                        <p class="text-gray-400">
+                                        <p class="text-gray-600">
                                             Planned Arrival
                                         </p>
                                         <p
@@ -868,7 +868,7 @@ const formatDate = (date) => {
                                     </div>
 
                                     <div>
-                                        <p class="text-gray-400">Building</p>
+                                        <p class="text-gray-600">Building</p>
                                         <p
                                             class="mt-0.5 font-medium text-gray-800"
                                         >
@@ -877,7 +877,7 @@ const formatDate = (date) => {
                                     </div>
 
                                     <div>
-                                        <p class="text-gray-400">Billing</p>
+                                        <p class="text-gray-600">Billing</p>
                                         <p
                                             class="mt-0.5 font-medium capitalize text-gray-800"
                                         >
@@ -949,7 +949,7 @@ const formatDate = (date) => {
                     <div class="p-4">
                         <div class="relative mb-3">
                             <Search
-                                class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+                                class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-600"
                             />
 
                             <input
@@ -976,7 +976,7 @@ const formatDate = (date) => {
 
                                     <div
                                         v-else
-                                        class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white text-sm font-semibold text-gray-500"
+                                        class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white text-sm font-semibold text-gray-700"
                                     >
                                         {{
                                             stay.resident?.first_name
@@ -994,7 +994,7 @@ const formatDate = (date) => {
                                         </p>
 
                                         <p
-                                            class="mt-0.5 truncate text-xs text-gray-500"
+                                            class="mt-0.5 truncate text-xs text-gray-700"
                                         >
                                             {{ stay.resident?.resident_code }}
                                         </p>
@@ -1011,7 +1011,7 @@ const formatDate = (date) => {
                                     class="mt-3 grid grid-cols-2 gap-2 rounded-lg bg-white p-3 text-xs"
                                 >
                                     <div>
-                                        <p class="text-gray-400">Room</p>
+                                        <p class="text-gray-600">Room</p>
                                         <p
                                             class="mt-0.5 font-medium text-gray-800"
                                         >
@@ -1022,7 +1022,7 @@ const formatDate = (date) => {
                                     </div>
 
                                     <div>
-                                        <p class="text-gray-400">Checked In</p>
+                                        <p class="text-gray-600">Checked In</p>
                                         <p
                                             class="mt-0.5 font-medium text-gray-800"
                                         >
@@ -1031,7 +1031,7 @@ const formatDate = (date) => {
                                     </div>
 
                                     <div>
-                                        <p class="text-gray-400">
+                                        <p class="text-gray-600">
                                             Assigned Assets
                                         </p>
                                         <p
@@ -1046,7 +1046,7 @@ const formatDate = (date) => {
                                     </div>
 
                                     <div>
-                                        <p class="text-gray-400">Billing</p>
+                                        <p class="text-gray-600">Billing</p>
                                         <p
                                             class="mt-0.5 font-medium capitalize text-gray-800"
                                         >
@@ -1113,7 +1113,7 @@ const formatDate = (date) => {
                         Allot Room
                     </h2>
 
-                    <p class="mt-1 text-sm text-gray-500">
+                    <p class="mt-1 text-sm text-gray-700">
                         Reserve a room and bed for
                         <strong class="text-gray-700">
                             {{ allottingResident.first_name }}
@@ -1263,7 +1263,7 @@ const formatDate = (date) => {
                                 Stay & Billing Details
                             </h3>
 
-                            <p class="mt-1 text-xs text-gray-500">
+                            <p class="mt-1 text-xs text-gray-700">
                                 Select the applicable billing method for this
                                 stay.
                             </p>
@@ -1304,7 +1304,7 @@ const formatDate = (date) => {
                                             </p>
 
                                             <p
-                                                class="mt-1 text-xs text-gray-500"
+                                                class="mt-1 text-xs text-gray-700"
                                             >
                                                 Regular resident billed every
                                                 month.
@@ -1341,7 +1341,7 @@ const formatDate = (date) => {
                                             </p>
 
                                             <p
-                                                class="mt-1 text-xs text-gray-500"
+                                                class="mt-1 text-xs text-gray-700"
                                             >
                                                 Resident charged for occupied
                                                 days.
@@ -1492,7 +1492,7 @@ const formatDate = (date) => {
                                 class="w-full"
                             />
 
-                            <p class="mt-1 text-xs text-gray-500">
+                            <p class="mt-1 text-xs text-gray-700">
                                 A one-time deposit invoice will be generated
                                 only after actual check-in.
                             </p>
@@ -1560,7 +1560,7 @@ const formatDate = (date) => {
                         Confirm Actual Check-In
                     </h2>
 
-                    <p class="mt-1 text-sm text-gray-500">
+                    <p class="mt-1 text-sm text-gray-700">
                         {{ checkingInStay.resident?.first_name }}
                         {{ checkingInStay.resident?.last_name }}
                         · Room
@@ -1613,7 +1613,7 @@ const formatDate = (date) => {
                                     Assign Student Inventory
                                 </h3>
 
-                                <p class="mt-1 text-xs text-gray-500">
+                                <p class="mt-1 text-xs text-gray-700">
                                     Inventory assignment is optional. Select
                                     only items physically issued to the
                                     resident.
@@ -1639,7 +1639,7 @@ const formatDate = (date) => {
                     >
                         <table class="min-w-[760px] w-full text-sm">
                             <thead
-                                class="bg-gray-50 text-xs uppercase text-gray-500"
+                                class="bg-gray-50 text-xs uppercase text-gray-700"
                             >
                                 <tr>
                                     <th class="w-14 px-3 py-3 text-center">
@@ -1694,7 +1694,7 @@ const formatDate = (date) => {
                                         }}
                                     </td>
 
-                                    <td class="px-3 py-3 text-gray-500">
+                                    <td class="px-3 py-3 text-gray-700">
                                         {{
                                             getInventoryItem(
                                                 assignment.inventory_id,
@@ -1760,7 +1760,7 @@ const formatDate = (date) => {
                                 <tr v-if="!actualCheckinForm.inventory.length">
                                     <td
                                         colspan="6"
-                                        class="px-4 py-10 text-center text-gray-400"
+                                        class="px-4 py-10 text-center text-gray-600"
                                     >
                                         No student-category inventory is
                                         currently available. Check-in can still
@@ -1811,7 +1811,7 @@ const formatDate = (date) => {
                         Checkout Review
                     </h2>
 
-                    <p class="mt-1 text-sm text-gray-500">
+                    <p class="mt-1 text-sm text-gray-700">
                         {{ checkingOutStay.resident?.first_name }}
                         {{ checkingOutStay.resident?.last_name }}
                         · Room {{ checkingOutStay.room?.room_number }} · Bed
@@ -1883,7 +1883,7 @@ const formatDate = (date) => {
                             Assigned Inventory
                         </h3>
 
-                        <p class="mt-1 text-xs text-gray-500">
+                        <p class="mt-1 text-xs text-gray-700">
                             Review every item before approving checkout.
                         </p>
                     </div>
@@ -1894,7 +1894,7 @@ const formatDate = (date) => {
                     >
                         <table class="w-full min-w-[900px] text-sm">
                             <thead
-                                class="bg-gray-50 text-xs uppercase text-gray-500"
+                                class="bg-gray-50 text-xs uppercase text-gray-700"
                             >
                                 <tr>
                                     <th class="px-3 py-3 text-left">Item</th>
@@ -2011,7 +2011,7 @@ const formatDate = (date) => {
 
                     <div
                         v-else
-                        class="rounded-xl border border-dashed border-gray-200 p-8 text-center text-sm text-gray-500"
+                        class="rounded-xl border border-dashed border-gray-200 p-8 text-center text-sm text-gray-700"
                     >
                         No inventory was assigned to this resident.
                     </div>

@@ -100,7 +100,7 @@ const destroyRequirement = (id) => {
                         <Settings class="h-6 w-6 text-blue-600" /> KYC
                         Requirements
                     </h1>
-                    <p class="text-sm text-gray-500 mt-0.5">
+                    <p class="text-sm text-gray-700 mt-0.5">
                         Manage which documents residents must submit. Drag to
                         reorder, toggle to enable/disable.
                     </p>
@@ -218,7 +218,7 @@ const destroyRequirement = (id) => {
             >
                 <div
                     v-if="!form.requirements.length"
-                    class="px-5 py-8 text-center text-gray-400"
+                    class="px-5 py-8 text-center text-gray-600"
                 >
                     <Settings class="h-8 w-8 mx-auto mb-2 text-gray-300" />
                     <p>
@@ -241,7 +241,7 @@ const destroyRequirement = (id) => {
                             :disabled="i === 0"
                             class="p-0.5 rounded hover:bg-gray-100 disabled:opacity-30"
                         >
-                            <GripVertical class="h-3 w-3 text-gray-400" />
+                            <GripVertical class="h-3 w-3 text-gray-600" />
                         </button>
                     </div>
 
@@ -252,7 +252,7 @@ const destroyRequirement = (id) => {
                                 {{ req.label }}
                             </p>
                             <span
-                                class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 font-mono"
+                                class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-700 font-mono"
                             >
                                 {{ req.document_type }}
                             </span>
@@ -263,7 +263,7 @@ const destroyRequirement = (id) => {
                                 Required
                             </span>
                         </div>
-                        <p class="text-xs text-gray-400 mt-0.5">
+                        <p class="text-xs text-gray-600 mt-0.5">
                             Order: {{ req.sort_order }}
                             {{ !req.is_active ? "• Inactive" : "" }}
                         </p>
@@ -297,7 +297,7 @@ const destroyRequirement = (id) => {
                                     "
                                 />
                             </button>
-                            <span class="text-xs text-gray-500">{{
+                            <span class="text-xs text-gray-700">{{
                                 req.is_active ? "Active" : "Inactive"
                             }}</span>
                         </label>
@@ -315,14 +315,14 @@ const destroyRequirement = (id) => {
                                 @change="toggleRequired(i)"
                                 class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                             />
-                            <span class="text-xs text-gray-500">Required</span>
+                            <span class="text-xs text-gray-700">Required</span>
                         </label>
 
                         <!-- Delete -->
                         <button
                             type="button"
                             @click="destroyRequirement(req.id)"
-                            class="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600"
+                            class="p-1.5 rounded-lg hover:bg-red-50 text-gray-600 hover:text-red-600"
                         >
                             <Trash2 class="h-3.5 w-3.5" />
                         </button>

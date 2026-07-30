@@ -46,11 +46,12 @@ class ResidentController extends Controller
         return Inertia::render('Residents/Index', [
             'view' => $view,
             'tab' => $request->string('tab')->toString() ?: 'residents',
-            'sub' => $request->string('sub')->toString() ?: 'active',
+            'sub' => $sub,
             'filters' => $request->only(
                 'search',
                 'gender',
                 'course',
+                'institute',
                 'bookings_filter',
                 'country',
                 'state',
@@ -64,6 +65,23 @@ class ResidentController extends Controller
                 'upcoming_bookings' => Resident::where('status', 'upcoming')->count(),
                 'left_suspended' => Resident::whereIn('status', ['left', 'suspended'])->count(),
             ],
+            'academicFilterOptions' => fn () => [
+                'courses' => Resident::query()
+                    ->whereNotNull('course')
+                    ->where('course', '!=', '')
+                    ->distinct()
+                    ->orderBy('course')
+                    ->pluck('course')
+                    ->values(),
+
+                'institutes' => Resident::query()
+                    ->whereNotNull('institute')
+                    ->where('institute', '!=', '')
+                    ->distinct()
+                    ->orderBy('institute')
+                    ->pluck('institute')
+                    ->values(),
+            ],    
             'buildings' => Building::orderBy('name')->get(['id', 'name']),
             'floors' => Floor::orderBy('floor_number')->get(['id', 'name', 'building_id']),
             'rooms' => Room::with('beds')->orderBy('room_number')->get(['id', 'room_number', 'building_id', 'floor_id', 'capacity', 'occupied_beds', 'monthly_rent_per_bed']),
@@ -110,6 +128,9 @@ class ResidentController extends Controller
         }
         if ($course = $request->string('course')->toString()) {
             $query->where('course', 'like', "%{$course}%");
+        }
+        if ($institute = $request->string('institute')->toString()) {
+            $query->where('institute', 'like', "%{$institute}%");
         }
         if ($country = $request->string('country')->toString()) {
             $query->where('country', $country);
@@ -238,6 +259,8 @@ class ResidentController extends Controller
             'whatsapp_number' => 'nullable|string|max:20',
             'date_of_birth' => 'nullable|date',
             'gender' => ($creating ? 'required' : 'sometimes') . '|in:male,female,other',
+            'aadhar_number' => [ 'nullable', 'digits:12', Rule::unique('residents', 'aadhar_number')->ignore(request()->route('resident')),
+],
             'blood_group' => 'nullable|string|max:10',
             'address' => 'nullable|string',
             'city' => 'nullable|string|max:100',
@@ -570,6 +593,9 @@ class ResidentController extends Controller
 
                         'gender' =>
                             $normalized['gender'],
+
+                        'aadhar_number' =>
+                            $normalized['aadhar_number'],
 
                         'blood_group' =>
                             $normalized['blood_group'],
@@ -2325,6 +2351,7 @@ class ResidentController extends Controller
             'whatsapp_number',
             'date_of_birth',
             'gender',
+            'aadhar_number',
             'blood_group',
             'address',
             'city',
@@ -2374,6 +2401,7 @@ class ResidentController extends Controller
             '9876543210',
             '2003-05-12',
             'male',
+            '123456789012',
             'B+',
             'Neemuch Road',
             'Chhoti Sadri',

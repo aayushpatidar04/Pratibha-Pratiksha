@@ -48,7 +48,7 @@ const resolve = (a) =>
                         <AlertTriangle class="h-6 w-6 text-red-600" /> Emergency
                         Alerts
                     </h1>
-                    <p class="text-sm text-gray-500 mt-0.5">
+                    <p class="text-sm text-gray-700 mt-0.5">
                         Respond quickly to active emergencies raised by
                         residents
                     </p>
@@ -65,7 +65,7 @@ const resolve = (a) =>
                     <p class="text-lg font-bold text-red-600">
                         {{ stats.active }}
                     </p>
-                    <p class="text-xs text-gray-400">Active</p>
+                    <p class="text-xs text-gray-600">Active</p>
                 </div>
                 <div
                     class="bg-white rounded-xl border border-gray-100 p-3 text-center"
@@ -73,7 +73,7 @@ const resolve = (a) =>
                     <p class="text-lg font-bold text-amber-600">
                         {{ stats.escalated }}
                     </p>
-                    <p class="text-xs text-gray-400">Escalated</p>
+                    <p class="text-xs text-gray-600">Escalated</p>
                 </div>
                 <div
                     class="bg-white rounded-xl border border-gray-100 p-3 text-center"
@@ -81,7 +81,7 @@ const resolve = (a) =>
                     <p class="text-lg font-bold text-green-600">
                         {{ stats.resolved }}
                     </p>
-                    <p class="text-xs text-gray-400">Resolved</p>
+                    <p class="text-xs text-gray-600">Resolved</p>
                 </div>
             </div>
 
@@ -89,7 +89,7 @@ const resolve = (a) =>
                 class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden"
             >
                 <table class="w-full text-sm">
-                    <thead class="bg-gray-50 text-gray-500 text-xs uppercase">
+                    <thead class="bg-gray-50 text-gray-700 text-xs uppercase">
                         <tr>
                             <th class="text-left px-4 py-3">Resident</th>
                             <th class="text-left px-4 py-3">Category</th>
@@ -133,7 +133,7 @@ const resolve = (a) =>
                         <tr v-if="!alerts.data.length">
                             <td
                                 colspan="5"
-                                class="px-4 py-10 text-center text-gray-400"
+                                class="px-4 py-10 text-center text-gray-600"
                             >
                                 No emergency alerts
                             </td>

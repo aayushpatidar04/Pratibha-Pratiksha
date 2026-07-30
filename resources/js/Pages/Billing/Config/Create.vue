@@ -63,7 +63,7 @@ const submit = () => form.post(route("billing.config.store"));
             <div class="flex items-center gap-3">
                 <Link
                     :href="route('billing.config.index')"
-                    class="p-2 rounded-lg hover:bg-gray-100 text-gray-500"
+                    class="p-2 rounded-lg hover:bg-gray-100 text-gray-700"
                 >
                     <ArrowLeft class="h-5 w-5" />
                 </Link>
@@ -71,7 +71,7 @@ const submit = () => form.post(route("billing.config.store"));
                     <h1 class="text-xl font-semibold text-gray-900">
                         New Monthly Billing Configuration
                     </h1>
-                    <p class="text-sm text-gray-500">
+                    <p class="text-sm text-gray-700">
                         Set up amenities and charges for the month
                     </p>
                 </div>
@@ -124,7 +124,7 @@ const submit = () => form.post(route("billing.config.store"));
                             required
                             class="w-full"
                         />
-                        <p class="text-xs text-gray-400 mt-1">
+                        <p class="text-xs text-gray-600 mt-1">
                             When bills will be auto-generated
                         </p>
                         <InputError :message="form.errors.generation_date" />
@@ -137,7 +137,7 @@ const submit = () => form.post(route("billing.config.store"));
                             required
                             class="w-full"
                         />
-                        <p class="text-xs text-gray-400 mt-1">
+                        <p class="text-xs text-gray-600 mt-1">
                             Payment deadline
                         </p>
                         <InputError :message="form.errors.due_date" />
@@ -266,7 +266,7 @@ const submit = () => form.post(route("billing.config.store"));
                     </div>
                     <p
                         v-if="!form.custom_charges.length"
-                        class="text-xs text-gray-400 italic"
+                        class="text-xs text-gray-600 italic"
                     >
                         No custom charges added
                     </p>
@@ -290,7 +290,7 @@ const submit = () => form.post(route("billing.config.store"));
                             class="w-48"
                             min="0"
                         />
-                        <p class="text-xs text-gray-400 mt-1">
+                        <p class="text-xs text-gray-600 mt-1">
                             Charged for every day the invoice remains unpaid
                             after the due date.
                         </p>

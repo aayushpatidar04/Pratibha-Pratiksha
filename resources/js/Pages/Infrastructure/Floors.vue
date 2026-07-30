@@ -52,7 +52,7 @@ const buildingName = (id) => props.buildings.find((b) => b.id === id)?.name || '
                     <h1 class="text-2xl font-bold text-gray-900 flex items-center gap-2">
                         <Layers class="h-6 w-6 text-blue-600" /> Floors
                     </h1>
-                    <p class="text-sm text-gray-500 mt-0.5">Manage floors within each building</p>
+                    <p class="text-sm text-gray-700 mt-0.5">Manage floors within each building</p>
                 </div>
                 <PrimaryButton type="button" @click="createOpen = true">
                     <Plus class="h-4 w-4" /> Add Floor
@@ -66,7 +66,7 @@ const buildingName = (id) => props.buildings.find((b) => b.id === id)?.name || '
 
             <div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
                 <table class="w-full text-sm">
-                    <thead class="bg-gray-50 text-gray-500 text-xs uppercase">
+                    <thead class="bg-gray-50 text-gray-700 text-xs uppercase">
                         <tr>
                             <th class="text-left px-4 py-3">Floor</th>
                             <th class="text-left px-4 py-3">Building</th>
@@ -77,10 +77,10 @@ const buildingName = (id) => props.buildings.find((b) => b.id === id)?.name || '
                     <tbody class="divide-y divide-gray-100">
                         <tr v-for="f in floors" :key="f.id">
                             <td class="px-4 py-3 font-medium text-gray-900">{{ f.name }} <span
-                                    class="text-gray-400">(#{{
+                                    class="text-gray-600">(#{{
                                     f.floor_number }})</span></td>
                             <td class="px-4 py-3 text-gray-600 flex items-center gap-1.5">
-                                <Building2 class="h-3.5 w-3.5 text-gray-400" />{{ buildingName(f.building_id) }}
+                                <Building2 class="h-3.5 w-3.5 text-gray-600" />{{ buildingName(f.building_id) }}
                             </td>
                             <td class="px-4 py-3 text-gray-600">{{ f.total_rooms }}</td>
                             <td class="px-4 py-3 text-right">
@@ -97,7 +97,7 @@ const buildingName = (id) => props.buildings.find((b) => b.id === id)?.name || '
                             </td>
                         </tr>
                         <tr v-if="!floors.length">
-                            <td colspan="4" class="px-4 py-10 text-center text-gray-400">No floors found</td>
+                            <td colspan="4" class="px-4 py-10 text-center text-gray-600">No floors found</td>
                         </tr>
                     </tbody>
                 </table>

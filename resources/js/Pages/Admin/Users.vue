@@ -167,7 +167,7 @@ const savePermissions = () => {
                         <UserCog class="h-6 w-6 text-blue-600" /> Staff & Admin
                         Users
                     </h1>
-                    <p class="text-sm text-gray-500 mt-0.5">
+                    <p class="text-sm text-gray-700 mt-0.5">
                         Manage accounts, roles, and exactly which modules each
                         person can view, create, edit or delete in
                     </p>
@@ -190,7 +190,7 @@ const savePermissions = () => {
                 class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden"
             >
                 <table class="w-full text-sm">
-                    <thead class="bg-gray-50 text-gray-500 text-xs uppercase">
+                    <thead class="bg-gray-50 text-gray-700 text-xs uppercase">
                         <tr>
                             <th class="text-left px-4 py-3">Name</th>
                             <th class="text-left px-4 py-3">Email</th>
@@ -206,7 +206,7 @@ const savePermissions = () => {
                                 {{ u.name }}
                                 <span
                                     v-if="u.id === currentUserId"
-                                    class="text-xs text-gray-400 font-normal"
+                                    class="text-xs text-gray-600 font-normal"
                                     >(you)</span
                                 >
                             </td>
@@ -334,7 +334,7 @@ const savePermissions = () => {
                         <option value="hostel_admin">Hostel Admin</option>
                         <option value="super_admin">Super Admin</option>
                     </select>
-                    <p class="text-xs text-gray-400 mt-1">
+                    <p class="text-xs text-gray-600 mt-1">
                         Everyone except Super Admin starts view-only; grant more
                         from "Manage Permissions" after creating.
                     </p>
@@ -366,7 +366,7 @@ const savePermissions = () => {
                     <h2 class="text-lg font-semibold text-gray-900">
                         Manage Permissions — {{ permUser.name }}
                     </h2>
-                    <p class="text-sm text-gray-500 mt-0.5">
+                    <p class="text-sm text-gray-700 mt-0.5">
                         Choose exactly which modules this user can view, create
                         in, edit, or delete from.
                     </p>
@@ -377,7 +377,7 @@ const savePermissions = () => {
                 >
                     <table class="w-full text-sm">
                         <thead
-                            class="bg-gray-50 text-gray-500 text-xs uppercase sticky top-0"
+                            class="bg-gray-50 text-gray-700 text-xs uppercase sticky top-0"
                         >
                             <tr>
                                 <th class="text-left px-4 py-2.5">Module</th>
@@ -440,7 +440,7 @@ const savePermissions = () => {
                                     </button>
                                     <button
                                         type="button"
-                                        class="text-[11px] text-gray-400 hover:underline"
+                                        class="text-[11px] text-gray-600 hover:underline"
                                         @click="clearModule(m.key)"
                                     >
                                         None

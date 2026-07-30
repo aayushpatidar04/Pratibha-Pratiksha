@@ -197,7 +197,7 @@ const openCreate = () => {
                     >
                         <DoorOpen class="h-6 w-6 text-blue-600" /> Rooms
                     </h1>
-                    <p class="text-sm text-gray-500 mt-0.5">
+                    <p class="text-sm text-gray-700 mt-0.5">
                         Manage rooms, beds and amenities
                     </p>
                 </div>
@@ -214,7 +214,7 @@ const openCreate = () => {
                     <p class="text-lg font-bold text-gray-900">
                         {{ stats.total }}
                     </p>
-                    <p class="text-xs text-gray-400">Total Rooms</p>
+                    <p class="text-xs text-gray-600">Total Rooms</p>
                 </div>
                 <div
                     class="bg-white rounded-xl border border-gray-100 p-3 text-center"
@@ -222,7 +222,7 @@ const openCreate = () => {
                     <p class="text-lg font-bold text-green-600">
                         {{ stats.available }}
                     </p>
-                    <p class="text-xs text-gray-400">Available</p>
+                    <p class="text-xs text-gray-600">Available</p>
                 </div>
                 <div
                     class="bg-white rounded-xl border border-gray-100 p-3 text-center"
@@ -230,7 +230,7 @@ const openCreate = () => {
                     <p class="text-lg font-bold text-blue-600">
                         {{ stats.occupied }}
                     </p>
-                    <p class="text-xs text-gray-400">Occupied</p>
+                    <p class="text-xs text-gray-600">Occupied</p>
                 </div>
                 <div
                     class="bg-white rounded-xl border border-gray-100 p-3 text-center"
@@ -238,7 +238,7 @@ const openCreate = () => {
                     <p class="text-lg font-bold text-blue-600">
                         {{ stats.partiallyOccupied }}
                     </p>
-                    <p class="text-xs text-gray-400">Partially Occupied</p>
+                    <p class="text-xs text-gray-600">Partially Occupied</p>
                 </div>
                 <div
                     class="bg-white rounded-xl border border-gray-100 p-3 text-center"
@@ -246,14 +246,14 @@ const openCreate = () => {
                     <p class="text-lg font-bold text-amber-600">
                         {{ stats.maintenance }}
                     </p>
-                    <p class="text-xs text-gray-400">Maintenance</p>
+                    <p class="text-xs text-gray-600">Maintenance</p>
                 </div>
             </div>
 
             <div class="flex flex-col sm:flex-row gap-3">
                 <div class="relative flex-1">
                     <Search
-                        class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400"
+                        class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-600"
                     />
                     <input
                         v-model="filters.search"
@@ -289,7 +289,7 @@ const openCreate = () => {
 
             <div
                 v-if="!rooms.length"
-                class="bg-white rounded-xl border border-gray-100 p-10 text-center text-gray-400"
+                class="bg-white rounded-xl border border-gray-100 p-10 text-center text-gray-600"
             >
                 No rooms found
             </div>
@@ -308,7 +308,7 @@ const openCreate = () => {
                             <h3 class="font-semibold text-gray-900">
                                 Room {{ r.room_number }}
                             </h3>
-                            <p class="text-xs text-gray-500">
+                            <p class="text-xs text-gray-700">
                                 {{ r.building?.name }} · {{ r.floor?.name }}
                             </p>
                         </div>
@@ -316,7 +316,7 @@ const openCreate = () => {
                             r.status.replace("_", " ")
                         }}</Badge>
                     </div>
-                    <p class="text-xs text-gray-500 mb-2">
+                    <p class="text-xs text-gray-700 mb-2">
                         {{ r.room_type.replace("_", " ") }} ·
                         {{ r.occupied_beds }}/{{ r.capacity }} beds · ₹{{
                             r.monthly_rent_per_bed
@@ -336,13 +336,13 @@ const openCreate = () => {
 
                                 {{ asset.item_name }}
 
-                                <span class="text-gray-400">
+                                <span class="text-gray-600">
                                     × {{ asset.quantity }}
                                 </span>
                             </span>
                         </div>
 
-                        <p v-else class="text-xs text-gray-400">
+                        <p v-else class="text-xs text-gray-600">
                             No room assets assigned
                         </p>
                     </div>
@@ -446,7 +446,7 @@ const openCreate = () => {
                     <div class="mb-3">
                         <InputLabel value="Room Assets" />
 
-                        <p class="mt-1 text-xs text-gray-500">
+                        <p class="mt-1 text-xs text-gray-700">
                             Select inventory items permanently assigned to this
                             room.
                         </p>
@@ -480,7 +480,7 @@ const openCreate = () => {
                                     }}
                                 </p>
 
-                                <p class="text-xs text-gray-500">
+                                <p class="text-xs text-gray-700">
                                     Available:
                                     {{
                                         getRoomInventory(asset.inventory_id)
@@ -521,7 +521,7 @@ const openCreate = () => {
 
                     <div
                         v-else
-                        class="rounded-xl border border-dashed border-gray-200 p-6 text-center text-sm text-gray-400"
+                        class="rounded-xl border border-dashed border-gray-200 p-6 text-center text-sm text-gray-600"
                     >
                         No room-category inventory is available.
                     </div>
@@ -603,7 +603,7 @@ const openCreate = () => {
                     <div class="mb-3">
                         <InputLabel value="Room Assets" />
 
-                        <p class="mt-1 text-xs text-gray-500">
+                        <p class="mt-1 text-xs text-gray-700">
                             Select inventory items permanently assigned to this
                             room.
                         </p>
@@ -637,7 +637,7 @@ const openCreate = () => {
                                     }}
                                 </p>
 
-                                <p class="text-xs text-gray-500">
+                                <p class="text-xs text-gray-700">
                                     Available:
                                     {{
                                         getRoomInventory(asset.inventory_id)
@@ -678,7 +678,7 @@ const openCreate = () => {
 
                     <div
                         v-else
-                        class="rounded-xl border border-dashed border-gray-200 p-6 text-center text-sm text-gray-400"
+                        class="rounded-xl border border-dashed border-gray-200 p-6 text-center text-sm text-gray-600"
                     >
                         No room-category inventory is available.
                     </div>

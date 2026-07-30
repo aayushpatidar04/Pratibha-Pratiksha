@@ -104,7 +104,7 @@ const aggregateSuccessRate = computed(() =>
         </div>
         <div v-if="active === 'custom'" class="flex flex-wrap items-end gap-2">
             <div>
-                <label class="block text-xs text-gray-500 mb-1">From</label>
+                <label class="block text-xs text-gray-700 mb-1">From</label>
                 <input
                     type="date"
                     v-model="customFrom"
@@ -112,7 +112,7 @@ const aggregateSuccessRate = computed(() =>
                 />
             </div>
             <div>
-                <label class="block text-xs text-gray-500 mb-1">To</label>
+                <label class="block text-xs text-gray-700 mb-1">To</label>
                 <input
                     type="date"
                     v-model="customTo"
@@ -137,7 +137,7 @@ const aggregateSuccessRate = computed(() =>
                     <p class="text-xl font-bold text-gray-900">
                         {{ complaints.raised }}
                     </p>
-                    <p class="text-[11px] text-gray-400">Complaints Raised</p>
+                    <p class="text-[11px] text-gray-600">Complaints Raised</p>
                 </div>
             </div>
             <div
@@ -148,7 +148,7 @@ const aggregateSuccessRate = computed(() =>
                     <p class="text-xl font-bold text-gray-900">
                         {{ complaints.resolved }}
                     </p>
-                    <p class="text-[11px] text-gray-400">Complaints Resolved</p>
+                    <p class="text-[11px] text-gray-600">Complaints Resolved</p>
                 </div>
             </div>
             <div
@@ -159,7 +159,7 @@ const aggregateSuccessRate = computed(() =>
                     <p class="text-xl font-bold text-gray-900">
                         {{ complaints.pending }}
                     </p>
-                    <p class="text-[11px] text-gray-400">Complaints Pending</p>
+                    <p class="text-[11px] text-gray-600">Complaints Pending</p>
                 </div>
             </div>
             <div
@@ -170,7 +170,7 @@ const aggregateSuccessRate = computed(() =>
                     <p class="text-xl font-bold text-gray-900">
                         {{ complaints.rejected }}
                     </p>
-                    <p class="text-[11px] text-gray-400">Complaints Rejected</p>
+                    <p class="text-[11px] text-gray-600">Complaints Rejected</p>
                 </div>
             </div>
         </div>
@@ -235,7 +235,7 @@ const aggregateSuccessRate = computed(() =>
                             :size="100"
                             :center-label="aggregateSuccessRate + '%'"
                         />
-                        <p class="text-xs text-gray-400 mt-1">Success rate</p>
+                        <p class="text-xs text-gray-600 mt-1">Success rate</p>
                     </div>
                 </div>
             </div>

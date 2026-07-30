@@ -78,6 +78,7 @@ const fieldSteps = {
     family_photo2: 4,
 
     payment_method: 5,
+    registration_payment_proof: 5,
 };
 
 const fieldLabels = computed(() => ({
@@ -393,10 +394,11 @@ const form = useForm({
     guardian_photo: null,
 
     // Payment
-    payment_method: "razorpay",
+    payment_method: "cash",
     razorpay_order_id: "",
     razorpay_payment_id: "",
     razorpay_signature: "",
+    registration_payment_proof: null,
 });
 
 const photoPreviews = ref({
@@ -627,7 +629,7 @@ const handleSubmit = async () => {
                         <h1 class="text-xl font-bold text-gray-900">
                             {{ t.title }}
                         </h1>
-                        <p class="text-sm text-gray-500">{{ t.subtitle }}</p>
+                        <p class="text-sm text-gray-700">{{ t.subtitle }}</p>
                     </div>
                     <div class="flex items-center gap-2">
                         <a
@@ -660,7 +662,7 @@ const handleSubmit = async () => {
                             :class="[
                                 step <= currentStep
                                     ? 'bg-indigo-600 text-white'
-                                    : 'bg-gray-200 text-gray-500',
+                                    : 'bg-gray-200 text-gray-700',
                                 stepErrors[step]
                                     ? 'ring-2 ring-red-300 ring-offset-2'
                                     : '',
@@ -699,7 +701,7 @@ const handleSubmit = async () => {
                         :class="
                             idx + 1 === currentStep
                                 ? 'text-indigo-600 font-medium'
-                                : 'text-gray-400'
+                                : 'text-gray-600'
                         "
                     >
                         {{ label }}
@@ -808,7 +810,7 @@ const handleSubmit = async () => {
                                     />
                                     <div
                                         v-else
-                                        class="flex flex-col items-center justify-center h-full text-gray-400"
+                                        class="flex flex-col items-center justify-center h-full text-gray-600"
                                     >
                                         <Camera class="w-8 h-8 mb-1" />
                                         <span class="text-xs">Photo</span>
@@ -1082,7 +1084,7 @@ const handleSubmit = async () => {
                                 />
                                 <div
                                     v-else
-                                    class="flex flex-col items-center justify-center h-full text-gray-400"
+                                    class="flex flex-col items-center justify-center h-full text-gray-600"
                                 >
                                     <Camera class="w-6 h-6" />
                                 </div>
@@ -1115,7 +1117,7 @@ const handleSubmit = async () => {
                                 />
                                 <div
                                     v-else
-                                    class="flex flex-col items-center justify-center h-full text-gray-400"
+                                    class="flex flex-col items-center justify-center h-full text-gray-600"
                                 >
                                     <Camera class="w-6 h-6" />
                                 </div>
@@ -1265,7 +1267,7 @@ const handleSubmit = async () => {
                             >
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
-                                    <span class="text-xs text-gray-500">{{
+                                    <span class="text-xs text-gray-700">{{
                                         t.from
                                     }}</span>
                                     <input
@@ -1276,7 +1278,7 @@ const handleSubmit = async () => {
                                     />
                                 </div>
                                 <div>
-                                    <span class="text-xs text-gray-500">{{
+                                    <span class="text-xs text-gray-700">{{
                                         t.to
                                     }}</span>
                                     <input
@@ -1603,7 +1605,7 @@ const handleSubmit = async () => {
                                 />
                                 <div
                                     v-else
-                                    class="flex flex-col items-center justify-center h-full text-gray-400"
+                                    class="flex flex-col items-center justify-center h-full text-gray-600"
                                 >
                                     <Camera class="w-6 h-6" />
                                 </div>
@@ -1647,7 +1649,7 @@ const handleSubmit = async () => {
                                     />
                                     <div
                                         v-else
-                                        class="flex flex-col items-center justify-center h-full text-gray-400"
+                                        class="flex flex-col items-center justify-center h-full text-gray-600"
                                     >
                                         <Camera class="w-6 h-6" />
                                     </div>
@@ -1683,7 +1685,7 @@ const handleSubmit = async () => {
                                     />
                                     <div
                                         v-else
-                                        class="flex flex-col items-center justify-center h-full text-gray-400"
+                                        class="flex flex-col items-center justify-center h-full text-gray-600"
                                     >
                                         <Camera class="w-6 h-6" />
                                     </div>
@@ -1743,7 +1745,7 @@ const handleSubmit = async () => {
                             >{{ t.paymentMethod }}</label
                         >
 
-                        <label
+                        <!-- <label
                             class="flex items-center gap-4 p-4 border-2 rounded-xl cursor-pointer transition-colors"
                             :class="
                                 form.payment_method === 'razorpay'
@@ -1766,7 +1768,7 @@ const handleSubmit = async () => {
                                 <p class="font-medium text-gray-900">
                                     {{ t.onlinePayment }}
                                 </p>
-                                <p class="text-xs text-gray-500">
+                                <p class="text-xs text-gray-700">
                                     UPI, Card, Net Banking
                                 </p>
                             </div>
@@ -1776,7 +1778,7 @@ const handleSubmit = async () => {
                             >
                                 <Check class="w-3 h-3 text-white" />
                             </div>
-                        </label>
+                        </label> -->
 
                         <label
                             class="flex items-center gap-4 p-4 border-2 rounded-xl cursor-pointer transition-colors"
@@ -1801,7 +1803,7 @@ const handleSubmit = async () => {
                                 <p class="font-medium text-gray-900">
                                     {{ t.cashPayment }}
                                 </p>
-                                <p class="text-xs text-gray-500">
+                                <p class="text-xs text-gray-700">
                                     Pay at hostel office
                                 </p>
                             </div>
@@ -1812,6 +1814,30 @@ const handleSubmit = async () => {
                                 <Check class="w-3 h-3 text-white" />
                             </div>
                         </label>
+                    </div>
+
+                    <div
+                        v-if="form.payment_method === 'cash'"
+                        class="mt-4"
+                    >
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Payment Screenshot / Receipt
+                        </label>
+
+                        <input
+                            type="file"
+                            accept=".jpg,.jpeg,.png,.pdf"
+                            @change="e => form.registration_payment_proof = e.target.files[0]"
+                            class="block w-full text-sm"
+                        />
+
+                        <p class="text-xs text-gray-700 mt-1">
+                            Upload the QR payment screenshot or receipt if you paid via UPI.
+                        </p>
+
+                        <InputError
+                            :message="form.errors.registration_payment_proof"
+                        />
                     </div>
 
                     <!-- Declaration -->

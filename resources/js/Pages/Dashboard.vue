@@ -142,7 +142,7 @@ const formatDate = (date) => {
             <!-- Header -->
             <div>
                 <h1 class="text-2xl font-bold text-gray-900">Dashboard</h1>
-                <p class="text-sm text-gray-500 mt-0.5">
+                <p class="text-sm text-gray-700 mt-0.5">
                     Real-time overview of all your hostels
                 </p>
             </div>
@@ -156,13 +156,13 @@ const formatDate = (date) => {
                 >
                     <div class="flex items-start justify-between">
                         <div>
-                            <p class="text-xs text-gray-500">
+                            <p class="text-xs text-gray-700">
                                 {{ card.label }}
                             </p>
                             <p class="text-2xl font-bold text-gray-900 mt-1">
                                 {{ card.value() }}
                             </p>
-                            <p class="text-xs text-gray-400 mt-1">
+                            <p class="text-xs text-gray-600 mt-1">
                                 {{ card.sub() }}
                             </p>
                         </div>
@@ -203,7 +203,7 @@ const formatDate = (date) => {
                                     }"
                                 />
                             </div>
-                            <span class="text-[10px] text-gray-400">{{
+                            <span class="text-[10px] text-gray-600">{{
                                 m.month
                             }}</span>
                         </div>
@@ -218,7 +218,7 @@ const formatDate = (date) => {
                         <h2 class="text-sm font-semibold text-gray-900">
                             Collection
                         </h2>
-                        <span class="text-xs font-medium text-gray-500"
+                        <span class="text-xs font-medium text-gray-700"
                             >{{ sessionBilling?.collectionRate ?? 0 }}%</span
                         >
                     </div>
@@ -259,38 +259,38 @@ const formatDate = (date) => {
 
                     <div class="space-y-3">
                         <div class="flex justify-between text-sm">
-                            <span class="text-gray-500">Session Name</span>
+                            <span class="text-gray-700">Session Name</span>
                             <span
                                 class="font-medium text-gray-900 text-right"
                                 >{{ sessionBilling?.name ?? "-" }}</span
                             >
                         </div>
                         <div class="flex justify-between text-sm">
-                            <span class="text-gray-500">Total Amount</span>
+                            <span class="text-gray-700">Total Amount</span>
                             <span class="font-semibold text-gray-900">{{
                                 formatCurrency(sessionBilling?.totalAmount)
                             }}</span>
                         </div>
                         <div class="flex justify-between text-sm">
-                            <span class="text-gray-500">Total Paid</span>
+                            <span class="text-gray-700">Total Paid</span>
                             <span class="font-semibold text-green-600">{{
                                 formatCurrency(sessionBilling?.paidAmount)
                             }}</span>
                         </div>
                         <div class="flex justify-between text-sm">
-                            <span class="text-gray-500">Total Pending</span>
+                            <span class="text-gray-700">Total Pending</span>
                             <span class="font-semibold text-red-600">{{
                                 formatCurrency(sessionBilling?.pendingAmount)
                             }}</span>
                         </div>
                         <div class="flex justify-between text-sm">
-                            <span class="text-gray-500">Total Refund</span>
+                            <span class="text-gray-700">Total Refund</span>
                             <span class="font-semibold text-gray-900">{{
                                 formatCurrency(sessionBilling?.refundAmount)
                             }}</span>
                         </div>
                         <div class="flex justify-between text-sm">
-                            <span class="text-gray-500">Bills Processed</span>
+                            <span class="text-gray-700">Bills Processed</span>
                             <span class="font-semibold text-gray-900"
                                 >{{ sessionBilling?.billsProcessed ?? 0 }}/{{
                                     sessionBilling?.totalBills ?? 0
@@ -333,7 +333,7 @@ const formatDate = (date) => {
                                     >
                                         {{ report.label }}
                                     </p>
-                                    <p class="text-xs text-gray-400">
+                                    <p class="text-xs text-gray-600">
                                         Generated
                                         {{ formatDate(report.generatedAt) }}
                                     </p>
@@ -350,7 +350,7 @@ const formatDate = (date) => {
                         </div>
                         <div
                             v-if="!misReports?.length"
-                            class="text-sm text-gray-400 text-center py-4"
+                            class="text-sm text-gray-600 text-center py-4"
                         >
                             No reports available
                         </div>
@@ -387,7 +387,7 @@ const formatDate = (date) => {
                                     class="h-8 w-8 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0"
                                 >
                                     <MessageSquareWarning
-                                        class="h-4 w-4 text-gray-500"
+                                        class="h-4 w-4 text-gray-700"
                                     />
                                 </div>
                                 <div class="min-w-0">
@@ -396,11 +396,11 @@ const formatDate = (date) => {
                                     >
                                         {{ complaint.category }}
                                     </p>
-                                    <p class="text-xs text-gray-500">
+                                    <p class="text-xs text-gray-700">
                                         {{ complaint.residentName }}
                                     </p>
                                     <p
-                                        class="text-xs text-gray-400 mt-0.5 line-clamp-1"
+                                        class="text-xs text-gray-600 mt-0.5 line-clamp-1"
                                     >
                                         {{ complaint.description }}
                                     </p>
@@ -415,7 +415,7 @@ const formatDate = (date) => {
                         </div>
                         <div
                             v-else
-                            class="text-sm text-gray-400 text-center py-4 flex flex-col items-center gap-2"
+                            class="text-sm text-gray-600 text-center py-4 flex flex-col items-center gap-2"
                         >
                             <XCircle class="w-8 h-8 text-gray-300" />
                             No open complaints
@@ -471,12 +471,12 @@ const formatDate = (date) => {
                                     </span>
                                 </div>
                                 <p
-                                    class="text-xs text-gray-500 mt-0.5 line-clamp-1"
+                                    class="text-xs text-gray-700 mt-0.5 line-clamp-1"
                                 >
                                     {{ leave.reason }}
                                 </p>
                                 <div
-                                    class="flex items-center gap-1 mt-1.5 text-xs text-gray-400"
+                                    class="flex items-center gap-1 mt-1.5 text-xs text-gray-600"
                                 >
                                     <Clock class="w-3 h-3" />
                                     <span
@@ -488,7 +488,7 @@ const formatDate = (date) => {
                         </div>
                         <div
                             v-else
-                            class="text-sm text-gray-400 text-center py-4 flex flex-col items-center gap-2"
+                            class="text-sm text-gray-600 text-center py-4 flex flex-col items-center gap-2"
                         >
                             <XCircle class="w-8 h-8 text-gray-300" />
                             No pending leave requests
@@ -519,14 +519,14 @@ const formatDate = (date) => {
                                     }}</span>
                                     {{ a.action }}
                                 </p>
-                                <p class="text-xs text-gray-400">
+                                <p class="text-xs text-gray-600">
                                     {{ new Date(a.date).toLocaleDateString() }}
                                 </p>
                             </div>
                         </li>
                         <li
                             v-if="!recentActivity.length"
-                            class="text-sm text-gray-400"
+                            class="text-sm text-gray-600"
                         >
                             No recent activity
                         </li>

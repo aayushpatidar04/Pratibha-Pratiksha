@@ -143,7 +143,7 @@ const submitReview = () => {
                         <ArrowRightLeft class="h-6 w-6 text-blue-600" /> Room
                         Change Requests
                     </h1>
-                    <p class="text-sm text-gray-500 mt-0.5">
+                    <p class="text-sm text-gray-700 mt-0.5">
                         Review and action resident requests to move rooms
                     </p>
                 </div>
@@ -167,7 +167,7 @@ const submitReview = () => {
                     <p class="text-lg font-bold text-amber-600">
                         {{ stats.pending }}
                     </p>
-                    <p class="text-xs text-gray-400">Pending</p>
+                    <p class="text-xs text-gray-600">Pending</p>
                 </div>
                 <div
                     class="bg-white rounded-xl border border-gray-100 p-3 text-center"
@@ -175,7 +175,7 @@ const submitReview = () => {
                     <p class="text-lg font-bold text-green-600">
                         {{ stats.approved }}
                     </p>
-                    <p class="text-xs text-gray-400">Approved</p>
+                    <p class="text-xs text-gray-600">Approved</p>
                 </div>
                 <div
                     class="bg-white rounded-xl border border-gray-100 p-3 text-center"
@@ -183,7 +183,7 @@ const submitReview = () => {
                     <p class="text-lg font-bold text-red-600">
                         {{ stats.rejected }}
                     </p>
-                    <p class="text-xs text-gray-400">Rejected</p>
+                    <p class="text-xs text-gray-600">Rejected</p>
                 </div>
             </div>
 
@@ -203,7 +203,7 @@ const submitReview = () => {
                 class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden"
             >
                 <table class="w-full text-sm">
-                    <thead class="bg-gray-50 text-gray-500 text-xs uppercase">
+                    <thead class="bg-gray-50 text-gray-700 text-xs uppercase">
                         <tr>
                             <th class="text-left px-4 py-3">Resident</th>
                             <th class="text-left px-4 py-3">Current Room</th>
@@ -272,7 +272,7 @@ const submitReview = () => {
                         <tr v-if="!requests.data.length">
                             <td
                                 colspan="6"
-                                class="px-4 py-10 text-center text-gray-400"
+                                class="px-4 py-10 text-center text-gray-600"
                             >
                                 No room change requests
                             </td>
@@ -336,7 +336,7 @@ const submitReview = () => {
                     ></textarea>
                 </div>
 
-                <p class="text-xs font-semibold text-gray-400 uppercase pt-1">
+                <p class="text-xs font-semibold text-gray-600 uppercase pt-1">
                     Preferred Room (optional — can be decided at approval time)
                 </p>
                 <div class="grid grid-cols-2 gap-4">
@@ -446,7 +446,7 @@ const submitReview = () => {
                         }}
                     </h2>
 
-                    <p class="mt-1 text-sm text-gray-500">
+                    <p class="mt-1 text-sm text-gray-700">
                         {{ reviewing.resident?.first_name }}
                         {{ reviewing.resident?.last_name }}
                     </p>
@@ -458,7 +458,7 @@ const submitReview = () => {
                             class="grid grid-cols-1 gap-4 rounded-xl border border-gray-200 bg-gray-50 p-4 sm:grid-cols-2"
                         >
                             <div>
-                                <p class="text-xs font-medium text-gray-400">
+                                <p class="text-xs font-medium text-gray-600">
                                     Current Room
                                 </p>
 
@@ -481,7 +481,7 @@ const submitReview = () => {
                                     }}
                                 </p>
 
-                                <p class="mt-1 text-xs text-gray-500">
+                                <p class="mt-1 text-xs text-gray-700">
                                     Current rent: ₹{{
                                         Number(
                                             reviewing.current_stay
@@ -492,7 +492,7 @@ const submitReview = () => {
                             </div>
 
                             <div>
-                                <p class="text-xs font-medium text-gray-400">
+                                <p class="text-xs font-medium text-gray-600">
                                     New Room
                                 </p>
 
@@ -523,7 +523,7 @@ const submitReview = () => {
                                     No specific bed has been selected.
                                 </p>
 
-                                <p class="mt-1 text-xs text-gray-500">
+                                <p class="mt-1 text-xs text-gray-700">
                                     Standard room rent: ₹{{
                                         Number(
                                             reviewing.requested_room
@@ -599,7 +599,7 @@ const submitReview = () => {
                                 class="w-full"
                             />
 
-                            <p class="mt-1 text-xs text-gray-500">
+                            <p class="mt-1 text-xs text-gray-700">
                                 Future monthly invoices will use this rent.
                             </p>
 

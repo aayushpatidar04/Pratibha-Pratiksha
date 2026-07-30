@@ -46,6 +46,12 @@ import {
     Calendar,
     Clock3,
     Printer,
+    ContactRound,
+    Copy,
+    CheckCheck,
+    Mail,
+    MessageCircle,
+    ChevronDown,
 } from "lucide-vue-next";
 
 const props = defineProps({
@@ -56,6 +62,7 @@ const props = defineProps({
     studentWise: Object,
     hostelWise: Object,
     tabCounts: Object,
+    academicFilterOptions: Object,
     buildings: Array,
     floors: Array,
     rooms: Array,
@@ -99,6 +106,7 @@ const filters = reactive({
     search: props.filters?.search || "",
     gender: props.filters?.gender || "",
     course: props.filters?.course || "",
+    institute: props.filters?.institute || "",
     bookings_filter: props.filters?.bookings_filter || "",
     country: props.filters?.country || "",
     state: props.filters?.state || "",
@@ -131,6 +139,7 @@ const clearFilters = () => {
         search: undefined,
         gender: undefined,
         course: undefined,
+        institute: undefined,
         bookings_filter: undefined,
         country: undefined,
         state: undefined,
@@ -244,6 +253,7 @@ const editForm = useForm({
     whatsapp_number: "",
     email: "",
     gender: "",
+    aadhar_number: "",
     date_of_birth: "",
     blood_group: "",
     address: "",
@@ -318,6 +328,7 @@ const openEdit = (resident) => {
         whatsapp_number: resident.whatsapp_number,
         email: resident.email,
         gender: resident.gender,
+        aadhar_number: resident.aadhar_number,
         date_of_birth: resident.date_of_birth,
         blood_group: resident.blood_group,
         address: resident.address,
@@ -384,12 +395,13 @@ const createForm = useForm({
     phone: "",
     whatsapp_number: "",
     date_of_birth: "",
-    gender: "male",
+    gender: "female",
+    aadhar_number: "",
     blood_group: "",
     address: "",
     city: "",
     state: "",
-    country: "India",
+    country: "Bharat",
     pincode: "",
     course: "",
     year: "",
@@ -618,6 +630,147 @@ const submitStayDates = () => {
         },
     );
 };
+
+const quickContactOpen = ref(false);
+const quickContactResident = ref(null);
+const copiedField = ref("");
+
+let copiedTimeout = null;
+
+const openQuickContact = (resident, event = null) => {
+    event?.stopPropagation();
+
+    quickContactResident.value = resident;
+    copiedField.value = "";
+    quickContactOpen.value = true;
+    openActionsFor.value = null;
+};
+
+const closeQuickContact = () => {
+    quickContactOpen.value = false;
+    quickContactResident.value = null;
+    copiedField.value = "";
+
+    if (copiedTimeout) {
+        clearTimeout(copiedTimeout);
+        copiedTimeout = null;
+    }
+};
+
+const copyContactValue = async (field, value) => {
+    if (!value) return;
+
+    try {
+        await navigator.clipboard.writeText(String(value));
+
+        copiedField.value = field;
+
+        if (copiedTimeout) {
+            clearTimeout(copiedTimeout);
+        }
+
+        copiedTimeout = setTimeout(() => {
+            copiedField.value = "";
+        }, 1800);
+    } catch (error) {
+        console.error("Unable to copy contact information.", error);
+    }
+};
+
+onBeforeUnmount(() => {
+    document.removeEventListener("click", handleClickOutside);
+    document.removeEventListener("keydown", handleEscape);
+
+    if (copiedTimeout) {
+        clearTimeout(copiedTimeout);
+    }
+});
+
+const activeBuildingId = ref(null);
+const openFloorIds = ref([]);
+
+const activeHostelBuilding = computed(() => {
+    if (!props.hostelWise?.buildings?.length) {
+        return null;
+    }
+
+    return (
+        props.hostelWise.buildings.find(
+            (building) => building.id === activeBuildingId.value,
+        ) ?? props.hostelWise.buildings[0]
+    );
+});
+
+const setActiveBuilding = (building) => {
+    activeBuildingId.value = building.id;
+
+    openFloorIds.value = building.floors?.length ? [building.floors[0].id] : [];
+};
+
+const toggleFloor = (floorId) => {
+    if (openFloorIds.value.includes(floorId)) {
+        openFloorIds.value = openFloorIds.value.filter((id) => id !== floorId);
+
+        return;
+    }
+
+    openFloorIds.value.push(floorId);
+};
+
+const isFloorOpen = (floorId) => {
+    return openFloorIds.value.includes(floorId);
+};
+
+const floorOccupancy = (floor) => {
+    return (floor.rooms ?? []).reduce(
+        (totals, room) => {
+            totals.capacity += Number(room.capacity ?? 0);
+            totals.occupied += Number(room.occupied_beds ?? 0);
+
+            return totals;
+        },
+        {
+            capacity: 0,
+            occupied: 0,
+        },
+    );
+};
+
+watch(
+    () => props.hostelWise?.buildings,
+    (buildings) => {
+        if (!buildings?.length) {
+            activeBuildingId.value = null;
+            openFloorIds.value = [];
+            return;
+        }
+
+        const selectedBuilding = buildings.find(
+            (building) => building.id === activeBuildingId.value,
+        );
+
+        if (!selectedBuilding) {
+            setActiveBuilding(buildings[0]);
+            return;
+        }
+
+        const validFloorIds = new Set(
+            (selectedBuilding.floors ?? []).map((floor) => floor.id),
+        );
+
+        openFloorIds.value = openFloorIds.value.filter((floorId) =>
+            validFloorIds.has(floorId),
+        );
+
+        if (!openFloorIds.value.length && selectedBuilding.floors?.length) {
+            openFloorIds.value = [selectedBuilding.floors[0].id];
+        }
+    },
+    {
+        immediate: true,
+        deep: true,
+    },
+);
 </script>
 
 <template>
@@ -632,7 +785,7 @@ const submitStayDates = () => {
             >
                 <div class="relative w-full lg:w-80">
                     <Search
-                        class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400"
+                        class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-600"
                     />
                     <input
                         v-model="filters.search"
@@ -673,7 +826,7 @@ const submitStayDates = () => {
             </div>
 
             <!-- Top-level tabs -->
-            <div
+            <div v-if="studentWise"
                 class="flex gap-1 bg-white p-1 rounded-xl border border-gray-100 w-fit"
             >
                 <button
@@ -703,7 +856,7 @@ const submitStayDates = () => {
 
             <!-- Sub-tabs (Residents tab only) -->
             <div
-                v-if="tab === 'residents'"
+                v-if="tab === 'residents' && studentWise" 
                 class="flex gap-5 border-b border-gray-200 text-sm"
             >
                 <button
@@ -721,7 +874,7 @@ const submitStayDates = () => {
                     :class="
                         sub === s.key
                             ? 'border-blue-600 text-blue-600 font-medium'
-                            : 'border-transparent text-gray-500'
+                            : 'border-transparent text-gray-700'
                     "
                 >
                     {{ s.label }}
@@ -769,7 +922,7 @@ const submitStayDates = () => {
                     v-if="studentWise"
                     class="flex flex-wrap items-center gap-2"
                 >
-                    <span class="text-xs text-gray-500">Bookings:</span>
+                    <span class="text-xs text-gray-700">Bookings:</span>
                     <button
                         class="px-3 py-1 text-xs rounded-full border"
                         :class="
@@ -811,9 +964,11 @@ const submitStayDates = () => {
                     </button>
                 </div>
 
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div
+                    class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4"
+                >
                     <div>
-                        <label class="block text-xs text-gray-500 mb-1"
+                        <label class="block text-xs text-gray-700 mb-1"
                             >Gender</label
                         >
                         <select
@@ -827,14 +982,57 @@ const submitStayDates = () => {
                         </select>
                     </div>
                     <div v-if="studentWise">
-                        <label class="block text-xs text-gray-500 mb-1"
+                        <label class="mb-1 block text-xs text-gray-700">
+                            Course
+                        </label>
+
+                        <select
+                            v-model="filters.course"
+                            class="w-full rounded-lg border-gray-300 text-sm"
+                        >
+                            <option value="">All Courses</option>
+
+                            <option
+                                v-for="course in academicFilterOptions?.courses ||
+                                []"
+                                :key="course"
+                                :value="course"
+                            >
+                                {{ course }}
+                            </option>
+                        </select>
+                    </div>
+
+                    <div v-if="studentWise">
+                        <label class="mb-1 block text-xs text-gray-700">
+                            Institute
+                        </label>
+
+                        <select
+                            v-model="filters.institute"
+                            class="w-full rounded-lg border-gray-300 text-sm"
+                        >
+                            <option value="">All Institutes</option>
+
+                            <option
+                                v-for="institute in academicFilterOptions?.institutes ||
+                                []"
+                                :key="institute"
+                                :value="institute"
+                            >
+                                {{ institute }}
+                            </option>
+                        </select>
+                    </div>
+                    <div v-if="studentWise">
+                        <label class="block text-xs text-gray-700 mb-1"
                             >Country</label
                         >
                         <select
                             v-model="filters.country"
                             class="w-full rounded-lg border-gray-300 text-sm"
                         >
-                            <option value="">No data Available</option>
+                            <option value="">All Countries</option>
                             <option
                                 v-for="c in studentWise.locationOptions
                                     .countries"
@@ -846,14 +1044,14 @@ const submitStayDates = () => {
                         </select>
                     </div>
                     <div v-if="studentWise">
-                        <label class="block text-xs text-gray-500 mb-1"
+                        <label class="block text-xs text-gray-700 mb-1"
                             >State</label
                         >
                         <select
                             v-model="filters.state"
                             class="w-full rounded-lg border-gray-300 text-sm"
                         >
-                            <option value="">No data Available</option>
+                            <option value="">All States</option>
                             <option
                                 v-for="s in studentWise.locationOptions.states"
                                 :key="s"
@@ -864,14 +1062,14 @@ const submitStayDates = () => {
                         </select>
                     </div>
                     <div v-if="studentWise">
-                        <label class="block text-xs text-gray-500 mb-1"
+                        <label class="block text-xs text-gray-700 mb-1"
                             >City</label
                         >
                         <select
                             v-model="filters.city"
                             class="w-full rounded-lg border-gray-300 text-sm"
                         >
-                            <option value="">No data Available</option>
+                            <option value="">All Cities</option>
                             <option
                                 v-for="c in studentWise.locationOptions.cities"
                                 :key="c"
@@ -882,7 +1080,7 @@ const submitStayDates = () => {
                         </select>
                     </div>
                     <div v-if="studentWise">
-                        <label class="block text-xs text-gray-500 mb-1"
+                        <label class="block text-xs text-gray-700 mb-1"
                             >Tentative Living Up To</label
                         >
                         <input
@@ -915,7 +1113,7 @@ const submitStayDates = () => {
                 class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-x-auto"
             >
                 <table class="w-full text-sm">
-                    <thead class="bg-gray-50 text-gray-500 text-xs uppercase">
+                    <thead class="bg-gray-50 text-gray-700 text-xs uppercase">
                         <tr>
                             <th class="text-left px-4 py-3">Id</th>
                             <th class="text-left px-4 py-3">Name</th>
@@ -930,35 +1128,70 @@ const submitStayDates = () => {
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
-                        <tr v-for="r in studentWise.residents.data" :key="r.id">
-                            <td class="px-4 py-3 text-gray-400">{{ r.id }}</td>
+                        <tr
+                            v-for="r in studentWise.residents.data"
+                            :key="r.id"
+                            class="group transition-colors duration-200 hover:bg-blue-50/50"
+                        >
+                            <td class="px-4 py-3 text-gray-600">{{ r.id }}</td>
                             <td class="px-4 py-3">
-                                <div class="flex items-center gap-2">
-                                    <img
-                                        v-if="r.photo_url"
-                                        :src="`/storage/${r.photo_url}`"
-                                        class="h-16 w-16 rounded object-cover shrink-0"
-                                    />
-                                    <div
-                                        v-else
-                                        class="h-16 w-16 rounded bg-gray-100 flex items-center justify-center text-gray-400 text-xs shrink-0"
-                                    >
-                                        {{ r.first_name?.charAt(0) }}
+                                <div
+                                    class="flex items-center gap-3 transition-transform duration-200 ease-out group-hover:translate-x-1 group-hover:scale-[1.025]"
+                                >
+                                    <div class="relative shrink-0">
+                                        <img
+                                            v-if="r.photo_url"
+                                            :src="`/storage/${r.photo_url}`"
+                                            class="h-16 w-16 rounded-lg border border-gray-100 object-cover shadow-sm transition-all duration-200 group-hover:shadow-md"
+                                            :alt="`${r.first_name} ${r.last_name || ''}`"
+                                        />
+
+                                        <div
+                                            v-else
+                                            class="flex h-16 w-16 items-center justify-center rounded-lg border border-gray-100 bg-gray-100 text-lg font-semibold text-gray-600 shadow-sm transition-all duration-200 group-hover:bg-blue-100 group-hover:text-blue-600 group-hover:shadow-md"
+                                        >
+                                            {{ r.first_name?.charAt(0) }}
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            class="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-blue-600 text-white shadow-sm transition-all duration-200 hover:scale-110 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                                            title="Quick contact"
+                                            @click="openQuickContact(r, $event)"
+                                        >
+                                            <ContactRound class="h-3.5 w-3.5" />
+                                        </button>
                                     </div>
-                                    <div>
-                                        <p class="font-medium text-gray-900">
+
+                                    <div class="min-w-0">
+                                        <p
+                                            class="truncate font-medium text-gray-900 transition-colors duration-200 group-hover:text-blue-700"
+                                        >
                                             {{ r.first_name }} {{ r.last_name }}
                                         </p>
-                                        <div class="flex items-center gap-1.5">
+
+                                        <div
+                                            class="mt-1 flex flex-wrap items-center gap-1.5"
+                                        >
                                             <span
-                                                class="text-[10px] text-gray-400"
-                                                >{{ r.resident_code }}</span
+                                                class="text-[10px] text-gray-600"
                                             >
+                                                {{ r.resident_code }}
+                                            </span>
+
                                             <Badge
                                                 :color="genderColor[r.gender]"
-                                                >{{ r.gender }}</Badge
                                             >
+                                                {{ r.gender }}
+                                            </Badge>
                                         </div>
+
+                                        <p
+                                            v-if="r.phone"
+                                            class="mt-1 text-[11px] text-gray-600 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+                                        >
+                                            {{ r.phone }}
+                                        </p>
                                     </div>
                                 </div>
                             </td>
@@ -983,10 +1216,10 @@ const submitStayDates = () => {
                                 <p v-if="r.course">
                                     {{ r.course }} · Year {{ r.year || "—" }}
                                 </p>
-                                <p class="text-gray-400">
+                                <p class="text-gray-600">
                                     {{ r.institute || "—" }}
                                 </p>
-                                <p class="text-gray-400">
+                                <p class="text-gray-600">
                                     Batch: {{ r.batch || "—" }}
                                 </p>
                             </td>
@@ -994,7 +1227,7 @@ const submitStayDates = () => {
                                 <p v-if="r.father_name">{{ r.father_name }}</p>
                                 <p
                                     v-if="r.father_phone"
-                                    class="flex items-center gap-1 text-gray-400"
+                                    class="flex items-center gap-1 text-gray-600"
                                 >
                                     <Phone class="h-3 w-3" />{{
                                         r.father_phone
@@ -1021,7 +1254,7 @@ const submitStayDates = () => {
                                 </p>
                                 <p
                                     v-else-if="r.current_stay"
-                                    class="text-gray-400"
+                                    class="text-gray-600"
                                 >
                                     No end date
                                 </p>
@@ -1041,7 +1274,7 @@ const submitStayDates = () => {
                                     @click="toggleActions(r.id, $event)"
                                 >
                                     <MoreVertical
-                                        class="h-4 w-4 text-gray-500"
+                                        class="h-4 w-4 text-gray-700"
                                     />
                                 </button>
                                 <div
@@ -1214,7 +1447,7 @@ const submitStayDates = () => {
                         <tr v-if="!studentWise.residents.data.length">
                             <td
                                 colspan="8"
-                                class="px-4 py-10 text-center text-gray-400"
+                                class="px-4 py-10 text-center text-gray-600"
                             >
                                 No residents found
                             </td>
@@ -1251,95 +1484,380 @@ const submitStayDates = () => {
             </div>
 
             <!-- ================= HOSTEL-WISE CARD GRID ================= -->
-            <div v-else-if="view === 'hostel' && hostelWise" class="space-y-6">
-                <div
-                    v-for="building in hostelWise.buildings"
-                    :key="building.id"
-                    class="bg-white rounded-xl border border-gray-100 shadow-sm p-5"
-                >
-                    <h2 class="text-sm font-semibold text-gray-900 mb-4">
-                        {{ building.name }}
-                    </h2>
+            <div v-else-if="view === 'hostel' && hostelWise" class="space-y-4">
+                <template v-if="hostelWise.buildings?.length">
+                    <!-- Building tabs -->
                     <div
-                        v-for="floor in building.floors"
-                        :key="floor.id"
-                        class="mb-5"
+                        class="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm"
                     >
-                        <p class="text-xs font-semibold text-gray-500 mb-2">
-                            {{ floor.name }}
-                        </p>
                         <div
-                            class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3"
+                            class="flex overflow-x-auto border-b border-gray-100 bg-gray-50 px-3 pt-3"
+                        >
+                            <button
+                                v-for="building in hostelWise.buildings"
+                                :key="building.id"
+                                type="button"
+                                class="relative flex shrink-0 items-center gap-2 rounded-t-xl px-5 py-3 text-sm font-medium transition-colors"
+                                :class="
+                                    activeBuildingId === building.id
+                                        ? 'bg-white text-blue-700 shadow-sm'
+                                        : 'text-gray-700 hover:bg-white/70 hover:text-gray-800'
+                                "
+                                @click="setActiveBuilding(building)"
+                            >
+                                <Building2 class="h-4 w-4" />
+
+                                <span>{{ building.name }}</span>
+
+                                <span
+                                    class="rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                                    :class="
+                                        activeBuildingId === building.id
+                                            ? 'bg-blue-100 text-blue-700'
+                                            : 'bg-gray-200 text-gray-700'
+                                    "
+                                >
+                                    {{ building.floors?.length ?? 0 }}
+                                    floor{{
+                                        (building.floors?.length ?? 0) === 1
+                                            ? ""
+                                            : "s"
+                                    }}
+                                </span>
+
+                                <span
+                                    v-if="activeBuildingId === building.id"
+                                    class="absolute bottom-0 left-4 right-4 h-0.5 rounded-full bg-blue-600"
+                                ></span>
+                            </button>
+                        </div>
+
+                        <!-- Active building header -->
+                        <div
+                            v-if="activeHostelBuilding"
+                            class="flex flex-col gap-3 border-b border-gray-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
+                        >
+                            <div>
+                                <h2
+                                    class="text-base font-semibold text-gray-900"
+                                >
+                                    {{ activeHostelBuilding.name }}
+                                </h2>
+
+                                <p class="mt-0.5 text-xs text-gray-700">
+                                    Select a floor to view its rooms, beds, and
+                                    residents.
+                                </p>
+                            </div>
+
+                            <div class="flex items-center gap-2 text-xs">
+                                <span
+                                    class="rounded-full bg-blue-50 px-3 py-1.5 font-medium text-blue-700"
+                                >
+                                    {{
+                                        activeHostelBuilding.floors?.length ?? 0
+                                    }}
+                                    Floors
+                                </span>
+
+                                <span
+                                    class="rounded-full bg-gray-100 px-3 py-1.5 font-medium text-gray-600"
+                                >
+                                    {{
+                                        (
+                                            activeHostelBuilding.floors ?? []
+                                        ).reduce(
+                                            (total, floor) =>
+                                                total +
+                                                (floor.rooms?.length ?? 0),
+                                            0,
+                                        )
+                                    }}
+                                    Rooms
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Floor accordions -->
+                        <div
+                            v-if="activeHostelBuilding"
+                            class="space-y-3 p-4 sm:p-5"
                         >
                             <div
-                                v-for="room in floor.rooms"
-                                :key="room.id"
-                                class="border border-gray-100 rounded-lg p-3"
+                                v-for="floor in activeHostelBuilding.floors"
+                                :key="floor.id"
+                                class="overflow-hidden rounded-xl border border-gray-200 bg-white"
                             >
-                                <div
-                                    class="flex items-center justify-between mb-2"
+                                <!-- Floor accordion header -->
+                                <button
+                                    type="button"
+                                    class="flex w-full items-center justify-between gap-4 px-4 py-4 text-left transition-colors hover:bg-gray-50"
+                                    @click="toggleFloor(floor.id)"
                                 >
-                                    <p
-                                        class="text-sm font-semibold text-gray-900"
-                                    >
-                                        Room {{ room.room_number }}
-                                    </p>
-                                    <span class="text-[10px] text-gray-400"
-                                        >{{ room.occupied_beds }}/{{
-                                            room.capacity
-                                        }}</span
-                                    >
-                                </div>
-                                <div class="space-y-1.5">
                                     <div
-                                        v-for="bed in room.beds"
-                                        :key="bed.id"
-                                        class="flex items-center gap-2 text-xs"
+                                        class="flex min-w-0 items-center gap-3"
                                     >
-                                        <span
-                                            class="w-8 text-gray-400 shrink-0"
-                                            >{{ bed.bed_number }}</span
+                                        <div
+                                            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
+                                            :class="
+                                                isFloorOpen(floor.id)
+                                                    ? 'bg-blue-100 text-blue-700'
+                                                    : 'bg-gray-100 text-gray-700'
+                                            "
                                         >
-                                        <template v-if="bed.resident">
-                                            <img
-                                                v-if="bed.resident.photo_url"
-                                                :src="`/storage/${bed.resident.photo_url}`"
-                                                class="h-5 w-5 rounded-full object-cover"
-                                            />
-                                            <div
-                                                v-else
-                                                class="h-5 w-5 rounded-full bg-gray-100 flex items-center justify-center text-[9px] text-gray-400"
+                                            <Building2 class="h-5 w-5" />
+                                        </div>
+
+                                        <div class="min-w-0">
+                                            <h3
+                                                class="truncate text-sm font-semibold text-gray-900"
                                             >
                                                 {{
-                                                    bed.resident.name.charAt(0)
+                                                    floor.name ||
+                                                    `Floor ${floor.floor_number}`
                                                 }}
-                                            </div>
-                                            <span
-                                                class="text-gray-700 truncate"
-                                                >{{ bed.resident.name }}</span
+                                            </h3>
+
+                                            <p
+                                                class="mt-0.5 text-xs text-gray-700"
                                             >
-                                        </template>
-                                        <span v-else class="text-gray-300"
-                                            >Vacant</span
-                                        >
+                                                {{ floor.rooms?.length ?? 0 }}
+                                                room{{
+                                                    (floor.rooms?.length ??
+                                                        0) === 1
+                                                        ? ""
+                                                        : "s"
+                                                }}
+                                            </p>
+                                        </div>
                                     </div>
-                                    <p
-                                        v-if="!room.beds.length"
-                                        class="text-xs text-gray-300"
+
+                                    <div
+                                        class="flex shrink-0 items-center gap-3"
                                     >
-                                        No beds
-                                    </p>
+                                        <div
+                                            class="hidden items-center gap-2 text-xs sm:flex"
+                                        >
+                                            <span
+                                                class="rounded-full bg-green-50 px-2.5 py-1 font-medium text-green-700"
+                                            >
+                                                {{
+                                                    floorOccupancy(floor)
+                                                        .occupied
+                                                }}
+                                                occupied
+                                            </span>
+
+                                            <span
+                                                class="rounded-full bg-gray-100 px-2.5 py-1 font-medium text-gray-600"
+                                            >
+                                                {{
+                                                    floorOccupancy(floor)
+                                                        .capacity
+                                                }}
+                                                beds
+                                            </span>
+                                        </div>
+
+                                        <ChevronDown
+                                            class="h-5 w-5 text-gray-600 transition-transform duration-200"
+                                            :class="
+                                                isFloorOpen(floor.id)
+                                                    ? 'rotate-180'
+                                                    : ''
+                                            "
+                                        />
+                                    </div>
+                                </button>
+
+                                <!-- Floor accordion content -->
+                                <div
+                                    v-show="isFloorOpen(floor.id)"
+                                    class="border-t border-gray-100 bg-gray-50/60 p-4"
+                                >
+                                    <div
+                                        v-if="floor.rooms?.length"
+                                        class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+                                    >
+                                        <div
+                                            v-for="room in floor.rooms"
+                                            :key="room.id"
+                                            class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md"
+                                        >
+                                            <!-- Room header -->
+                                            <div
+                                                class="flex items-center justify-between border-b border-gray-100 px-4 py-3"
+                                            >
+                                                <div
+                                                    class="flex items-center gap-2"
+                                                >
+                                                    <DoorOpen
+                                                        class="h-4 w-4 text-blue-600"
+                                                    />
+
+                                                    <p
+                                                        class="text-sm font-semibold text-gray-900"
+                                                    >
+                                                        Room
+                                                        {{ room.room_number }}
+                                                    </p>
+                                                </div>
+
+                                                <span
+                                                    class="rounded-full px-2 py-1 text-[10px] font-semibold"
+                                                    :class="
+                                                        Number(
+                                                            room.occupied_beds,
+                                                        ) >=
+                                                        Number(room.capacity)
+                                                            ? 'bg-red-50 text-red-700'
+                                                            : 'bg-green-50 text-green-700'
+                                                    "
+                                                >
+                                                    {{ room.occupied_beds }}/{{
+                                                        room.capacity
+                                                    }}
+                                                </span>
+                                            </div>
+
+                                            <!-- Bed list -->
+                                            <div class="space-y-2 p-3">
+                                                <div
+                                                    v-for="bed in room.beds"
+                                                    :key="bed.id"
+                                                    class="flex min-h-10 items-center gap-2 rounded-lg border border-gray-100 px-2.5 py-2 text-xs"
+                                                    :class="
+                                                        bed.resident
+                                                            ? 'bg-blue-50/40'
+                                                            : 'bg-gray-50'
+                                                    "
+                                                >
+                                                    <span
+                                                        class="w-12 shrink-0 font-medium text-gray-600"
+                                                    >
+                                                        Bed {{ bed.bed_number }}
+                                                    </span>
+
+                                                    <template
+                                                        v-if="bed.resident"
+                                                    >
+                                                        <img
+                                                            v-if="
+                                                                bed.resident
+                                                                    .photo_url
+                                                            "
+                                                            :src="`/storage/${bed.resident.photo_url}`"
+                                                            class="h-7 w-7 shrink-0 rounded-full border border-white object-cover shadow-sm"
+                                                            :alt="
+                                                                bed.resident
+                                                                    .name
+                                                            "
+                                                        />
+
+                                                        <div
+                                                            v-else
+                                                            class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-100 text-[10px] font-semibold text-blue-700"
+                                                        >
+                                                            {{
+                                                                bed.resident.name
+                                                                    ?.charAt(0)
+                                                                    ?.toUpperCase() ||
+                                                                "R"
+                                                            }}
+                                                        </div>
+
+                                                        <span
+                                                            class="min-w-0 flex-1 truncate font-medium text-gray-700"
+                                                            :title="
+                                                                bed.resident
+                                                                    .name
+                                                            "
+                                                        >
+                                                            {{
+                                                                bed.resident
+                                                                    .name
+                                                            }}
+                                                        </span>
+                                                    </template>
+
+                                                    <span
+                                                        v-else
+                                                        class="min-w-0 flex-1 text-gray-600"
+                                                    >
+                                                        Vacant
+                                                    </span>
+                                                </div>
+
+                                                <div
+                                                    v-if="!room.beds?.length"
+                                                    class="rounded-lg border border-dashed border-gray-200 px-3 py-5 text-center text-xs text-gray-600"
+                                                >
+                                                    No beds configured
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div
+                                        v-else
+                                        class="rounded-xl border border-dashed border-gray-200 bg-white px-4 py-10 text-center"
+                                    >
+                                        <DoorOpen
+                                            class="mx-auto h-8 w-8 text-gray-300"
+                                        />
+
+                                        <p
+                                            class="mt-2 text-sm font-medium text-gray-700"
+                                        >
+                                            No rooms configured
+                                        </p>
+
+                                        <p class="mt-1 text-xs text-gray-600">
+                                            This floor does not currently
+                                            contain any rooms.
+                                        </p>
+                                    </div>
                                 </div>
+                            </div>
+
+                            <div
+                                v-if="!activeHostelBuilding.floors?.length"
+                                class="rounded-xl border border-dashed border-gray-200 px-4 py-12 text-center"
+                            >
+                                <Building2
+                                    class="mx-auto h-9 w-9 text-gray-300"
+                                />
+
+                                <p
+                                    class="mt-3 text-sm font-medium text-gray-700"
+                                >
+                                    No floors configured
+                                </p>
+
+                                <p class="mt-1 text-xs text-gray-600">
+                                    This building does not currently contain any
+                                    floors.
+                                </p>
                             </div>
                         </div>
                     </div>
-                </div>
-                <p
-                    v-if="!hostelWise.buildings.length"
-                    class="text-sm text-gray-400 text-center py-10"
+                </template>
+
+                <div
+                    v-else
+                    class="rounded-xl border border-gray-100 bg-white px-4 py-14 text-center shadow-sm"
                 >
-                    No buildings yet
-                </p>
+                    <Building2 class="mx-auto h-10 w-10 text-gray-300" />
+
+                    <p class="mt-3 text-sm font-medium text-gray-700">
+                        No buildings yet
+                    </p>
+
+                    <p class="mt-1 text-xs text-gray-600">
+                        Add a building, floor, room, and beds to see the hostel
+                        layout.
+                    </p>
+                </div>
             </div>
         </div>
 
@@ -1361,7 +1879,7 @@ const submitStayDates = () => {
 
                     <div
                         v-else
-                        class="flex h-20 w-20 items-center justify-center rounded-xl bg-gray-100 text-3xl font-semibold text-gray-500"
+                        class="flex h-20 w-20 items-center justify-center rounded-xl bg-gray-100 text-3xl font-semibold text-gray-700"
                     >
                         {{ viewing.first_name?.charAt(0) }}
                     </div>
@@ -1372,7 +1890,7 @@ const submitStayDates = () => {
                             {{ viewing.last_name }}
                         </h2>
 
-                        <p class="mt-0.5 text-sm text-gray-500">
+                        <p class="mt-0.5 text-sm text-gray-700">
                             {{ viewing.resident_code }}
                         </p>
 
@@ -1410,21 +1928,21 @@ const submitStayDates = () => {
                             class="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2 lg:grid-cols-3"
                         >
                             <div>
-                                <p class="text-xs text-gray-400">First Name</p>
+                                <p class="text-xs text-gray-600">First Name</p>
                                 <p class="font-medium text-gray-900">
                                     {{ viewing.first_name || "—" }}
                                 </p>
                             </div>
 
                             <div>
-                                <p class="text-xs text-gray-400">Last Name</p>
+                                <p class="text-xs text-gray-600">Last Name</p>
                                 <p class="font-medium text-gray-900">
                                     {{ viewing.last_name || "—" }}
                                 </p>
                             </div>
 
                             <div>
-                                <p class="text-xs text-gray-400">
+                                <p class="text-xs text-gray-600">
                                     Resident Code
                                 </p>
                                 <p class="font-medium text-gray-900">
@@ -1433,14 +1951,23 @@ const submitStayDates = () => {
                             </div>
 
                             <div>
-                                <p class="text-xs text-gray-400">Gender</p>
+                                <p class="text-xs text-gray-600">Gender</p>
                                 <p class="font-medium capitalize text-gray-900">
                                     {{ viewing.gender || "—" }}
                                 </p>
                             </div>
 
                             <div>
-                                <p class="text-xs text-gray-400">
+                                <p class="text-xs text-gray-600">
+                                    Aadhar Number
+                                </p>
+                                <p class="font-medium capitalize text-gray-900">
+                                    {{ viewing.aadhar_number || "—" }}
+                                </p>
+                            </div>
+
+                            <div>
+                                <p class="text-xs text-gray-600">
                                     Date of Birth
                                 </p>
                                 <p class="font-medium text-gray-900">
@@ -1449,21 +1976,21 @@ const submitStayDates = () => {
                             </div>
 
                             <div>
-                                <p class="text-xs text-gray-400">Blood Group</p>
+                                <p class="text-xs text-gray-600">Blood Group</p>
                                 <p class="font-medium text-gray-900">
                                     {{ viewing.blood_group || "—" }}
                                 </p>
                             </div>
 
                             <div>
-                                <p class="text-xs text-gray-400">Status</p>
+                                <p class="text-xs text-gray-600">Status</p>
                                 <p class="font-medium capitalize text-gray-900">
                                     {{ viewing.status || "—" }}
                                 </p>
                             </div>
 
                             <div>
-                                <p class="text-xs text-gray-400">Created At</p>
+                                <p class="text-xs text-gray-600">Created At</p>
                                 <p class="font-medium text-gray-900">
                                     {{ viewing.created_at || "—" }}
                                 </p>
@@ -1484,14 +2011,14 @@ const submitStayDates = () => {
                             class="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2"
                         >
                             <div>
-                                <p class="text-xs text-gray-400">Phone</p>
+                                <p class="text-xs text-gray-600">Phone</p>
                                 <p class="font-medium text-gray-900">
                                     {{ viewing.phone || "—" }}
                                 </p>
                             </div>
 
                             <div>
-                                <p class="text-xs text-gray-400">
+                                <p class="text-xs text-gray-600">
                                     WhatsApp Number
                                 </p>
                                 <p class="font-medium text-gray-900">
@@ -1500,42 +2027,42 @@ const submitStayDates = () => {
                             </div>
 
                             <div>
-                                <p class="text-xs text-gray-400">Email</p>
+                                <p class="text-xs text-gray-600">Email</p>
                                 <p class="break-all font-medium text-gray-900">
                                     {{ viewing.email || "—" }}
                                 </p>
                             </div>
 
                             <div>
-                                <p class="text-xs text-gray-400">City</p>
+                                <p class="text-xs text-gray-600">City</p>
                                 <p class="font-medium text-gray-900">
                                     {{ viewing.city || "—" }}
                                 </p>
                             </div>
 
                             <div>
-                                <p class="text-xs text-gray-400">State</p>
+                                <p class="text-xs text-gray-600">State</p>
                                 <p class="font-medium text-gray-900">
                                     {{ viewing.state || "—" }}
                                 </p>
                             </div>
 
                             <div>
-                                <p class="text-xs text-gray-400">Country</p>
+                                <p class="text-xs text-gray-600">Country</p>
                                 <p class="font-medium text-gray-900">
                                     {{ viewing.country || "—" }}
                                 </p>
                             </div>
 
                             <div>
-                                <p class="text-xs text-gray-400">Pincode</p>
+                                <p class="text-xs text-gray-600">Pincode</p>
                                 <p class="font-medium text-gray-900">
                                     {{ viewing.pincode || "—" }}
                                 </p>
                             </div>
 
                             <div class="sm:col-span-2">
-                                <p class="text-xs text-gray-400">Address</p>
+                                <p class="text-xs text-gray-600">Address</p>
                                 <p
                                     class="whitespace-pre-line font-medium text-gray-900"
                                 >
@@ -1558,21 +2085,21 @@ const submitStayDates = () => {
                             class="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2 lg:grid-cols-3"
                         >
                             <div>
-                                <p class="text-xs text-gray-400">Institute</p>
+                                <p class="text-xs text-gray-600">Institute</p>
                                 <p class="font-medium text-gray-900">
                                     {{ viewing.institute || "—" }}
                                 </p>
                             </div>
 
                             <div>
-                                <p class="text-xs text-gray-400">Course</p>
+                                <p class="text-xs text-gray-600">Course</p>
                                 <p class="font-medium text-gray-900">
                                     {{ viewing.course || "—" }}
                                 </p>
                             </div>
 
                             <div>
-                                <p class="text-xs text-gray-400">
+                                <p class="text-xs text-gray-600">
                                     Academic Year
                                 </p>
                                 <p class="font-medium text-gray-900">
@@ -1581,14 +2108,14 @@ const submitStayDates = () => {
                             </div>
 
                             <div>
-                                <p class="text-xs text-gray-400">Batch</p>
+                                <p class="text-xs text-gray-600">Batch</p>
                                 <p class="font-medium text-gray-900">
                                     {{ viewing.batch || "—" }}
                                 </p>
                             </div>
 
                             <div>
-                                <p class="text-xs text-gray-400">Roll Number</p>
+                                <p class="text-xs text-gray-600">Roll Number</p>
                                 <p class="font-medium text-gray-900">
                                     {{ viewing.roll_number || "—" }}
                                 </p>
@@ -1608,7 +2135,7 @@ const submitStayDates = () => {
                         <div class="space-y-5">
                             <div>
                                 <h4
-                                    class="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500"
+                                    class="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-700"
                                 >
                                     Father Details
                                 </h4>
@@ -1617,7 +2144,7 @@ const submitStayDates = () => {
                                     class="grid grid-cols-1 gap-4 text-sm sm:grid-cols-3"
                                 >
                                     <div>
-                                        <p class="text-xs text-gray-400">
+                                        <p class="text-xs text-gray-600">
                                             Name
                                         </p>
                                         <p class="font-medium text-gray-900">
@@ -1626,7 +2153,7 @@ const submitStayDates = () => {
                                     </div>
 
                                     <div>
-                                        <p class="text-xs text-gray-400">
+                                        <p class="text-xs text-gray-600">
                                             Phone
                                         </p>
                                         <p class="font-medium text-gray-900">
@@ -1635,7 +2162,7 @@ const submitStayDates = () => {
                                     </div>
 
                                     <div>
-                                        <p class="text-xs text-gray-400">
+                                        <p class="text-xs text-gray-600">
                                             Email
                                         </p>
                                         <p
@@ -1649,7 +2176,7 @@ const submitStayDates = () => {
 
                             <div class="border-t border-gray-100 pt-4">
                                 <h4
-                                    class="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500"
+                                    class="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-700"
                                 >
                                     Mother Details
                                 </h4>
@@ -1658,7 +2185,7 @@ const submitStayDates = () => {
                                     class="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2"
                                 >
                                     <div>
-                                        <p class="text-xs text-gray-400">
+                                        <p class="text-xs text-gray-600">
                                             Name
                                         </p>
                                         <p class="font-medium text-gray-900">
@@ -1667,7 +2194,7 @@ const submitStayDates = () => {
                                     </div>
 
                                     <div>
-                                        <p class="text-xs text-gray-400">
+                                        <p class="text-xs text-gray-600">
                                             Phone
                                         </p>
                                         <p class="font-medium text-gray-900">
@@ -1693,7 +2220,7 @@ const submitStayDates = () => {
                                 class="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2 lg:grid-cols-3"
                             >
                                 <div>
-                                    <p class="text-xs text-gray-400">
+                                    <p class="text-xs text-gray-600">
                                         Building
                                     </p>
                                     <p class="font-medium text-gray-900">
@@ -1705,7 +2232,7 @@ const submitStayDates = () => {
                                 </div>
 
                                 <div>
-                                    <p class="text-xs text-gray-400">Floor</p>
+                                    <p class="text-xs text-gray-600">Floor</p>
                                     <p class="font-medium text-gray-900">
                                         {{
                                             viewing.current_stay.floor?.name ||
@@ -1717,7 +2244,7 @@ const submitStayDates = () => {
                                 </div>
 
                                 <div>
-                                    <p class="text-xs text-gray-400">Room</p>
+                                    <p class="text-xs text-gray-600">Room</p>
                                     <p class="font-medium text-gray-900">
                                         {{
                                             viewing.current_stay.room
@@ -1727,7 +2254,7 @@ const submitStayDates = () => {
                                 </div>
 
                                 <div>
-                                    <p class="text-xs text-gray-400">Bed</p>
+                                    <p class="text-xs text-gray-600">Bed</p>
                                     <p class="font-medium text-gray-900">
                                         {{
                                             viewing.current_stay.bed
@@ -1737,7 +2264,7 @@ const submitStayDates = () => {
                                 </div>
 
                                 <div>
-                                    <p class="text-xs text-gray-400">
+                                    <p class="text-xs text-gray-600">
                                         Check-in Date
                                     </p>
                                     <p class="font-medium text-gray-900">
@@ -1749,7 +2276,7 @@ const submitStayDates = () => {
                                 </div>
 
                                 <div>
-                                    <p class="text-xs text-gray-400">
+                                    <p class="text-xs text-gray-600">
                                         Expected Check-out
                                     </p>
                                     <p class="font-medium text-gray-900">
@@ -1761,7 +2288,7 @@ const submitStayDates = () => {
                                 </div>
 
                                 <div>
-                                    <p class="text-xs text-gray-400">
+                                    <p class="text-xs text-gray-600">
                                         Actual Check-out
                                     </p>
                                     <p class="font-medium text-gray-900">
@@ -1773,7 +2300,7 @@ const submitStayDates = () => {
                                 </div>
 
                                 <div>
-                                    <p class="text-xs text-gray-400">
+                                    <p class="text-xs text-gray-600">
                                         Rent Amount
                                     </p>
                                     <p class="font-medium text-gray-900">
@@ -1787,7 +2314,7 @@ const submitStayDates = () => {
                                 </div>
 
                                 <div>
-                                    <p class="text-xs text-gray-400">
+                                    <p class="text-xs text-gray-600">
                                         Deposit Amount
                                     </p>
                                     <p class="font-medium text-gray-900">
@@ -1801,7 +2328,7 @@ const submitStayDates = () => {
                                 </div>
 
                                 <div>
-                                    <p class="text-xs text-gray-400">
+                                    <p class="text-xs text-gray-600">
                                         Bill Type
                                     </p>
                                     <p
@@ -1817,7 +2344,7 @@ const submitStayDates = () => {
                                 </div>
 
                                 <div>
-                                    <p class="text-xs text-gray-400">
+                                    <p class="text-xs text-gray-600">
                                         Stay Status
                                     </p>
                                     <p
@@ -1828,7 +2355,7 @@ const submitStayDates = () => {
                                 </div>
 
                                 <div class="sm:col-span-2 lg:col-span-3">
-                                    <p class="text-xs text-gray-400">Notes</p>
+                                    <p class="text-xs text-gray-600">Notes</p>
                                     <p
                                         class="whitespace-pre-line font-medium text-gray-900"
                                     >
@@ -1884,7 +2411,7 @@ const submitStayDates = () => {
 
                         <div
                             v-else
-                            class="flex h-20 w-20 items-center justify-center rounded-xl bg-gray-100 text-3xl font-semibold text-gray-500"
+                            class="flex h-20 w-20 items-center justify-center rounded-xl bg-gray-100 text-3xl font-semibold text-gray-700"
                         >
                             {{ editForm.first_name?.charAt(0) || "R" }}
                         </div>
@@ -1911,12 +2438,12 @@ const submitStayDates = () => {
                             Edit Resident
                         </h2>
 
-                        <p class="mt-0.5 truncate text-sm text-gray-500">
+                        <p class="mt-0.5 truncate text-sm text-gray-700">
                             {{ editForm.first_name }}
                             {{ editForm.last_name }}
                         </p>
 
-                        <p class="mt-1 text-xs text-gray-400">
+                        <p class="mt-1 text-xs text-gray-600">
                             Update personal, contact, academic, guardian, and
                             hostel details.
                         </p>
@@ -1963,7 +2490,7 @@ const submitStayDates = () => {
                             :class="
                                 activeTab === tab.key
                                     ? 'border-blue-600 bg-blue-50 text-blue-700'
-                                    : 'border-transparent text-gray-500 hover:bg-gray-50 hover:text-gray-800'
+                                    : 'border-transparent text-gray-700 hover:bg-gray-50 hover:text-gray-800'
                             "
                             @click="activeTab = tab.key"
                         >
@@ -1981,7 +2508,7 @@ const submitStayDates = () => {
                             <h3 class="text-base font-semibold text-gray-900">
                                 Basic Information
                             </h3>
-                            <p class="text-xs text-gray-500">
+                            <p class="text-xs text-gray-700">
                                 Main identity and status details of the
                                 resident.
                             </p>
@@ -2042,6 +2569,20 @@ const submitStayDates = () => {
                                     <option value="other">Other</option>
                                 </select>
                                 <InputError :message="editForm.errors.gender" />
+                            </div>
+
+                            <div>
+                                <InputLabel value="Aadhaar Number" />
+
+                                <TextInput
+                                    v-model="editForm.aadhar_number"
+                                    maxlength="12"
+                                    class="w-full"
+                                />
+
+                                <InputError
+                                    :message="editForm.errors.aadhar_number"
+                                />
                             </div>
 
                             <div>
@@ -2129,7 +2670,7 @@ const submitStayDates = () => {
                             <h3 class="text-base font-semibold text-gray-900">
                                 Contact Information
                             </h3>
-                            <p class="text-xs text-gray-500">
+                            <p class="text-xs text-gray-700">
                                 Phone, email, WhatsApp, and permanent address.
                             </p>
                         </div>
@@ -2255,7 +2796,7 @@ const submitStayDates = () => {
                             <h3 class="text-base font-semibold text-gray-900">
                                 Academic Information
                             </h3>
-                            <p class="text-xs text-gray-500">
+                            <p class="text-xs text-gray-700">
                                 Institute, course, year, batch, and roll number.
                             </p>
                         </div>
@@ -2341,7 +2882,7 @@ const submitStayDates = () => {
                             <h3 class="text-base font-semibold text-gray-900">
                                 Guardian Information
                             </h3>
-                            <p class="text-xs text-gray-500">
+                            <p class="text-xs text-gray-700">
                                 Parent and guardian contact details.
                             </p>
                         </div>
@@ -2357,7 +2898,7 @@ const submitStayDates = () => {
                                     >
                                         Father Details
                                     </h4>
-                                    <p class="text-xs text-gray-400">
+                                    <p class="text-xs text-gray-600">
                                         Primary guardian information
                                     </p>
                                 </div>
@@ -2431,7 +2972,7 @@ const submitStayDates = () => {
                                     >
                                         Mother Details
                                     </h4>
-                                    <p class="text-xs text-gray-400">
+                                    <p class="text-xs text-gray-600">
                                         Secondary guardian information
                                     </p>
                                 </div>
@@ -2484,7 +3025,7 @@ const submitStayDates = () => {
                                 Hostel Information
                             </h3>
 
-                            <p class="text-xs text-gray-500">
+                            <p class="text-xs text-gray-700">
                                 Current room allotment and stay information.
                             </p>
                         </div>
@@ -2528,7 +3069,7 @@ const submitStayDates = () => {
                                     class="grid grid-cols-1 gap-4 text-sm md:grid-cols-2 lg:grid-cols-4"
                                 >
                                     <div>
-                                        <p class="text-xs text-gray-400">
+                                        <p class="text-xs text-gray-600">
                                             Building
                                         </p>
 
@@ -2541,7 +3082,7 @@ const submitStayDates = () => {
                                     </div>
 
                                     <div>
-                                        <p class="text-xs text-gray-400">
+                                        <p class="text-xs text-gray-600">
                                             Floor
                                         </p>
 
@@ -2557,7 +3098,7 @@ const submitStayDates = () => {
                                     </div>
 
                                     <div>
-                                        <p class="text-xs text-gray-400">
+                                        <p class="text-xs text-gray-600">
                                             Room
                                         </p>
 
@@ -2570,7 +3111,7 @@ const submitStayDates = () => {
                                     </div>
 
                                     <div>
-                                        <p class="text-xs text-gray-400">Bed</p>
+                                        <p class="text-xs text-gray-600">Bed</p>
 
                                         <p class="font-medium text-gray-900">
                                             {{
@@ -2594,7 +3135,7 @@ const submitStayDates = () => {
                                     class="grid grid-cols-1 gap-4 text-sm md:grid-cols-2 lg:grid-cols-3"
                                 >
                                     <div>
-                                        <p class="text-xs text-gray-400">
+                                        <p class="text-xs text-gray-600">
                                             Check-in Date
                                         </p>
 
@@ -2607,7 +3148,7 @@ const submitStayDates = () => {
                                     </div>
 
                                     <div>
-                                        <p class="text-xs text-gray-400">
+                                        <p class="text-xs text-gray-600">
                                             Expected Check-out
                                         </p>
 
@@ -2621,7 +3162,7 @@ const submitStayDates = () => {
                                     </div>
 
                                     <div>
-                                        <p class="text-xs text-gray-400">
+                                        <p class="text-xs text-gray-600">
                                             Actual Check-out
                                         </p>
 
@@ -2635,7 +3176,7 @@ const submitStayDates = () => {
                                     </div>
 
                                     <div>
-                                        <p class="text-xs text-gray-400">
+                                        <p class="text-xs text-gray-600">
                                             Monthly Rent
                                         </p>
 
@@ -2652,7 +3193,7 @@ const submitStayDates = () => {
                                     </div>
 
                                     <div>
-                                        <p class="text-xs text-gray-400">
+                                        <p class="text-xs text-gray-600">
                                             Deposit Amount
                                         </p>
 
@@ -2669,7 +3210,7 @@ const submitStayDates = () => {
                                     </div>
 
                                     <div>
-                                        <p class="text-xs text-gray-400">
+                                        <p class="text-xs text-gray-600">
                                             Bill Type
                                         </p>
 
@@ -2686,7 +3227,7 @@ const submitStayDates = () => {
                                     </div>
 
                                     <div>
-                                        <p class="text-xs text-gray-400">
+                                        <p class="text-xs text-gray-600">
                                             Stay Status
                                         </p>
 
@@ -2701,7 +3242,7 @@ const submitStayDates = () => {
                                     </div>
 
                                     <div class="md:col-span-2 lg:col-span-3">
-                                        <p class="text-xs text-gray-400">
+                                        <p class="text-xs text-gray-600">
                                             Stay Notes
                                         </p>
 
@@ -2749,7 +3290,7 @@ const submitStayDates = () => {
                 <div
                     class="flex shrink-0 items-center justify-between gap-3 border-t border-gray-100 bg-white px-6 py-4"
                 >
-                    <p class="text-xs text-gray-400">
+                    <p class="text-xs text-gray-600">
                         Fields marked with * are required.
                     </p>
 
@@ -2790,7 +3331,7 @@ const submitStayDates = () => {
                         Add New Resident
                     </h2>
 
-                    <p class="mt-1 text-sm text-gray-500">
+                    <p class="mt-1 text-sm text-gray-700">
                         Enter resident details and optionally assign a room.
                     </p>
                 </div>
@@ -2836,7 +3377,7 @@ const submitStayDates = () => {
                                             class="flex flex-col items-center justify-center pt-5 pb-6 px-4 text-center"
                                         >
                                             <svg
-                                                class="w-16 h-16 mb-3 text-gray-400 group-hover:text-gray-500 transition-colors"
+                                                class="w-16 h-16 mb-3 text-gray-600 group-hover:text-gray-700 transition-colors"
                                                 fill="none"
                                                 stroke="currentColor"
                                                 viewBox="0 0 24 24"
@@ -2856,7 +3397,7 @@ const submitStayDates = () => {
                                                 or drag and drop
                                             </p>
                                             <p
-                                                class="text-xs text-gray-400 mt-1"
+                                                class="text-xs text-gray-600 mt-1"
                                             >
                                                 PNG, JPG, GIF up to 2MB
                                             </p>
@@ -2875,7 +3416,7 @@ const submitStayDates = () => {
                                             <button
                                                 type="button"
                                                 @click.prevent="clearPhoto"
-                                                class="absolute top-3 right-3 p-1.5 bg-white/90 backdrop-blur-sm rounded-full shadow-sm hover:bg-red-50 text-gray-500 hover:text-red-600 transition-colors"
+                                                class="absolute top-3 right-3 p-1.5 bg-white/90 backdrop-blur-sm rounded-full shadow-sm hover:bg-red-50 text-gray-700 hover:text-red-600 transition-colors"
                                                 title="Remove photo"
                                             >
                                                 <svg
@@ -2911,7 +3452,7 @@ const submitStayDates = () => {
                                 />
 
                                 <p
-                                    class="text-xs text-gray-400 mt-2 flex items-start gap-1.5"
+                                    class="text-xs text-gray-600 mt-2 flex items-start gap-1.5"
                                 >
                                     <svg
                                         class="w-3.5 h-3.5 mt-0.5 flex-shrink-0"
@@ -2933,7 +3474,7 @@ const submitStayDates = () => {
                         </div>
 
                         <p
-                            class="pt-1 text-xs font-semibold uppercase text-gray-400"
+                            class="pt-1 text-xs font-semibold uppercase text-gray-600"
                         >
                             Personal Details
                         </p>
@@ -2995,6 +3536,21 @@ const submitStayDates = () => {
 
                                 <InputError
                                     :message="createForm.errors.gender"
+                                />
+                            </div>
+
+                            <div>
+                                <InputLabel value="Aadhaar Number" />
+
+                                <TextInput
+                                    v-model="createForm.aadhar_number"
+                                    maxlength="12"
+                                    class="w-full"
+                                    placeholder="123412341234"
+                                />
+
+                                <InputError
+                                    :message="createForm.errors.aadhar_number"
                                 />
                             </div>
 
@@ -3068,7 +3624,9 @@ const submitStayDates = () => {
                             </div>
                         </div>
 
-                        <p class="pt-1 text-xs font-semibold uppercase text-gray-400">
+                        <p
+                            class="pt-1 text-xs font-semibold uppercase text-gray-600"
+                        >
                             Contact Details
                         </p>
 
@@ -3087,7 +3645,9 @@ const submitStayDates = () => {
                                     class="w-full"
                                 />
 
-                                <InputError :message="createForm.errors.phone" />
+                                <InputError
+                                    :message="createForm.errors.phone"
+                                />
                             </div>
 
                             <div>
@@ -3104,14 +3664,13 @@ const submitStayDates = () => {
                                     placeholder="Defaults to phone number"
                                 />
 
-                                <InputError :message="createForm.errors.whatsapp_number" />
+                                <InputError
+                                    :message="createForm.errors.whatsapp_number"
+                                />
                             </div>
 
                             <div class="sm:col-span-2">
-                                <InputLabel
-                                    for="create_email"
-                                    value="Email"
-                                />
+                                <InputLabel for="create_email" value="Email" />
 
                                 <TextInput
                                     id="create_email"
@@ -3120,7 +3679,9 @@ const submitStayDates = () => {
                                     class="w-full"
                                 />
 
-                                <InputError :message="createForm.errors.email" />
+                                <InputError
+                                    :message="createForm.errors.email"
+                                />
                             </div>
 
                             <div class="sm:col-span-2">
@@ -3137,14 +3698,13 @@ const submitStayDates = () => {
                                     placeholder="Enter complete permanent address"
                                 ></textarea>
 
-                                <InputError :message="createForm.errors.address" />
+                                <InputError
+                                    :message="createForm.errors.address"
+                                />
                             </div>
 
                             <div>
-                                <InputLabel
-                                    for="create_city"
-                                    value="City"
-                                />
+                                <InputLabel for="create_city" value="City" />
 
                                 <TextInput
                                     id="create_city"
@@ -3157,10 +3717,7 @@ const submitStayDates = () => {
                             </div>
 
                             <div>
-                                <InputLabel
-                                    for="create_state"
-                                    value="State"
-                                />
+                                <InputLabel for="create_state" value="State" />
 
                                 <TextInput
                                     id="create_state"
@@ -3169,7 +3726,9 @@ const submitStayDates = () => {
                                     class="w-full"
                                 />
 
-                                <InputError :message="createForm.errors.state" />
+                                <InputError
+                                    :message="createForm.errors.state"
+                                />
                             </div>
 
                             <div>
@@ -3185,7 +3744,9 @@ const submitStayDates = () => {
                                     class="w-full"
                                 />
 
-                                <InputError :message="createForm.errors.country" />
+                                <InputError
+                                    :message="createForm.errors.country"
+                                />
                             </div>
 
                             <div>
@@ -3201,11 +3762,15 @@ const submitStayDates = () => {
                                     class="w-full"
                                 />
 
-                                <InputError :message="createForm.errors.pincode" />
+                                <InputError
+                                    :message="createForm.errors.pincode"
+                                />
                             </div>
                         </div>
 
-                        <p class="pt-1 text-xs font-semibold uppercase text-gray-400">
+                        <p
+                            class="pt-1 text-xs font-semibold uppercase text-gray-600"
+                        >
                             Academic Details
                         </p>
 
@@ -3223,7 +3788,9 @@ const submitStayDates = () => {
                                     class="w-full"
                                 />
 
-                                <InputError :message="createForm.errors.institute" />
+                                <InputError
+                                    :message="createForm.errors.institute"
+                                />
                             </div>
 
                             <div class="sm:col-span-2">
@@ -3239,7 +3806,9 @@ const submitStayDates = () => {
                                     class="w-full"
                                 />
 
-                                <InputError :message="createForm.errors.course" />
+                                <InputError
+                                    :message="createForm.errors.course"
+                                />
                             </div>
 
                             <div>
@@ -3262,10 +3831,7 @@ const submitStayDates = () => {
                             </div>
 
                             <div>
-                                <InputLabel
-                                    for="create_batch"
-                                    value="Batch"
-                                />
+                                <InputLabel for="create_batch" value="Batch" />
 
                                 <TextInput
                                     id="create_batch"
@@ -3275,7 +3841,9 @@ const submitStayDates = () => {
                                     placeholder="Example: 2026-2029"
                                 />
 
-                                <InputError :message="createForm.errors.batch" />
+                                <InputError
+                                    :message="createForm.errors.batch"
+                                />
                             </div>
 
                             <div class="sm:col-span-2">
@@ -3291,16 +3859,22 @@ const submitStayDates = () => {
                                     class="w-full"
                                 />
 
-                                <InputError :message="createForm.errors.roll_number" />
+                                <InputError
+                                    :message="createForm.errors.roll_number"
+                                />
                             </div>
                         </div>
 
-                        <p class="pt-1 text-xs font-semibold uppercase text-gray-400">
+                        <p
+                            class="pt-1 text-xs font-semibold uppercase text-gray-600"
+                        >
                             Parent / Guardian Details
                         </p>
 
                         <div class="rounded-xl border border-gray-200 p-4">
-                            <h3 class="mb-4 text-sm font-semibold text-gray-900">
+                            <h3
+                                class="mb-4 text-sm font-semibold text-gray-900"
+                            >
                                 Father Details
                             </h3>
 
@@ -3318,7 +3892,9 @@ const submitStayDates = () => {
                                         class="w-full"
                                     />
 
-                                    <InputError :message="createForm.errors.father_name" />
+                                    <InputError
+                                        :message="createForm.errors.father_name"
+                                    />
                                 </div>
 
                                 <div>
@@ -3334,7 +3910,11 @@ const submitStayDates = () => {
                                         class="w-full"
                                     />
 
-                                    <InputError :message="createForm.errors.father_phone" />
+                                    <InputError
+                                        :message="
+                                            createForm.errors.father_phone
+                                        "
+                                    />
                                 </div>
 
                                 <div class="sm:col-span-2">
@@ -3350,13 +3930,19 @@ const submitStayDates = () => {
                                         class="w-full"
                                     />
 
-                                    <InputError :message="createForm.errors.father_email" />
+                                    <InputError
+                                        :message="
+                                            createForm.errors.father_email
+                                        "
+                                    />
                                 </div>
                             </div>
                         </div>
 
                         <div class="rounded-xl border border-gray-200 p-4">
-                            <h3 class="mb-4 text-sm font-semibold text-gray-900">
+                            <h3
+                                class="mb-4 text-sm font-semibold text-gray-900"
+                            >
                                 Mother Details
                             </h3>
 
@@ -3374,7 +3960,9 @@ const submitStayDates = () => {
                                         class="w-full"
                                     />
 
-                                    <InputError :message="createForm.errors.mother_name" />
+                                    <InputError
+                                        :message="createForm.errors.mother_name"
+                                    />
                                 </div>
 
                                 <div>
@@ -3390,13 +3978,17 @@ const submitStayDates = () => {
                                         class="w-full"
                                     />
 
-                                    <InputError :message="createForm.errors.mother_phone" />
+                                    <InputError
+                                        :message="
+                                            createForm.errors.mother_phone
+                                        "
+                                    />
                                 </div>
                             </div>
                         </div>
 
                         <p
-                            class="text-xs font-semibold text-gray-400 uppercase pt-1"
+                            class="text-xs font-semibold text-gray-600 uppercase pt-1"
                         >
                             Room Allotment (optional now, can be done later via
                             Check-In)
@@ -3489,7 +4081,7 @@ const submitStayDates = () => {
                                     Stay & Billing Details
                                 </h3>
 
-                                <p class="mt-0.5 text-xs text-gray-500">
+                                <p class="mt-0.5 text-xs text-gray-700">
                                     Choose monthly billing for regular residents
                                     or daily billing for short-term residents.
                                 </p>
@@ -3523,7 +4115,7 @@ const submitStayDates = () => {
                                             Monthly Billing
                                         </p>
 
-                                        <p class="mt-1 text-xs text-gray-500">
+                                        <p class="mt-1 text-xs text-gray-700">
                                             Regular resident charged every
                                             month.
                                         </p>
@@ -3550,7 +4142,7 @@ const submitStayDates = () => {
                                             Daily Short Stay
                                         </p>
 
-                                        <p class="mt-1 text-xs text-gray-500">
+                                        <p class="mt-1 text-xs text-gray-700">
                                             Resident charged according to
                                             occupied days.
                                         </p>
@@ -3717,7 +4309,7 @@ const submitStayDates = () => {
                                     class="w-full"
                                 />
 
-                                <p class="mt-1 text-xs text-gray-400">
+                                <p class="mt-1 text-xs text-gray-600">
                                     One-time refundable deposit for this stay.
                                     It will not be included in monthly billing.
                                 </p>
@@ -3748,7 +4340,7 @@ const submitStayDates = () => {
                 <div
                     class="flex shrink-0 items-center justify-between gap-3 border-t border-gray-100 bg-white px-6 py-4"
                 >
-                    <p class="hidden text-xs text-gray-400 sm:block">
+                    <p class="hidden text-xs text-gray-600 sm:block">
                         Fields marked with * are required.
                     </p>
 
@@ -3789,7 +4381,7 @@ const submitStayDates = () => {
                         Bulk Upload Residents
                     </h2>
 
-                    <p class="mt-1 text-sm text-gray-500">
+                    <p class="mt-1 text-sm text-gray-700">
                         Import resident profiles, current stays, historical
                         stays and security-deposit records.
                     </p>
@@ -3851,7 +4443,7 @@ const submitStayDates = () => {
                                 </span>
                             </div>
 
-                            <p class="mt-3 text-xs text-gray-500">
+                            <p class="mt-3 text-xs text-gray-700">
                                 Gender must be male, female or other.
                             </p>
                         </div>
@@ -3877,7 +4469,7 @@ const submitStayDates = () => {
                                 </span>
                             </div>
 
-                            <p class="mt-3 text-xs text-gray-500">
+                            <p class="mt-3 text-xs text-gray-700">
                                 Left residents must also contain
                                 actual_check_out_date.
                             </p>
@@ -3902,6 +4494,7 @@ const submitStayDates = () => {
                                         'whatsapp_number',
                                         'date_of_birth',
                                         'gender',
+                                        'aadhar_number',
                                         'blood_group',
                                         'address',
                                         'city',
@@ -4013,7 +4606,7 @@ const submitStayDates = () => {
 
                         <p
                             v-if="bulkForm.file"
-                            class="mt-2 text-xs text-gray-500"
+                            class="mt-2 text-xs text-gray-700"
                         >
                             Selected:
                             <span class="font-medium text-gray-700">
@@ -4073,7 +4666,7 @@ const submitStayDates = () => {
                                 Edit Stay Dates
                             </h2>
 
-                            <p class="mt-0.5 text-sm text-gray-500">
+                            <p class="mt-0.5 text-sm text-gray-700">
                                 {{ stayDatesResident.first_name }}
                                 {{ stayDatesResident.last_name }}
                                 ·
@@ -4147,7 +4740,7 @@ const submitStayDates = () => {
                     >
                         <div>
                             <p
-                                class="text-xs font-medium uppercase tracking-wide text-gray-400"
+                                class="text-xs font-medium uppercase tracking-wide text-gray-600"
                             >
                                 Current check-in
                             </p>
@@ -4162,7 +4755,7 @@ const submitStayDates = () => {
 
                         <div>
                             <p
-                                class="text-xs font-medium uppercase tracking-wide text-gray-400"
+                                class="text-xs font-medium uppercase tracking-wide text-gray-600"
                             >
                                 Current expected checkout
                             </p>
@@ -4177,7 +4770,7 @@ const submitStayDates = () => {
 
                         <div>
                             <p
-                                class="text-xs font-medium uppercase tracking-wide text-gray-400"
+                                class="text-xs font-medium uppercase tracking-wide text-gray-600"
                             >
                                 Billing basis
                             </p>
@@ -4194,7 +4787,7 @@ const submitStayDates = () => {
 
                         <div>
                             <p
-                                class="text-xs font-medium uppercase tracking-wide text-gray-400"
+                                class="text-xs font-medium uppercase tracking-wide text-gray-600"
                             >
                                 Stay status
                             </p>
@@ -4355,7 +4948,7 @@ const submitStayDates = () => {
                                 Bulk Import Completed
                             </h2>
 
-                            <p class="text-sm text-gray-500">
+                            <p class="text-sm text-gray-700">
                                 Resident import finished successfully.
                             </p>
                         </div>
@@ -4367,35 +4960,35 @@ const submitStayDates = () => {
                     <!-- Summary -->
                     <div class="grid grid-cols-2 gap-4 md:grid-cols-4">
                         <div class="rounded-xl border p-4">
-                            <p class="text-xs text-gray-500">Processed</p>
+                            <p class="text-xs text-gray-700">Processed</p>
                             <p class="mt-1 text-2xl font-bold">
                                 {{ bulkSummary.processed ?? 0 }}
                             </p>
                         </div>
 
                         <div class="rounded-xl border p-4">
-                            <p class="text-xs text-gray-500">Created</p>
+                            <p class="text-xs text-gray-700">Created</p>
                             <p class="mt-1 text-2xl font-bold text-green-600">
                                 {{ bulkSummary.residents_created ?? 0 }}
                             </p>
                         </div>
 
                         <div class="rounded-xl border p-4">
-                            <p class="text-xs text-gray-500">Updated</p>
+                            <p class="text-xs text-gray-700">Updated</p>
                             <p class="mt-1 text-2xl font-bold text-blue-600">
                                 {{ bulkSummary.residents_updated ?? 0 }}
                             </p>
                         </div>
 
                         <div class="rounded-xl border p-4">
-                            <p class="text-xs text-gray-500">Failed</p>
+                            <p class="text-xs text-gray-700">Failed</p>
                             <p class="mt-1 text-2xl font-bold text-red-600">
                                 {{ bulkSummary.failed ?? 0 }}
                             </p>
                         </div>
 
                         <div class="rounded-xl border p-4">
-                            <p class="text-xs text-gray-500">Stays Created</p>
+                            <p class="text-xs text-gray-700">Stays Created</p>
 
                             <p class="mt-1 text-xl font-semibold">
                                 {{ bulkSummary.stays_created ?? 0 }}
@@ -4403,7 +4996,7 @@ const submitStayDates = () => {
                         </div>
 
                         <div class="rounded-xl border p-4">
-                            <p class="text-xs text-gray-500">Check-ins</p>
+                            <p class="text-xs text-gray-700">Check-ins</p>
 
                             <p class="mt-1 text-xl font-semibold">
                                 {{ bulkSummary.checkins_completed ?? 0 }}
@@ -4411,7 +5004,7 @@ const submitStayDates = () => {
                         </div>
 
                         <div class="rounded-xl border p-4">
-                            <p class="text-xs text-gray-500">
+                            <p class="text-xs text-gray-700">
                                 Deposit Invoices
                             </p>
 
@@ -4421,7 +5014,7 @@ const submitStayDates = () => {
                         </div>
 
                         <div class="rounded-xl border p-4">
-                            <p class="text-xs text-gray-500">
+                            <p class="text-xs text-gray-700">
                                 Deposit Payments
                             </p>
 
@@ -4442,7 +5035,7 @@ const submitStayDates = () => {
                                     Failed Rows
                                 </h3>
 
-                                <p class="text-xs text-gray-500">
+                                <p class="text-xs text-gray-700">
                                     These rows could not be imported.
                                 </p>
                             </div>
@@ -4537,6 +5130,213 @@ const submitStayDates = () => {
                     >
                         Close
                     </PrimaryButton>
+                </div>
+            </div>
+        </Modal>
+
+        <Modal
+            :show="quickContactOpen"
+            maxWidth="md"
+            @close="closeQuickContact"
+        >
+            <div
+                v-if="quickContactResident"
+                class="overflow-hidden rounded-xl bg-white"
+            >
+                <div
+                    class="flex items-center gap-4 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-white px-6 py-5"
+                >
+                    <img
+                        v-if="quickContactResident.photo_url"
+                        :src="`/storage/${quickContactResident.photo_url}`"
+                        class="h-16 w-16 rounded-xl border border-white object-cover shadow-sm"
+                        alt="Resident photo"
+                    />
+
+                    <div
+                        v-else
+                        class="flex h-16 w-16 items-center justify-center rounded-xl bg-blue-100 text-xl font-bold text-blue-700"
+                    >
+                        {{ quickContactResident.first_name?.charAt(0) || "R" }}
+                    </div>
+
+                    <div class="min-w-0 flex-1">
+                        <h2 class="truncate text-lg font-bold text-gray-900">
+                            {{ quickContactResident.first_name }}
+                            {{ quickContactResident.last_name }}
+                        </h2>
+
+                        <p class="mt-0.5 text-xs text-gray-700">
+                            {{ quickContactResident.resident_code }}
+                        </p>
+
+                        <span
+                            class="mt-2 inline-flex rounded-full bg-blue-100 px-2.5 py-1 text-[11px] font-semibold capitalize text-blue-700"
+                        >
+                            {{ quickContactResident.status }}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="space-y-3 p-6">
+                    <div
+                        class="flex items-center gap-3 rounded-xl border border-gray-200 p-4"
+                    >
+                        <div
+                            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-green-50 text-green-600"
+                        >
+                            <Phone class="h-5 w-5" />
+                        </div>
+
+                        <div class="min-w-0 flex-1">
+                            <p class="text-xs text-gray-600">Phone Number</p>
+
+                            <p
+                                class="truncate text-sm font-semibold text-gray-900"
+                            >
+                                {{
+                                    quickContactResident.phone ||
+                                    "Not available"
+                                }}
+                            </p>
+                        </div>
+
+                        <button
+                            type="button"
+                            :disabled="!quickContactResident.phone"
+                            class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-700 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-40"
+                            title="Copy phone number"
+                            @click="
+                                copyContactValue(
+                                    'phone',
+                                    quickContactResident.phone,
+                                )
+                            "
+                        >
+                            <CheckCheck
+                                v-if="copiedField === 'phone'"
+                                class="h-4 w-4 text-green-600"
+                            />
+
+                            <Copy v-else class="h-4 w-4" />
+                        </button>
+                    </div>
+
+                    <div
+                        class="flex items-center gap-3 rounded-xl border border-gray-200 p-4"
+                    >
+                        <div
+                            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600"
+                        >
+                            <MessageCircle class="h-5 w-5" />
+                        </div>
+
+                        <div class="min-w-0 flex-1">
+                            <p class="text-xs text-gray-600">WhatsApp Number</p>
+
+                            <p
+                                class="truncate text-sm font-semibold text-gray-900"
+                            >
+                                {{
+                                    quickContactResident.whatsapp_number ||
+                                    quickContactResident.phone ||
+                                    "Not available"
+                                }}
+                            </p>
+                        </div>
+
+                        <button
+                            type="button"
+                            :disabled="
+                                !quickContactResident.whatsapp_number &&
+                                !quickContactResident.phone
+                            "
+                            class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-700 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-40"
+                            title="Copy WhatsApp number"
+                            @click="
+                                copyContactValue(
+                                    'whatsapp',
+                                    quickContactResident.whatsapp_number ||
+                                        quickContactResident.phone,
+                                )
+                            "
+                        >
+                            <CheckCheck
+                                v-if="copiedField === 'whatsapp'"
+                                class="h-4 w-4 text-green-600"
+                            />
+
+                            <Copy v-else class="h-4 w-4" />
+                        </button>
+                    </div>
+
+                    <div
+                        class="flex items-center gap-3 rounded-xl border border-gray-200 p-4"
+                    >
+                        <div
+                            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-purple-50 text-purple-600"
+                        >
+                            <Mail class="h-5 w-5" />
+                        </div>
+
+                        <div class="min-w-0 flex-1">
+                            <p class="text-xs text-gray-600">Email Address</p>
+
+                            <p
+                                class="break-all text-sm font-semibold text-gray-900"
+                            >
+                                {{
+                                    quickContactResident.email ||
+                                    "Not available"
+                                }}
+                            </p>
+                        </div>
+
+                        <button
+                            type="button"
+                            :disabled="!quickContactResident.email"
+                            class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-700 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-40"
+                            title="Copy email address"
+                            @click="
+                                copyContactValue(
+                                    'email',
+                                    quickContactResident.email,
+                                )
+                            "
+                        >
+                            <CheckCheck
+                                v-if="copiedField === 'email'"
+                                class="h-4 w-4 text-green-600"
+                            />
+
+                            <Copy v-else class="h-4 w-4" />
+                        </button>
+                    </div>
+
+                    <div
+                        v-if="copiedField"
+                        class="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-center text-xs font-medium text-green-700"
+                    >
+                        {{
+                            copiedField === "email"
+                                ? "Email copied"
+                                : copiedField === "whatsapp"
+                                  ? "WhatsApp number copied"
+                                  : "Phone number copied"
+                        }}
+                    </div>
+                </div>
+
+                <div
+                    class="flex justify-end border-t border-gray-100 bg-gray-50 px-6 py-4"
+                >
+                    <button
+                        type="button"
+                        class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+                        @click="closeQuickContact"
+                    >
+                        Close
+                    </button>
                 </div>
             </div>
         </Modal>

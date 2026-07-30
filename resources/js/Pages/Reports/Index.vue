@@ -68,7 +68,7 @@ const cell = (row, col) => {
                 >
                     <FileText class="h-6 w-6 text-blue-600" /> Reports
                 </h1>
-                <p class="text-sm text-gray-500 mt-0.5">
+                <p class="text-sm text-gray-700 mt-0.5">
                     Generate quick operational reports
                 </p>
             </div>
@@ -93,7 +93,7 @@ const cell = (row, col) => {
                 class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-x-auto"
             >
                 <table class="w-full text-sm">
-                    <thead class="bg-gray-50 text-gray-500 text-xs uppercase">
+                    <thead class="bg-gray-50 text-gray-700 text-xs uppercase">
                         <tr>
                             <th
                                 v-for="c in columns()"
@@ -117,7 +117,7 @@ const cell = (row, col) => {
                         <tr v-if="!rows.length">
                             <td
                                 :colspan="columns().length"
-                                class="px-4 py-10 text-center text-gray-400"
+                                class="px-4 py-10 text-center text-gray-600"
                             >
                                 No data for this report
                             </td>

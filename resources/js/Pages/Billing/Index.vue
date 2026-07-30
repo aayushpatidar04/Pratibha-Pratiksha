@@ -258,7 +258,7 @@ const paymentBalanceDue = computed(() => {
             <div class="flex items-center justify-between">
                 <div>
                     <h1 class="text-xl font-semibold text-gray-900">Billing</h1>
-                    <p class="text-sm text-gray-500">
+                    <p class="text-sm text-gray-700">
                         Fee invoices and payment collection
                     </p>
                 </div>
@@ -287,7 +287,7 @@ const paymentBalanceDue = computed(() => {
                     <p class="text-lg font-bold">
                         {{ formatCurrency(stats.totalBilled) }}
                     </p>
-                    <p class="text-xs text-gray-400">Total Billed</p>
+                    <p class="text-xs text-gray-600">Total Billed</p>
                 </div>
                 <div
                     class="bg-white rounded-xl border border-gray-100 p-3 text-center"
@@ -295,7 +295,7 @@ const paymentBalanceDue = computed(() => {
                     <p class="text-lg font-bold text-green-600">
                         {{ formatCurrency(stats.paidAmount) }}
                     </p>
-                    <p class="text-xs text-gray-400">Collected</p>
+                    <p class="text-xs text-gray-600">Collected</p>
                 </div>
                 <div
                     class="bg-white rounded-xl border border-gray-100 p-3 text-center"
@@ -303,7 +303,7 @@ const paymentBalanceDue = computed(() => {
                     <p class="text-lg font-bold text-amber-600">
                         {{ stats.pendingCount }}
                     </p>
-                    <p class="text-xs text-gray-400">Pending</p>
+                    <p class="text-xs text-gray-600">Pending</p>
                 </div>
                 <div
                     class="bg-white rounded-xl border border-gray-100 p-3 text-center"
@@ -311,7 +311,7 @@ const paymentBalanceDue = computed(() => {
                     <p class="text-lg font-bold text-blue-600">
                         {{ stats.partialCount }}
                     </p>
-                    <p class="text-xs text-gray-400">Partial</p>
+                    <p class="text-xs text-gray-600">Partial</p>
                 </div>
                 <div
                     class="bg-white rounded-xl border border-gray-100 p-3 text-center"
@@ -319,7 +319,7 @@ const paymentBalanceDue = computed(() => {
                     <p class="text-lg font-bold text-purple-600">
                         {{ stats.lateFeePendingCount }}
                     </p>
-                    <p class="text-xs text-gray-400">Late Fee Pending</p>
+                    <p class="text-xs text-gray-600">Late Fee Pending</p>
                 </div>
                 <div
                     class="bg-white rounded-xl border border-gray-100 p-3 text-center"
@@ -327,7 +327,7 @@ const paymentBalanceDue = computed(() => {
                     <p class="text-lg font-bold text-red-600">
                         {{ stats.overdueCount }}
                     </p>
-                    <p class="text-xs text-gray-400">Overdue</p>
+                    <p class="text-xs text-gray-600">Overdue</p>
                 </div>
             </div>
 
@@ -387,7 +387,7 @@ const paymentBalanceDue = computed(() => {
                 class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden"
             >
                 <table class="w-full text-sm">
-                    <thead class="bg-gray-50 text-gray-500 text-xs uppercase">
+                    <thead class="bg-gray-50 text-gray-700 text-xs uppercase">
                         <tr>
                             <th class="text-left px-4 py-3">Invoice</th>
                             <th class="text-left px-4 py-3">Resident</th>
@@ -418,7 +418,7 @@ const paymentBalanceDue = computed(() => {
                                 </span>
                                 <p
                                     v-if="inv.monthly_config"
-                                    class="text-xs text-gray-400"
+                                    class="text-xs text-gray-600"
                                 >
                                     {{ inv.monthly_config.full_label }}
                                 </p>
@@ -437,7 +437,7 @@ const paymentBalanceDue = computed(() => {
                                                 inv.resident_id,
                                             )
                                         "
-                                        class="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-blue-600"
+                                        class="p-1 rounded hover:bg-gray-100 text-gray-600 hover:text-blue-600"
                                         title="View Payment History"
                                     >
                                         <History class="h-3.5 w-3.5" />
@@ -488,7 +488,7 @@ const paymentBalanceDue = computed(() => {
                                         Number(inv.late_fee_amount) > 0 &&
                                         !inv.late_fee_waived
                                     "
-                                    class="text-xs text-gray-400"
+                                    class="text-xs text-gray-600"
                                 >
                                     Late fee after due date:
                                     {{ formatCurrency(inv.late_fee_amount) }}
@@ -500,7 +500,7 @@ const paymentBalanceDue = computed(() => {
                                     {{ formatCurrency(inv.late_fee_amount) }}
                                     waived
                                 </p>
-                                <p class="text-xs text-gray-400">
+                                <p class="text-xs text-gray-600">
                                     Paid: {{ formatCurrency(inv.paid_amount) }}
                                 </p>
                             </td>
@@ -637,7 +637,7 @@ const paymentBalanceDue = computed(() => {
                                                 via {{ payment.payment_mode }}
                                             </p>
                                             <p
-                                                class="text-[10px] text-gray-500"
+                                                class="text-[10px] text-gray-700"
                                             >
                                                 {{ payment.payment_date }} •
                                                 <a
@@ -655,7 +655,7 @@ const paymentBalanceDue = computed(() => {
                                             </p>
                                             <p
                                                 v-if="payment.transaction_id"
-                                                class="text-[10px] text-gray-400"
+                                                class="text-[10px] text-gray-600"
                                             >
                                                 TXN:
                                                 {{ payment.transaction_id }}
@@ -670,7 +670,7 @@ const paymentBalanceDue = computed(() => {
                                                 class="p-1 rounded bg-white border hover:bg-gray-50"
                                             >
                                                 <Upload
-                                                    class="h-3 w-3 text-gray-500"
+                                                    class="h-3 w-3 text-gray-700"
                                                 />
                                             </a>
                                         </div>
@@ -681,7 +681,7 @@ const paymentBalanceDue = computed(() => {
                         <tr v-if="!invoices.data.length">
                             <td
                                 colspan="7"
-                                class="px-4 py-10 text-center text-gray-400"
+                                class="px-4 py-10 text-center text-gray-600"
                             >
                                 No invoices found
                             </td>
@@ -812,7 +812,7 @@ const paymentBalanceDue = computed(() => {
                         placeholder="e.g. 50"
                     />
 
-                    <p class="text-xs text-gray-400 mt-1">
+                    <p class="text-xs text-gray-600 mt-1">
                         Charged for every day the invoice remains unpaid after
                         the due date.
                     </p>
@@ -888,7 +888,7 @@ const paymentBalanceDue = computed(() => {
                         </span>
                         <span
                             v-if="Number(payingInvoice.late_fee_per_day) > 0"
-                            class="text-xs text-gray-400"
+                            class="text-xs text-gray-600"
                         >
                             ({{
                                 formatCurrency(payingInvoice.late_fee_per_day)
@@ -903,7 +903,7 @@ const paymentBalanceDue = computed(() => {
                         "
                     >
                         Late Fee if paid after {{ payingInvoice.due_date }}:
-                        <span class="font-medium text-gray-500">
+                        <span class="font-medium text-gray-700">
                             {{ formatCurrency(payingInvoice.late_fee_amount) }}
                         </span>
                     </p>
@@ -975,7 +975,7 @@ const paymentBalanceDue = computed(() => {
                         multiple
                         accept="image/*"
                         @change="handleProofUpload"
-                        class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100"
+                        class="w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100"
                     />
                     <div v-if="paymentProofs.length" class="flex gap-2 mt-2">
                         <img

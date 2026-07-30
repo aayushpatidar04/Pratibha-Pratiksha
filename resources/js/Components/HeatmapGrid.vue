@@ -22,7 +22,7 @@ const statusMeta = {
     no_capacity: {
         label: "No Capacity",
         color: "bg-gray-200",
-        text: "text-gray-500",
+        text: "text-gray-700",
     },
 };
 
@@ -82,12 +82,12 @@ defineExpose({ statusMeta });
             </button>
         </div>
 
-        <p v-if="loading" class="text-sm text-gray-400 text-center py-8">
+        <p v-if="loading" class="text-sm text-gray-600 text-center py-8">
             Loading...
         </p>
         <template v-else>
             <div v-for="floor in visibleFloors" :key="floor.floor_number">
-                <p class="text-xs font-semibold text-gray-500 mb-2">
+                <p class="text-xs font-semibold text-gray-700 mb-2">
                     Floor {{ floor.floor_number }}:
                 </p>
                 <div class="flex flex-wrap gap-2">
@@ -114,7 +114,7 @@ defineExpose({ statusMeta });
             </div>
             <p
                 v-if="!visibleFloors.length"
-                class="text-sm text-gray-400 text-center py-8"
+                class="text-sm text-gray-600 text-center py-8"
             >
                 No rooms match this filter
             </p>

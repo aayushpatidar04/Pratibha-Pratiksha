@@ -70,7 +70,7 @@ const submitEdit = () =>
                     <GraduationCap class="h-6 w-6 text-blue-600" /> Academic
                     Details
                 </h1>
-                <p class="text-sm text-gray-500 mt-0.5">
+                <p class="text-sm text-gray-700 mt-0.5">
                     Course, institute, batch, year and roll number — kept
                     separate from the main resident profile
                 </p>
@@ -79,7 +79,7 @@ const submitEdit = () =>
             <div class="flex flex-wrap gap-3">
                 <div class="relative flex-1 min-w-[220px]">
                     <Search
-                        class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400"
+                        class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-600"
                     />
                     <input
                         v-model="filters.search"
@@ -122,7 +122,7 @@ const submitEdit = () =>
                 class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden"
             >
                 <table class="w-full text-sm">
-                    <thead class="bg-gray-50 text-gray-500 text-xs uppercase">
+                    <thead class="bg-gray-50 text-gray-700 text-xs uppercase">
                         <tr>
                             <th class="text-left px-4 py-3">Resident</th>
                             <th class="text-left px-4 py-3">Course</th>
@@ -144,7 +144,7 @@ const submitEdit = () =>
                                     />
                                     <div
                                         v-else
-                                        class="h-16 w-16 rounded-full bg-gray-100 flex items-center justify-center text-xs text-gray-400"
+                                        class="h-16 w-16 rounded-full bg-gray-100 flex items-center justify-center text-xs text-gray-600"
                                     >
                                         {{ r.first_name?.charAt(0) }}
                                     </div>
@@ -152,7 +152,7 @@ const submitEdit = () =>
                                         <p class="font-medium text-gray-900">
                                             {{ r.first_name }} {{ r.last_name }}
                                         </p>
-                                        <p class="text-xs text-gray-400">
+                                        <p class="text-xs text-gray-600">
                                             {{ r.resident_code }}
                                         </p>
                                     </div>
@@ -185,7 +185,7 @@ const submitEdit = () =>
                         <tr v-if="!residents.data.length">
                             <td
                                 colspan="7"
-                                class="px-4 py-10 text-center text-gray-400"
+                                class="px-4 py-10 text-center text-gray-600"
                             >
                                 No residents found
                             </td>

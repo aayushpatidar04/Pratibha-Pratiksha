@@ -22,7 +22,7 @@ const props = defineProps({
             <h1 class="text-2xl font-bold text-gray-900 mb-2">
                 Registration Submitted!
             </h1>
-            <p class="text-gray-500 mb-8">
+            <p class="text-gray-700 mb-8">
                 Your application has been received successfully.
             </p>
 
@@ -32,7 +32,7 @@ const props = defineProps({
                 <div
                     class="flex items-center justify-between pb-4 border-b border-gray-100"
                 >
-                    <span class="text-sm text-gray-500">Application No.</span>
+                    <span class="text-sm text-gray-700">Application No.</span>
                     <span class="text-lg font-bold text-indigo-600">{{
                         application.application_no
                     }}</span>
@@ -40,9 +40,9 @@ const props = defineProps({
 
                 <div class="space-y-3">
                     <div class="flex items-center gap-3">
-                        <FileText class="w-4 h-4 text-gray-400" />
+                        <FileText class="w-4 h-4 text-gray-600" />
                         <div>
-                            <p class="text-sm text-gray-500">Student Name</p>
+                            <p class="text-sm text-gray-700">Student Name</p>
                             <p class="font-medium text-gray-900">
                                 {{ application.student_name }}
                             </p>
@@ -50,9 +50,9 @@ const props = defineProps({
                     </div>
 
                     <div class="flex items-center gap-3">
-                        <Clock class="w-4 h-4 text-gray-400" />
+                        <Clock class="w-4 h-4 text-gray-600" />
                         <div>
-                            <p class="text-sm text-gray-500">Status</p>
+                            <p class="text-sm text-gray-700">Status</p>
                             <span
                                 class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
                                 :class="
@@ -71,9 +71,9 @@ const props = defineProps({
                     </div>
 
                     <div class="flex items-center gap-3">
-                        <MapPin class="w-4 h-4 text-gray-400" />
+                        <MapPin class="w-4 h-4 text-gray-600" />
                         <div>
-                            <p class="text-sm text-gray-500">Hostel Address</p>
+                            <p class="text-sm text-gray-700">Hostel Address</p>
                             <p class="text-sm text-gray-700">
                                 13, Ujjainagar, Dicholi Maidan Road, Indore -
                                 452016
@@ -84,11 +84,11 @@ const props = defineProps({
             </div>
 
             <div class="mt-6 space-y-3">
-                <p class="text-sm text-gray-500">
+                <p class="text-sm text-gray-700">
                     Please visit the hostel office with original documents for
                     verification.
                 </p>
-                <p class="text-xs text-gray-400">
+                <p class="text-xs text-gray-600">
                     Contact: 9399140386 | pratibhapratikshaavs@gmail.com
                 </p>
             </div>

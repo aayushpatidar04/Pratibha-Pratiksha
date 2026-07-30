@@ -21,7 +21,7 @@ const submit = () => {
         <Head title="Log in" />
 
         <h1 class="text-xl font-bold text-gray-900 mb-1">Welcome back</h1>
-        <p class="text-sm text-gray-500 mb-6">Sign in to manage your hostel dashboard</p>
+        <p class="text-sm text-gray-700 mb-6">Sign in to manage your hostel dashboard</p>
 
         <div v-if="status" class="mb-4 text-sm font-medium text-green-600">{{ status }}</div>
 
@@ -52,7 +52,7 @@ const submit = () => {
                 Log in
             </PrimaryButton>
 
-            <p class="text-center text-sm text-gray-500">
+            <p class="text-center text-sm text-gray-700">
                 Don't have an account?
                 <Link href="/register" class="text-blue-600 hover:underline">Register</Link>
             </p>

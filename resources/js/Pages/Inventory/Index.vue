@@ -103,7 +103,7 @@ const destroy = (item) => {
                     >
                         <Boxes class="h-6 w-6 text-blue-600" /> Inventory
                     </h1>
-                    <p class="text-sm text-gray-500 mt-0.5">
+                    <p class="text-sm text-gray-700 mt-0.5">
                         Track furniture and equipment across the hostel
                     </p>
                 </div>
@@ -116,7 +116,7 @@ const destroy = (item) => {
                 class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden"
             >
                 <table class="w-full text-sm">
-                    <thead class="bg-gray-50 text-xs uppercase text-gray-500">
+                    <thead class="bg-gray-50 text-xs uppercase text-gray-700">
                         <tr>
                             <th class="px-4 py-3 text-left">Item</th>
                             <th class="px-4 py-3 text-left">Category</th>
@@ -134,7 +134,7 @@ const destroy = (item) => {
                                 {{ item.item_name }}
 
                                 <p
-                                    class="mt-0.5 text-xs font-normal text-gray-400"
+                                    class="mt-0.5 text-xs font-normal text-gray-600"
                                 >
                                     {{ item.unit }}
                                 </p>
@@ -224,7 +224,7 @@ const destroy = (item) => {
                         <tr v-if="!items.length">
                             <td
                                 colspan="8"
-                                class="px-4 py-10 text-center text-gray-400"
+                                class="px-4 py-10 text-center text-gray-600"
                             >
                                 No inventory items yet
                             </td>

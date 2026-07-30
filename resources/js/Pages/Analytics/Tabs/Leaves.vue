@@ -74,7 +74,7 @@ const toggleBuilding = (id) => {
         </div>
         <div v-if="active === 'custom'" class="flex flex-wrap items-end gap-2">
             <div>
-                <label class="block text-xs text-gray-500 mb-1">From</label>
+                <label class="block text-xs text-gray-700 mb-1">From</label>
                 <input
                     type="date"
                     v-model="customFrom"
@@ -82,7 +82,7 @@ const toggleBuilding = (id) => {
                 />
             </div>
             <div>
-                <label class="block text-xs text-gray-500 mb-1">To</label>
+                <label class="block text-xs text-gray-700 mb-1">To</label>
                 <input
                     type="date"
                     v-model="customTo"
@@ -105,7 +105,7 @@ const toggleBuilding = (id) => {
                 <p class="text-2xl font-bold text-gray-900">
                     {{ leaves.total_requests }}
                 </p>
-                <p class="text-xs text-gray-400 mt-1">Total Leave Requests</p>
+                <p class="text-xs text-gray-600 mt-1">Total Leave Requests</p>
             </div>
             <div
                 class="bg-white rounded-xl border border-gray-100 p-5 text-center"
@@ -113,7 +113,7 @@ const toggleBuilding = (id) => {
                 <p class="text-2xl font-bold text-gray-900">
                     {{ leaves.total_students_on_leave }}
                 </p>
-                <p class="text-xs text-gray-400 mt-1">
+                <p class="text-xs text-gray-600 mt-1">
                     Total students on Leave
                 </p>
             </div>
@@ -142,13 +142,13 @@ const toggleBuilding = (id) => {
                     <p class="text-xl font-bold text-gray-900">
                         {{ b.total_requests }}
                     </p>
-                    <p class="text-[11px] text-gray-400">
+                    <p class="text-[11px] text-gray-600">
                         Total Leave requests
                     </p>
                     <p class="text-xl font-bold text-gray-900 mt-2">
                         {{ b.students_on_leave }}
                     </p>
-                    <p class="text-[11px] text-gray-400">
+                    <p class="text-[11px] text-gray-600">
                         Total students on Leave
                     </p>
                     <component
@@ -157,13 +157,13 @@ const toggleBuilding = (id) => {
                                 ? ChevronUp
                                 : ChevronDown
                         "
-                        class="h-4 w-4 text-gray-400 mx-auto mt-2"
+                        class="h-4 w-4 text-gray-600 mx-auto mt-2"
                     />
                 </button>
             </div>
             <p
                 v-if="!leaves.hostel_wise.length"
-                class="text-sm text-gray-400 text-center py-6"
+                class="text-sm text-gray-600 text-center py-6"
             >
                 No leave requests in this period
             </p>

@@ -16,7 +16,7 @@ defineProps({ path: String });
                 <Construction class="h-8 w-8 text-blue-500" />
             </div>
             <h1 class="text-lg font-semibold text-gray-900">This module is coming soon</h1>
-            <p class="text-sm text-gray-500 mt-1 max-w-sm">
+            <p class="text-sm text-gray-700 mt-1 max-w-sm">
                 This section is part of the full Hostel Management System roadmap and hasn't been built out yet.
             </p>
         </div>

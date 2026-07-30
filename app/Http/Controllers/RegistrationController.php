@@ -103,6 +103,7 @@ class RegistrationController extends Controller
             'razorpay_order_id' => 'nullable|string',
             'razorpay_payment_id' => 'nullable|string',
             'razorpay_signature' => 'nullable|string',
+            'registration_payment_proof' => ['nullable','image','mimes:jpg,jpeg,png,webp,pdf','max:5120'],
         ]);
 
         // Handle file uploads
@@ -119,6 +120,16 @@ class RegistrationController extends Controller
         }
 
         $validated['registration_fee'] = (int) config('services.razorpay.registration_fee', 300);
+
+        if ($request->hasFile('registration_payment_proof')) {
+
+            $validated['registration_payment_proof'] =
+                $request->file('registration_payment_proof')
+                    ->store(
+                        'registration-payment-proofs',
+                        'public'
+                    );
+        }
 
         $application = RegistrationApplication::create($validated);
 
@@ -235,7 +246,7 @@ class RegistrationController extends Controller
         ]);
 
         $registrationFeePayment = $application->resident?->invoices
-            ->first()?->payments->first();
+            ->first()?->payments->first() ?? $application->invoices->first()?->payments->first();
         return Inertia::render('Admin/Registrations/Show', [
             'application' => $application,
             'registrationFeePaymentId' => $registrationFeePayment?->id,
@@ -441,7 +452,7 @@ class RegistrationController extends Controller
             [
                 'resident_id' => $application->resident_id,
                 'stay_id' => optional($application->resident)?->activeStay?->id,
-                'invoice_number' => 'INV-' . now()->format('Ym') . '-' . str_pad((string) (FeeInvoice::count() + 1), 5, '0', STR_PAD_LEFT),
+                'invoice_number' => 'INV-' . now()->format('Ym') . '-' . str_pad((string) (FeeInvoice::withTrashed()->count() + 1), 5, '0', STR_PAD_LEFT),
                 'amount' => $application->registration_fee,
                 'paid_amount' => $application->registration_fee,
                 'status' => 'paid',
@@ -466,17 +477,6 @@ class RegistrationController extends Controller
         );
 
         if ($isPaid) {
-            Payment::create([
-                'invoice_id' => $invoice->id,
-                'application_id' => $application->id,
-                'resident_id' => $application->resident_id,
-                'amount' => $application->registration_fee,
-                'payment_mode' => $application->payment_method === 'razorpay' ? 'card' : 'cash',
-                'transaction_id' => $application->razorpay_payment_id,
-                'payment_date' => $application->paid_at ?? now(),
-                'notes' => "Auto-generated on approval of application payment {$application->application_no}",
-                'receipt_number' => 'RCPT-' . now()->format('Ymd') . '-' . str_pad((string) (Payment::count() + 1), 5, '0', STR_PAD_LEFT),
-            ]);
             $payment = Payment::create([
                 'invoice_id' => $invoice->id,
                 'application_id' => $application->id,
@@ -506,6 +506,22 @@ class RegistrationController extends Controller
                         STR_PAD_LEFT
                     ),
             ]);
+
+            if (
+                $application->registration_payment_proof
+            ) {
+                PaymentProof::create([
+                    'payment_id' => $payment->id,
+                    'file_path' => $application->registration_payment_proof,
+                    'file_type' => pathinfo(
+                        $application->registration_payment_proof,
+                        PATHINFO_EXTENSION
+                    ),
+                    'original_name' => basename(
+                        $application->registration_payment_proof
+                    ),
+                ]);
+            }
 
             if ($request && $request->hasFile('proofs')) {
 

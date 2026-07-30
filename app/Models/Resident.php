@@ -21,6 +21,7 @@ class Resident extends Model
         'whatsapp_number',
         'date_of_birth',
         'gender',
+        'aadhar_number',
         'blood_group',
         'address',
         'city',

@@ -74,7 +74,7 @@ const destroy = (b) => {
                     <h1 class="text-2xl font-bold text-gray-900 flex items-center gap-2">
                         <Building2 class="h-6 w-6 text-blue-600" /> Buildings
                     </h1>
-                    <p class="text-sm text-gray-500 mt-0.5">Manage hostel buildings and their details</p>
+                    <p class="text-sm text-gray-700 mt-0.5">Manage hostel buildings and their details</p>
                 </div>
                 <PrimaryButton type="button" @click="createOpen = true">
                     <Plus class="h-4 w-4" /> Add Building
@@ -83,7 +83,7 @@ const destroy = (b) => {
 
             <div class="flex flex-col sm:flex-row gap-3">
                 <div class="relative flex-1">
-                    <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Search class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-600" />
                     <input v-model="filters.search" @input="applyFilters" placeholder="Search buildings..."
                         class="w-full pl-9 rounded-lg border-gray-300 text-sm focus:border-blue-500 focus:ring-blue-500" />
                 </div>
@@ -103,8 +103,8 @@ const destroy = (b) => {
 
             <div v-if="!buildings.length" class="bg-white rounded-xl border border-gray-100 p-10 text-center">
                 <Building2 class="h-10 w-10 text-gray-300 mx-auto mb-3" />
-                <p class="text-gray-500">No buildings found</p>
-                <p class="text-xs text-gray-400 mt-1">Add your first building to get started</p>
+                <p class="text-gray-700">No buildings found</p>
+                <p class="text-xs text-gray-600 mt-1">Add your first building to get started</p>
             </div>
 
             <div v-else class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -113,7 +113,7 @@ const destroy = (b) => {
                     <div class="flex items-start justify-between mb-3">
                         <div>
                             <h3 class="font-semibold text-gray-900">{{ b.name }}</h3>
-                            <p class="text-xs text-gray-500">{{ b.code }}</p>
+                            <p class="text-xs text-gray-700">{{ b.code }}</p>
                         </div>
                         <div class="flex gap-1.5">
                             <Badge :color="typeBadge[b.type]">{{ b.type }}</Badge>
@@ -121,25 +121,25 @@ const destroy = (b) => {
                         </div>
                     </div>
 
-                    <div v-if="b.address" class="flex items-start gap-1.5 mb-3 text-xs text-gray-500">
+                    <div v-if="b.address" class="flex items-start gap-1.5 mb-3 text-xs text-gray-700">
                         <MapPin class="h-3 w-3 shrink-0 mt-0.5" /> <span>{{ b.address }}</span>
                     </div>
 
                     <div class="grid grid-cols-3 gap-2 mb-3">
                         <div class="text-center p-2 bg-gray-50 rounded-md">
-                            <Layers class="h-3.5 w-3.5 mx-auto mb-1 text-gray-400" />
+                            <Layers class="h-3.5 w-3.5 mx-auto mb-1 text-gray-600" />
                             <p class="text-sm font-semibold">{{ b.total_floors }}</p>
-                            <p class="text-[10px] text-gray-400">Floors</p>
+                            <p class="text-[10px] text-gray-600">Floors</p>
                         </div>
                         <div class="text-center p-2 bg-gray-50 rounded-md">
-                            <BedDouble class="h-3.5 w-3.5 mx-auto mb-1 text-gray-400" />
+                            <BedDouble class="h-3.5 w-3.5 mx-auto mb-1 text-gray-600" />
                             <p class="text-sm font-semibold">{{ b.total_rooms }}</p>
-                            <p class="text-[10px] text-gray-400">Rooms</p>
+                            <p class="text-[10px] text-gray-600">Rooms</p>
                         </div>
                         <div class="text-center p-2 bg-gray-50 rounded-md">
-                            <Building2 class="h-3.5 w-3.5 mx-auto mb-1 text-gray-400" />
+                            <Building2 class="h-3.5 w-3.5 mx-auto mb-1 text-gray-600" />
                             <p class="text-sm font-semibold">{{ b.occupied }}</p>
-                            <p class="text-[10px] text-gray-400">Occupied</p>
+                            <p class="text-[10px] text-gray-600">Occupied</p>
                         </div>
                     </div>
 

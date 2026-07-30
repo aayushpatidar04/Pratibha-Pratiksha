@@ -16,7 +16,7 @@ const submit = () => form.post('/forgot-password');
 
         <Head title="Forgot Password" />
         <h1 class="text-xl font-bold text-gray-900 mb-2">Forgot your password?</h1>
-        <p class="text-sm text-gray-500 mb-6">We'll email you a link to reset it.</p>
+        <p class="text-sm text-gray-700 mb-6">We'll email you a link to reset it.</p>
 
         <div v-if="status" class="mb-4 text-sm font-medium text-green-600">{{ status }}</div>
 

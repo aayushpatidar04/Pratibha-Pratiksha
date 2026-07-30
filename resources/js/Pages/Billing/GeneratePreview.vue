@@ -74,7 +74,7 @@ const formatCurrency = (amount) => {
             <div class="flex items-center gap-3">
                 <Link
                     :href="route('billing.config.index')"
-                    class="p-2 rounded-lg hover:bg-gray-100 text-gray-500"
+                    class="p-2 rounded-lg hover:bg-gray-100 text-gray-700"
                 >
                     <ArrowLeft class="h-5 w-5" />
                 </Link>
@@ -82,7 +82,7 @@ const formatCurrency = (amount) => {
                     <h1 class="text-xl font-semibold text-gray-900">
                         Generate Bills
                     </h1>
-                    <p class="text-sm text-gray-500">
+                    <p class="text-sm text-gray-700">
                         {{ config.full_label }} • Due: {{ config.due_date }}
                     </p>
                 </div>
@@ -188,16 +188,16 @@ const formatCurrency = (amount) => {
 
                         <div class="flex-1">
                             <div class="flex items-center gap-2 mb-1">
-                                <User class="h-4 w-4 text-gray-400" />
+                                <User class="h-4 w-4 text-gray-600" />
                                 <span class="font-medium text-gray-900">{{
                                     p.resident_name
                                 }}</span>
-                                <span class="text-xs text-gray-400">{{
+                                <span class="text-xs text-gray-600">{{
                                     p.resident_code
                                 }}</span>
                                 <span
                                     v-if="p.room"
-                                    class="text-xs text-gray-400"
+                                    class="text-xs text-gray-600"
                                     >Room {{ p.room }}</span
                                 >
                                 <span

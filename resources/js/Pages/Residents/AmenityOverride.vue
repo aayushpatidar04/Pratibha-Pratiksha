@@ -34,7 +34,7 @@ const submit = () => {
             <div class="flex items-center gap-3">
                 <Link
                     :href="route('residents.index')"
-                    class="p-2 rounded-lg hover:bg-gray-100 text-gray-500"
+                    class="p-2 rounded-lg hover:bg-gray-100 text-gray-700"
                 >
                     <ArrowLeft class="h-5 w-5" />
                 </Link>
@@ -42,7 +42,7 @@ const submit = () => {
                     <h1 class="text-xl font-semibold text-gray-900">
                         Amenity Configuration
                     </h1>
-                    <p class="text-sm text-gray-500">
+                    <p class="text-sm text-gray-700">
                         {{ resident.first_name }} {{ resident.last_name }}
                     </p>
                 </div>
@@ -107,7 +107,7 @@ const submit = () => {
                     <h3 class="text-sm font-semibold text-gray-900 mb-3">
                         Custom Amounts (Optional)
                     </h3>
-                    <p class="text-xs text-gray-500 mb-3">
+                    <p class="text-xs text-gray-700 mb-3">
                         Leave blank to use default rates from room/stay
                     </p>
 

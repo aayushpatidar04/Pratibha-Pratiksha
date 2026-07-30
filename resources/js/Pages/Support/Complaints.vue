@@ -84,7 +84,7 @@ const destroy = (c) => {
                         <MessageSquareWarning class="h-6 w-6 text-blue-600" />
                         Complaints
                     </h1>
-                    <p class="text-sm text-gray-500 mt-0.5">
+                    <p class="text-sm text-gray-700 mt-0.5">
                         Track and resolve resident complaints
                     </p>
                 </div>
@@ -100,7 +100,7 @@ const destroy = (c) => {
                     <p class="text-lg font-bold text-amber-600">
                         {{ stats.open }}
                     </p>
-                    <p class="text-xs text-gray-400">Open</p>
+                    <p class="text-xs text-gray-600">Open</p>
                 </div>
                 <div
                     class="bg-white rounded-xl border border-gray-100 p-3 text-center"
@@ -108,7 +108,7 @@ const destroy = (c) => {
                     <p class="text-lg font-bold text-blue-600">
                         {{ stats.inProgress }}
                     </p>
-                    <p class="text-xs text-gray-400">In Progress</p>
+                    <p class="text-xs text-gray-600">In Progress</p>
                 </div>
                 <div
                     class="bg-white rounded-xl border border-gray-100 p-3 text-center"
@@ -116,7 +116,7 @@ const destroy = (c) => {
                     <p class="text-lg font-bold text-green-600">
                         {{ stats.resolved }}
                     </p>
-                    <p class="text-xs text-gray-400">Resolved</p>
+                    <p class="text-xs text-gray-600">Resolved</p>
                 </div>
                 <div
                     class="bg-white rounded-xl border border-gray-100 p-3 text-center"
@@ -124,7 +124,7 @@ const destroy = (c) => {
                     <p class="text-lg font-bold text-red-600">
                         {{ stats.urgent }}
                     </p>
-                    <p class="text-xs text-gray-400">Urgent (open)</p>
+                    <p class="text-xs text-gray-600">Urgent (open)</p>
                 </div>
             </div>
 
@@ -158,7 +158,7 @@ const destroy = (c) => {
                 class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden"
             >
                 <table class="w-full text-sm">
-                    <thead class="bg-gray-50 text-gray-500 text-xs uppercase">
+                    <thead class="bg-gray-50 text-gray-700 text-xs uppercase">
                         <tr>
                             <th class="text-left px-4 py-3">Complaint</th>
                             <th class="text-left px-4 py-3">Resident</th>
@@ -173,7 +173,7 @@ const destroy = (c) => {
                                 <p class="font-medium text-gray-900">
                                     {{ c.title }}
                                 </p>
-                                <p class="text-xs text-gray-400 capitalize">
+                                <p class="text-xs text-gray-600 capitalize">
                                     {{ c.category }}
                                 </p>
                             </td>
@@ -215,7 +215,7 @@ const destroy = (c) => {
                         <tr v-if="!complaints.data.length">
                             <td
                                 colspan="5"
-                                class="px-4 py-10 text-center text-gray-400"
+                                class="px-4 py-10 text-center text-gray-600"
                             >
                                 No complaints found
                             </td>

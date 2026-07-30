@@ -41,7 +41,7 @@ const statusColor = { sent: 'green', delivered: 'green', read: 'blue', failed: '
                 <h1 class="text-2xl font-bold text-gray-900 flex items-center gap-2">
                     <MessageCircle class="h-6 w-6 text-blue-600" /> WhatsApp Communication
                 </h1>
-                <p class="text-sm text-gray-500 mt-0.5">Send messages to residents and parents via WhatsApp</p>
+                <p class="text-sm text-gray-700 mt-0.5">Send messages to residents and parents via WhatsApp</p>
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
@@ -104,10 +104,10 @@ const statusColor = { sent: 'green', delivered: 'green', read: 'blue', failed: '
                         <p class="flex items-center gap-2 text-green-600">
                             <CheckCircle2 class="h-4 w-4" /> {{ setting.status }}
                         </p>
-                        <p class="text-gray-500">{{ setting.phone_number }}</p>
-                        <p class="text-xs text-gray-400">{{ setting.messages_sent_today }} messages sent today</p>
+                        <p class="text-gray-700">{{ setting.phone_number }}</p>
+                        <p class="text-xs text-gray-600">{{ setting.messages_sent_today }} messages sent today</p>
                     </div>
-                    <p v-else class="text-sm text-gray-400">No WhatsApp gateway connected yet. Configure Baileys or
+                    <p v-else class="text-sm text-gray-600">No WhatsApp gateway connected yet. Configure Baileys or
                         another
                         provider to enable live sending.</p>
                 </div>
@@ -118,7 +118,7 @@ const statusColor = { sent: 'green', delivered: 'green', read: 'blue', failed: '
                     <h2 class="text-sm font-semibold text-gray-900">Recent Messages</h2>
                 </div>
                 <table class="w-full text-sm">
-                    <thead class="bg-gray-50 text-gray-500 text-xs uppercase">
+                    <thead class="bg-gray-50 text-gray-700 text-xs uppercase">
                         <tr>
                             <th class="text-left px-4 py-2">To</th>
                             <th class="text-left px-4 py-2">Message</th>
@@ -129,14 +129,14 @@ const statusColor = { sent: 'green', delivered: 'green', read: 'blue', failed: '
                     <tbody class="divide-y divide-gray-100">
                         <tr v-for="m in recentMessages" :key="m.id">
                             <td class="px-4 py-2 text-gray-700">{{ m.recipient_phone }}</td>
-                            <td class="px-4 py-2 text-gray-500 truncate max-w-xs">{{ m.content }}</td>
+                            <td class="px-4 py-2 text-gray-700 truncate max-w-xs">{{ m.content }}</td>
                             <td class="px-4 py-2">
                                 <Badge :color="statusColor[m.status]">{{ m.status }}</Badge>
                             </td>
-                            <td class="px-4 py-2 text-xs text-gray-400">{{ new Date(m.sent_at).toLocaleString() }}</td>
+                            <td class="px-4 py-2 text-xs text-gray-600">{{ new Date(m.sent_at).toLocaleString() }}</td>
                         </tr>
                         <tr v-if="!recentMessages.length">
-                            <td colspan="4" class="px-4 py-8 text-center text-gray-400">No messages sent yet</td>
+                            <td colspan="4" class="px-4 py-8 text-center text-gray-600">No messages sent yet</td>
                         </tr>
                     </tbody>
                 </table>

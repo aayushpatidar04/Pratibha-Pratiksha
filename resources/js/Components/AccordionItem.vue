@@ -49,7 +49,7 @@ const toggle = () => {
             </div>
 
             <ChevronDown
-                class="h-4 w-4 shrink-0 text-gray-500 transition-transform duration-200"
+                class="h-4 w-4 shrink-0 text-gray-700 transition-transform duration-200"
                 :class="{ 'rotate-180': isOpen }"
             />
         </button>

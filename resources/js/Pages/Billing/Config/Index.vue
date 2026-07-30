@@ -54,7 +54,7 @@ const formatCurrency = (amount) => {
                     <h1 class="text-xl font-semibold text-gray-900">
                         Monthly Billing Configuration
                     </h1>
-                    <p class="text-sm text-gray-500">
+                    <p class="text-sm text-gray-700">
                         Set up monthly amenities and generate bills
                     </p>
                 </div>
@@ -80,7 +80,7 @@ const formatCurrency = (amount) => {
                 <h3 class="text-lg font-medium text-gray-900 mb-1">
                     No configurations yet
                 </h3>
-                <p class="text-sm text-gray-500 mb-4">
+                <p class="text-sm text-gray-700 mb-4">
                     Create your first monthly billing configuration to start
                     auto-generating bills.
                 </p>
@@ -113,7 +113,7 @@ const formatCurrency = (amount) => {
                         </div>
 
                         <div
-                            class="flex items-center gap-4 text-sm text-gray-500 mb-3"
+                            class="flex items-center gap-4 text-sm text-gray-700 mb-3"
                         >
                             <span class="flex items-center gap-1">
                                 <Calendar class="h-3.5 w-3.5" />
@@ -178,7 +178,7 @@ const formatCurrency = (amount) => {
                             v-if="config.custom_charges?.length"
                             class="mt-3 pt-3 border-t border-gray-100"
                         >
-                            <p class="text-xs text-gray-500 mb-2 font-medium">
+                            <p class="text-xs text-gray-700 mb-2 font-medium">
                                 Custom Charges:
                             </p>
                             <div class="flex flex-wrap gap-2">
@@ -195,7 +195,7 @@ const formatCurrency = (amount) => {
 
                         <p
                             v-if="config.notes"
-                            class="mt-3 text-xs text-gray-400 italic"
+                            class="mt-3 text-xs text-gray-600 italic"
                         >
                             {{ config.notes }}
                         </p>

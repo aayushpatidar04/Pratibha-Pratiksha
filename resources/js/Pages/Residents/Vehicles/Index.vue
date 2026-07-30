@@ -94,7 +94,7 @@ const destroy = (v) => {
                     >
                         <Bike class="h-6 w-6 text-blue-600" /> Student Vehicles
                     </h1>
-                    <p class="text-sm text-gray-500 mt-0.5">
+                    <p class="text-sm text-gray-700 mt-0.5">
                         Registered vehicles per resident
                     </p>
                 </div>
@@ -127,7 +127,7 @@ const destroy = (v) => {
                 class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden"
             >
                 <table class="w-full text-sm">
-                    <thead class="bg-gray-50 text-gray-500 text-xs uppercase">
+                    <thead class="bg-gray-50 text-gray-700 text-xs uppercase">
                         <tr>
                             <th class="text-left px-4 py-3">Resident</th>
                             <th class="text-left px-4 py-3">Vehicle No.</th>
@@ -172,7 +172,7 @@ const destroy = (v) => {
                         <tr v-if="!vehicles.data.length">
                             <td
                                 colspan="5"
-                                class="px-4 py-10 text-center text-gray-400"
+                                class="px-4 py-10 text-center text-gray-600"
                             >
                                 No vehicles registered yet
                             </td>

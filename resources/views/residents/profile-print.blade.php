@@ -623,6 +623,16 @@
                         </span>
                     </td>
                 </tr>
+                <tr>
+                    <td>
+                        <span class="field-label">Aadhaar Number</span>
+                        <span class="field-value">
+                            {{ $resident->aadhar_number ?? '—' }}
+                        </span>
+                    </td>
+                    <td></td>
+                    <td></td>
+                </tr>
             </table>
         </section>
 
