@@ -300,7 +300,19 @@ class RegistrationController extends Controller
                     [$firstName, $lastName] = $this->splitName($application->student_name);
 
                     $year = now()->year;
-                    $seq = Resident::whereYear('created_at', $year)->count() + 1;
+
+                    // Find the max sequence already used for this year
+                    $lastCode = Resident::whereYear('created_at', $year)
+                        ->orderBy('resident_code', 'desc')
+                        ->value('resident_code');
+
+                    if ($lastCode) {
+                        // Extract the numeric part after the year
+                        preg_match('/PP-' . $year . '-(\d+)/', $lastCode, $matches);
+                        $seq = isset($matches[1]) ? (int)$matches[1] + 1 : 1;
+                    } else {
+                        $seq = 1;
+                    }
 
                     $resident = Resident::create([
                         'resident_code' => sprintf('PP-%d-%04d', $year, $seq),

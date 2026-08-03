@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Middleware\EnsureResidentPortalEnabled;
+use App\Http\Middleware\EnsureUserIsActive;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -13,14 +15,23 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [
-            \App\Http\Middleware\EnsureUserIsActive::class,
             \App\Http\Middleware\HandleInertiaRequests::class,
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
         ]);
 
         $middleware->alias([
             'permission' => \App\Http\Middleware\CheckPermission::class,
+            'user.active' => EnsureUserIsActive::class,
+            'resident.portal.enabled' => EnsureResidentPortalEnabled::class,
         ]);
+
+        $middleware->redirectGuestsTo(
+            function (Request $request): string {
+                return $request->routeIs('resident.*')
+                    ? route('resident.login')
+                    : route('login');
+            }
+        );
 
     })
     ->withExceptions(function (Exceptions $exceptions): void {

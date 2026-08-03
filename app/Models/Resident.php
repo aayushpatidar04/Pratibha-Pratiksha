@@ -3,12 +3,15 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 
-class Resident extends Model
+class Resident extends Authenticatable
 {
-    use HasFactory;
+    use HasFactory, Notifiable;
 
     protected $table = 'residents';
 
@@ -39,15 +42,35 @@ class Resident extends Model
         'mother_name',
         'mother_phone',
         'status',
+        'portal_enabled',
         'photo_url',
-        'created_by'
+        'created_by',
+        'password',
+        'last_login_at',
+        'password_changed_at',
+        'must_change_password',
+    ];
+
+    protected $hidden = [
+        'password',
+        'remember_token',
     ];
 
     protected function casts(): array
     {
         return [
-            'date_of_birth' => 'date:Y-m-d'
+            'date_of_birth' => 'date:Y-m-d',
+            'portal_enabled' => 'boolean',
+            'last_login_at' => 'datetime',
+            'password_changed_at' => 'datetime',
+            'must_change_password' => 'boolean',
+            'password' => 'hashed',
         ];
+    }
+
+    public function getAuthIdentifierName(): string
+    {
+        return 'id';
     }
 
     public function stays()
@@ -59,6 +82,14 @@ class Resident extends Model
     {
         return $this->hasOne(ResidentStay::class)->whereIn('status', ['upcoming', 'active'])->latestOfMany();
     }
+
+    public function activeStay(): HasOne
+    {
+        return $this->hasOne(ResidentStay::class)
+            ->where('status', 'active')
+            ->latestOfMany();
+    }
+
 
     public function registrationApplications()
     {

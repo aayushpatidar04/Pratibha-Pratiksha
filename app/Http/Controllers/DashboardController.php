@@ -67,7 +67,7 @@ class DashboardController extends Controller
             ],
             'leaves' => [
                 'total' => LeaveRequest::count(),
-                'pending' => LeaveRequest::where('final_status', 'pending')->count(),
+                'pending' => LeaveRequest::where('final_status', 'pending')->orWhere('final_status', 'parent_approval_pending')->count(),
                 'approved' => LeaveRequest::where('final_status', 'approved')->count(),
             ],
         ];
@@ -144,6 +144,7 @@ class DashboardController extends Controller
 
         $latestLeaves = LeaveRequest::with('resident')
             ->where('final_status', 'pending')
+            ->orWhere('final_status', 'parent_approval_pending')
             ->latest()
             ->limit(5)
             ->get()

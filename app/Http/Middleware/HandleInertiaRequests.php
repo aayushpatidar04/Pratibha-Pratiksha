@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Illuminate\Http\Request;
 use Inertia\Middleware;
+use Illuminate\Support\Facades\Auth;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -29,20 +30,22 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
-        $user = $request->user();
+        $user = Auth::guard('web')->user();
+        $resident = Auth::guard('resident')->user();
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => $request->user(),
+                'user' => $user ?? null,
                 'permissions' => $user ? $this->resolvePermissions($user) : [],
+                'resident' => $resident ?? null,
             ],
             'flash' => [
-                'success' => fn () => $request->session()->get('success'),
-                'error' => fn () => $request->session()->get('error'),
-                'bulk_upload_summary' => fn () =>
+                'success' => fn() => $request->session()->get('success'),
+                'error' => fn() => $request->session()->get('error'),
+                'bulk_upload_summary' => fn() =>
                     $request->session()->get('bulk_upload_summary'),
 
-                'bulk_upload_failures' => fn () =>
+                'bulk_upload_failures' => fn() =>
                     $request->session()->get('bulk_upload_failures'),
             ],
         ];
@@ -51,13 +54,13 @@ class HandleInertiaRequests extends Middleware
     protected function resolvePermissions($user): array
     {
         $resolved = [];
- 
+
         foreach (config('modules.modules') as $module) {
             $resolved[$module['key']] = $user->hasFullAccess()
                 ? $module['actions']
                 : array_values(array_intersect($module['actions'], $user->permissions[$module['key']] ?? []));
         }
- 
+
         return $resolved;
     }
 }

@@ -16,6 +16,7 @@ use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\KycController;
 use App\Http\Controllers\LeaveRequestController;
 use App\Http\Controllers\MessMenuController;
+use App\Http\Controllers\ParentLeaveApprovalController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RazorpayController;
 use App\Http\Controllers\RegistrationController;
@@ -35,7 +36,7 @@ Route::get('/', function () {
     return redirect()->route('dashboard');
 });
 
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', 'user.active'])->group(function () {
     // Dashboard has no module gate — every logged-in user can see the overview.
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
@@ -218,4 +219,28 @@ Route::prefix('register')->name('register.')->group(function () {
 Route::post('/razorpay/create-order', [RazorpayController::class, 'createOrder'])->name('razorpay.order');
 Route::post('/razorpay/verify', [RazorpayController::class, 'verifyPayment'])->name('razorpay.verify');
 
+Route::middleware([
+    'web',
+    'throttle:30,1',
+])->group(function () {
+    Route::get(
+        '/leave-approval/{token}',
+        [
+            ParentLeaveApprovalController::class,
+            'show',
+        ]
+    )
+        ->name('leave.parent.review')
+        ->middleware('signed');
+
+    Route::post(
+        '/leave-approval/{token}',
+        [
+            ParentLeaveApprovalController::class,
+            'respond',
+        ]
+    )->name('leave.parent.respond');
+});
+
 require __DIR__ . '/auth.php';
+require __DIR__ . '/resident.php';

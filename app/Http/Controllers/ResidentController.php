@@ -65,7 +65,7 @@ class ResidentController extends Controller
                 'upcoming_bookings' => Resident::where('status', 'upcoming')->count(),
                 'left_suspended' => Resident::whereIn('status', ['left', 'suspended'])->count(),
             ],
-            'academicFilterOptions' => fn () => [
+            'academicFilterOptions' => fn() => [
                 'courses' => Resident::query()
                     ->whereNotNull('course')
                     ->where('course', '!=', '')
@@ -81,7 +81,7 @@ class ResidentController extends Controller
                     ->orderBy('institute')
                     ->pluck('institute')
                     ->values(),
-            ],    
+            ],
             'buildings' => Building::orderBy('name')->get(['id', 'name']),
             'floors' => Floor::orderBy('floor_number')->get(['id', 'name', 'building_id']),
             'rooms' => Room::with('beds')->orderBy('room_number')->get(['id', 'room_number', 'building_id', 'floor_id', 'capacity', 'occupied_beds', 'monthly_rent_per_bed']),
@@ -259,8 +259,11 @@ class ResidentController extends Controller
             'whatsapp_number' => 'nullable|string|max:20',
             'date_of_birth' => 'nullable|date',
             'gender' => ($creating ? 'required' : 'sometimes') . '|in:male,female,other',
-            'aadhar_number' => [ 'nullable', 'digits:12', Rule::unique('residents', 'aadhar_number')->ignore(request()->route('resident')),
-],
+            'aadhar_number' => [
+                'nullable',
+                'digits:12',
+                Rule::unique('residents', 'aadhar_number')->ignore(request()->route('resident')),
+            ],
             'blood_group' => 'nullable|string|max:10',
             'address' => 'nullable|string',
             'city' => 'nullable|string|max:100',
@@ -314,10 +317,18 @@ class ResidentController extends Controller
 
         $year = now()->year;
 
-        $seq = Resident::whereYear(
-            'created_at',
-            $year
-        )->count() + 1;
+        // Find the max sequence already used for this year
+        $lastCode = Resident::whereYear('created_at', $year)
+            ->orderBy('resident_code', 'desc')
+            ->value('resident_code');
+
+        if ($lastCode) {
+            // Extract the numeric part after the year
+            preg_match('/PP-' . $year . '-(\d+)/', $lastCode, $matches);
+            $seq = isset($matches[1]) ? (int) $matches[1] + 1 : 1;
+        } else {
+            $seq = 1;
+        }
 
         $validated['resident_code'] = sprintf(
             'PP-%d-%04d',

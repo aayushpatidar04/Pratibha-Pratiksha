@@ -13,7 +13,7 @@ return new class extends Migration
             $table->foreignId('resident_id')->constrained('residents')->cascadeOnDelete();
             $table->foreignId('stay_id')->constrained('resident_stays')->cascadeOnDelete();
             $table->string('invoice_number', 50)->unique();
-            $table->enum('fee_type', ['hostel_fee', 'mess_fee', 'security_deposit', 'other']);
+            $table->enum('fee_type', ['hostel_fee', 'mess_fee', 'security_deposit', 'registration_fee', 'other']);
             $table->decimal('amount', 10, 2);
             $table->date('due_date');
             $table->decimal('paid_amount', 10, 2)->default(0.00);

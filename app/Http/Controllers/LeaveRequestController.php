@@ -53,24 +53,63 @@ class LeaveRequestController extends Controller
         return back()->with('success', 'Leave request submitted.');
     }
 
-    public function update(Request $request, LeaveRequest $leave): RedirectResponse
-    {
+    public function update(Request $request, LeaveRequest $leave): RedirectResponse {
         $validated = $request->validate([
-            'final_status' => 'required|in:pending,parent_approval_pending,approved,rejected,cancelled,expired',
+            'final_status' => [
+                'required',
+                'in:pending,parent_approval_pending,approved,rejected,cancelled,expired',
+            ],
+
+            'admin_remarks' => [
+                'nullable',
+                'string',
+                'max:2000',
+            ],
         ]);
 
-        if ($validated['final_status'] === 'approved') {
-            $validated['admin_approval_status'] = 'approved';
-            $validated['approved_by'] = $request->user()?->id;
-            $validated['approved_at'] = now();
-            $validated['gate_pass_code'] = $leave->gate_pass_code ?? ('GP-'.strtoupper(uniqid()));
-        } elseif ($validated['final_status'] === 'rejected') {
-            $validated['admin_approval_status'] = 'rejected';
+        $updates = [
+            'final_status' =>
+                $validated['final_status'],
+
+            'admin_remarks' =>
+                $validated['admin_remarks'] ?? null,
+        ];
+
+        if (
+            $validated['final_status'] === 'approved'
+        ) {
+            $updates += [
+                'admin_approval_status' => 'approved',
+                'approved_by' => $request->user()?->id,
+                'approved_at' => now(),
+
+                'gate_pass_code' =>
+                    $leave->gate_pass_code
+                    ?: LeaveRequest::generateGatePassCode(),
+            ];
+        } elseif (
+            $validated['final_status'] === 'rejected'
+        ) {
+            $updates += [
+                'admin_approval_status' => 'rejected',
+                'approved_by' => $request->user()?->id,
+                'approved_at' => now(),
+            ];
+        } elseif (
+            $validated['final_status'] ===
+            'parent_approval_pending'
+        ) {
+            $updates += [
+                'admin_approval_status' => 'pending',
+            ];
         }
 
-        $leave->update($validated);
+        $leave->update($updates);
 
-        return back()->with('success', 'Leave request updated.');
+        return back()->with(
+            'success',
+            'Leave request updated.'
+        );
     }
 
     public function destroy(LeaveRequest $leave): RedirectResponse

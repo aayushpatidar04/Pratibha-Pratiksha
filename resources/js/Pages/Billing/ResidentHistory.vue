@@ -154,7 +154,7 @@ const formatCurrency = (amount) => {
                                 <a
                                     v-for="proof in payment.proofs"
                                     :key="proof.id"
-                                    :href="`storage/${proof.file_path}`"
+                                    :href="`/storage/${proof.file_path}`"
                                     target="_blank"
                                     class="p-1.5 rounded bg-white border hover:bg-gray-50"
                                     title="View Proof"
