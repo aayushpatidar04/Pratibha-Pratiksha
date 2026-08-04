@@ -3,6 +3,7 @@ import NavItem from "@/Components/ResidentPortal/NavItem.vue";
 import ProfileDropdown from "@/Components/ResidentPortal/ProfileDropdown.vue";
 import { Link, usePage } from "@inertiajs/vue3";
 import {
+    ArrowRightLeft,
     Bell,
     Building2,
     CalendarDays,
@@ -11,10 +12,12 @@ import {
     Gauge,
     HelpCircle,
     Home,
+    Megaphone,
     Menu,
     MessageSquareWarning,
     ReceiptText,
     Send,
+    Siren,
     UserRound,
     WalletCards,
     X,
@@ -209,9 +212,10 @@ onBeforeUnmount(() => {
                 </NavItem>
 
                 <NavItem
-                    href="#"
+                    :href="route('resident.complaints.index')"
                     label="Complaints"
-                    disabled
+                    :active="isActive('resident.complaints.*')"
+                    @click="closeMobileSidebar"
                 >
                     <template #icon>
                         <MessageSquareWarning class="h-4 w-4" />
@@ -219,12 +223,44 @@ onBeforeUnmount(() => {
                 </NavItem>
 
                 <NavItem
-                    href="#"
-                    label="Requests"
-                    disabled
+                    :href="route('resident.emergency.index')"
+                    label="Emergency SOS"
+                    :active="isActive('resident.emergency.*')"
+                    class="text-red-600"
+                    @click="closeMobileSidebar"
                 >
                     <template #icon>
-                        <Send class="h-4 w-4" />
+                        <Siren class="h-4 w-4" />
+                    </template>
+                </NavItem>
+
+                <NavItem
+                    :href="route('resident.notices.index')"
+                    label="Notices"
+                    :active="isActive('resident.notices.*')"
+                    @click="closeMobileSidebar"
+                >
+                    <template #icon>
+                        <Megaphone class="h-4 w-4" />
+                    </template>
+                </NavItem>
+
+                <NavItem
+                    :href="
+                        route(
+                            'resident.room-change-requests.index',
+                        )
+                    "
+                    label="Room Change"
+                    :active="
+                        isActive(
+                            'resident.room-change-requests.*',
+                        )
+                    "
+                    @click="closeMobileSidebar"
+                >
+                    <template #icon>
+                        <ArrowRightLeft class="h-4 w-4" />
                     </template>
                 </NavItem>
 

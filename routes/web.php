@@ -16,6 +16,7 @@ use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\KycController;
 use App\Http\Controllers\LeaveRequestController;
 use App\Http\Controllers\MessMenuController;
+use App\Http\Controllers\NoticeController;
 use App\Http\Controllers\ParentLeaveApprovalController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RazorpayController;
@@ -113,6 +114,38 @@ Route::middleware(['auth', 'user.active'])->group(function () {
     Route::get('/residents/bulk-upload/template/csv', [ResidentController::class, 'downloadBulkCsvTemplate'])->name('residents.bulk.template.csv');
     Route::get('/residents/bulk-upload/template/excel', [ResidentController::class, 'downloadBulkExcelTemplate'])->name('residents.bulk.template.xlsx');
 
+    Route::prefix('notices')
+        ->name('notices.')
+        ->group(function () {
+            Route::get(
+                '/',
+                [NoticeController::class, 'index']
+            )->name('index');
+
+            Route::post(
+                '/',
+                [NoticeController::class, 'store']
+            )->name('store');
+
+            Route::post(
+                '/{notice}',
+                [NoticeController::class, 'update']
+            )->name('update');
+
+            Route::delete(
+                '/{notice}',
+                [NoticeController::class, 'destroy']
+            )->name('destroy');
+
+            Route::delete(
+                '/{notice}/attachments/{attachment}',
+                [
+                    NoticeController::class,
+                    'deleteAttachment',
+                ]
+            )->name('attachments.destroy');
+        });
+        
     // Billing
     Route::prefix('billing')->group(function () {
         // Main billing

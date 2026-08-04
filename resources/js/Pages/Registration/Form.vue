@@ -1,7 +1,7 @@
 <!-- resources/js/Pages/Registration/Form.vue -->
 <script setup>
 import { Head, useForm } from "@inertiajs/vue3";
-import { ref, computed, nextTick } from "vue";
+import { ref, computed, nextTick, watch } from "vue";
 import {
     User,
     Phone,
@@ -19,6 +19,8 @@ import {
     Check,
     AlertCircle,
     Upload,
+    QrCode,
+    X,
 } from "lucide-vue-next";
 
 const props = defineProps({
@@ -316,10 +318,41 @@ const t = computed(() => ({
         props.lang === "hi"
             ? "ऑनलाइन भुगतान (Razorpay)"
             : "Online Payment (Razorpay)",
+
     cashPayment:
         props.lang === "hi"
-            ? "नकद भुगतान (कार्यालय में)"
-            : "Cash Payment (At Office) Or UPI",
+            ? "नकद भुगतान"
+            : "Cash Payment",
+
+    cashPaymentDescription:
+        props.lang === "hi"
+            ? "छात्रावास कार्यालय में नकद भुगतान करें"
+            : "Pay cash at the hostel office",
+
+    upiPayment:
+        props.lang === "hi"
+            ? "यूपीआई भुगतान"
+            : "UPI Payment",
+
+    upiPaymentDescription:
+        props.lang === "hi"
+            ? "कार्यालय के QR कोड या UPI ID पर भुगतान करें"
+            : "Pay using the hostel QR code or UPI ID",
+
+    paymentProof:
+        props.lang === "hi"
+            ? "भुगतान प्रमाण"
+            : "Payment Proof",
+
+    paymentProofRequired:
+        props.lang === "hi"
+            ? "UPI भुगतान के लिए स्क्रीनशॉट या रसीद अनिवार्य है।"
+            : "A payment screenshot or receipt is mandatory for UPI payment.",
+
+    paymentProofOptional:
+        props.lang === "hi"
+            ? "नकद भुगतान के लिए रसीद उपलब्ध हो तो अपलोड करें।"
+            : "Upload a receipt for cash payment if available.",
     registrationFee: props.lang === "hi" ? "पंजीकरण शुल्क" : "Registration Fee",
     payNow: props.lang === "hi" ? "अब भुगतान करें" : "Pay Now",
     submitApplication:
@@ -452,7 +485,9 @@ const validateBeforeSubmit = () => {
     const requiredFields = {
         student_photo: form.student_photo,
         student_name: form.student_name,
+        email: form.email,
         father_name: form.father_name,
+        father_mobile: form.father_mobile,
         mother_name: form.mother_name,
         dob: form.dob,
         age: form.age,
@@ -519,6 +554,18 @@ const validateBeforeSubmit = () => {
             props.lang === "hi"
                 ? "वाहन नंबर दर्ज करें"
                 : "Please enter the vehicle number",
+        );
+    }
+
+    if (
+        form.payment_method === "upi" &&
+        !form.registration_payment_proof
+    ) {
+        form.setError(
+            "registration_payment_proof",
+            props.lang === "hi"
+                ? "UPI भुगतान के लिए भुगतान प्रमाण अपलोड करना अनिवार्य है।"
+                : "Payment proof is required for UPI payment.",
         );
     }
 
@@ -613,6 +660,51 @@ const handleSubmit = async () => {
         initRazorpay();
     } else {
         submitForm();
+    }
+};
+
+watch(
+    () => form.payment_method,
+    (newMethod, oldMethod) => {
+        form.clearErrors(
+            "registration_payment_proof"
+        );
+
+        /*
+         * Do not silently keep a UPI screenshot if the
+         * resident switches to Razorpay.
+         */
+        if (
+            newMethod === "razorpay" &&
+            oldMethod !== "razorpay"
+        ) {
+            form.registration_payment_proof =
+                null;
+        }
+    },
+);
+
+const paymentProofInput = ref(null);
+const paymentProofName = ref("");
+
+const handlePaymentProofChange = (event) => {
+    const file =
+        event.target.files?.[0] || null;
+
+    form.registration_payment_proof = file;
+    paymentProofName.value = file?.name || "";
+
+    form.clearErrors(
+        "registration_payment_proof"
+    );
+};
+
+const removePaymentProof = () => {
+    form.registration_payment_proof = null;
+    paymentProofName.value = "";
+
+    if (paymentProofInput.value) {
+        paymentProofInput.value.value = "";
     }
 };
 </script>
@@ -1741,12 +1833,14 @@ const handleSubmit = async () => {
                     <!-- Payment Method -->
                     <div class="space-y-3">
                         <label
-                            class="block text-sm font-medium text-gray-700 mb-2"
-                            >{{ t.paymentMethod }}</label
+                            class="mb-2 block text-sm font-medium text-gray-700"
                         >
+                            {{ t.paymentMethod }}
+                        </label>
 
-                        <!-- <label
-                            class="flex items-center gap-4 p-4 border-2 rounded-xl cursor-pointer transition-colors"
+                        <!-- Razorpay -->
+                        <label
+                            class="flex cursor-pointer items-center gap-4 rounded-xl border-2 p-4 transition-colors"
                             :class="
                                 form.payment_method === 'razorpay'
                                     ? 'border-indigo-500 bg-indigo-50'
@@ -1759,29 +1853,82 @@ const handleSubmit = async () => {
                                 value="razorpay"
                                 class="sr-only"
                             />
+
                             <div
-                                class="w-10 h-10 rounded-lg bg-white flex items-center justify-center"
+                                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white shadow-sm"
                             >
-                                <CreditCard class="w-5 h-5 text-indigo-600" />
+                                <CreditCard
+                                    class="h-5 w-5 text-indigo-600"
+                                />
                             </div>
+
                             <div class="flex-1">
                                 <p class="font-medium text-gray-900">
                                     {{ t.onlinePayment }}
                                 </p>
-                                <p class="text-xs text-gray-700">
-                                    UPI, Card, Net Banking
+
+                                <p class="text-xs text-gray-600">
+                                    UPI, card or net banking through
+                                    Razorpay
                                 </p>
                             </div>
-                            <div
-                                v-if="form.payment_method === 'razorpay'"
-                                class="w-5 h-5 rounded-full bg-indigo-600 flex items-center justify-center"
-                            >
-                                <Check class="w-3 h-3 text-white" />
-                            </div>
-                        </label> -->
 
+                            <div
+                                v-if="
+                                    form.payment_method ===
+                                    'razorpay'
+                                "
+                                class="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-600"
+                            >
+                                <Check class="h-3 w-3 text-white" />
+                            </div>
+                        </label>
+
+                        <!-- UPI -->
                         <label
-                            class="flex items-center gap-4 p-4 border-2 rounded-xl cursor-pointer transition-colors"
+                            class="flex cursor-pointer items-center gap-4 rounded-xl border-2 p-4 transition-colors"
+                            :class="
+                                form.payment_method === 'upi'
+                                    ? 'border-indigo-500 bg-indigo-50'
+                                    : 'border-gray-200 hover:border-gray-300'
+                            "
+                        >
+                            <input
+                                v-model="form.payment_method"
+                                type="radio"
+                                value="upi"
+                                class="sr-only"
+                            />
+
+                            <div
+                                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white shadow-sm"
+                            >
+                                <QrCode
+                                    class="h-5 w-5 text-purple-600"
+                                />
+                            </div>
+
+                            <div class="flex-1">
+                                <p class="font-medium text-gray-900">
+                                    {{ t.upiPayment }}
+                                </p>
+
+                                <p class="text-xs text-gray-600">
+                                    {{ t.upiPaymentDescription }}
+                                </p>
+                            </div>
+
+                            <div
+                                v-if="form.payment_method === 'upi'"
+                                class="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-600"
+                            >
+                                <Check class="h-3 w-3 text-white" />
+                            </div>
+                        </label>
+
+                        <!-- Cash -->
+                        <label
+                            class="flex cursor-pointer items-center gap-4 rounded-xl border-2 p-4 transition-colors"
                             :class="
                                 form.payment_method === 'cash'
                                     ? 'border-indigo-500 bg-indigo-50'
@@ -1794,50 +1941,225 @@ const handleSubmit = async () => {
                                 value="cash"
                                 class="sr-only"
                             />
+
                             <div
-                                class="w-10 h-10 rounded-lg bg-white flex items-center justify-center"
+                                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white shadow-sm"
                             >
-                                <Banknote class="w-5 h-5 text-green-600" />
+                                <Banknote
+                                    class="h-5 w-5 text-green-600"
+                                />
                             </div>
+
                             <div class="flex-1">
                                 <p class="font-medium text-gray-900">
                                     {{ t.cashPayment }}
                                 </p>
-                                <p class="text-xs text-gray-700">
-                                    Pay at hostel office
+
+                                <p class="text-xs text-gray-600">
+                                    {{ t.cashPaymentDescription }}
                                 </p>
                             </div>
+
                             <div
                                 v-if="form.payment_method === 'cash'"
-                                class="w-5 h-5 rounded-full bg-indigo-600 flex items-center justify-center"
+                                class="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-600"
                             >
-                                <Check class="w-3 h-3 text-white" />
+                                <Check class="h-3 w-3 text-white" />
                             </div>
                         </label>
+
+                        <p
+                            v-if="form.errors.payment_method"
+                            class="mt-1 text-xs text-red-500"
+                        >
+                            {{ form.errors.payment_method }}
+                        </p>
                     </div>
 
+                    <!-- Manual payment proof -->
                     <div
-                        v-if="form.payment_method === 'cash'"
-                        class="mt-4"
+                        v-if="
+                            ['cash', 'upi'].includes(
+                                form.payment_method,
+                            )
+                        "
+                        class="rounded-2xl border p-5"
+                        :class="
+                            form.payment_method === 'upi'
+                                ? 'border-purple-200 bg-purple-50'
+                                : 'border-green-200 bg-green-50'
+                        "
                     >
-                        <label class="block text-sm font-medium text-gray-700 mb-2">
-                            Payment Screenshot / Receipt
+                        <div
+                            class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"
+                        >
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <Upload
+                                        class="h-5 w-5"
+                                        :class="
+                                            form.payment_method === 'upi'
+                                                ? 'text-purple-700'
+                                                : 'text-green-700'
+                                        "
+                                    />
+
+                                    <h3
+                                        class="text-sm font-semibold"
+                                        :class="
+                                            form.payment_method === 'upi'
+                                                ? 'text-purple-900'
+                                                : 'text-green-900'
+                                        "
+                                    >
+                                        {{ t.paymentProof }}
+
+                                        <span
+                                            v-if="
+                                                form.payment_method ===
+                                                'upi'
+                                            "
+                                            class="text-red-600"
+                                        >
+                                            *
+                                        </span>
+
+                                        <span
+                                            v-else
+                                            class="font-normal text-gray-500"
+                                        >
+                                            (Optional)
+                                        </span>
+                                    </h3>
+                                </div>
+
+                                <p
+                                    class="mt-1 text-xs leading-5"
+                                    :class="
+                                        form.payment_method === 'upi'
+                                            ? 'text-purple-700'
+                                            : 'text-green-700'
+                                    "
+                                >
+                                    {{
+                                        form.payment_method === "upi"
+                                            ? t.paymentProofRequired
+                                            : t.paymentProofOptional
+                                    }}
+                                </p>
+                            </div>
+                        </div>
+
+                        <label
+                            class="mt-4 flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed bg-white p-6 text-center transition"
+                            :class="
+                                form.errors
+                                    .registration_payment_proof
+                                    ? 'border-red-400'
+                                    : form.payment_method === 'upi'
+                                    ? 'border-purple-300 hover:border-purple-500'
+                                    : 'border-green-300 hover:border-green-500'
+                            "
+                        >
+                            <Upload
+                                class="h-7 w-7"
+                                :class="
+                                    form.payment_method === 'upi'
+                                        ? 'text-purple-500'
+                                        : 'text-green-500'
+                                "
+                            />
+
+                            <p
+                                class="mt-2 text-sm font-semibold text-gray-800"
+                            >
+                                {{
+                                    paymentProofName ||
+                                    (lang === "hi"
+                                        ? "फाइल चुनें"
+                                        : "Choose payment proof")
+                                }}
+                            </p>
+
+                            <p
+                                class="mt-1 text-xs text-gray-500"
+                            >
+                                JPG, JPEG, PNG, WEBP or PDF · Maximum
+                                5 MB
+                            </p>
+
+                            <input
+                                id="registration_payment_proof"
+                                ref="paymentProofInput"
+                                type="file"
+                                accept=".jpg,.jpeg,.png,.webp,.pdf"
+                                class="sr-only"
+                                @change="handlePaymentProofChange"
+                            />
                         </label>
 
-                        <input
-                            type="file"
-                            accept=".jpg,.jpeg,.png,.pdf"
-                            @change="e => form.registration_payment_proof = e.target.files[0]"
-                            class="block w-full text-sm"
-                        />
+                        <div
+                            v-if="
+                                form.registration_payment_proof
+                            "
+                            class="mt-3 flex items-center justify-between rounded-xl border border-gray-200 bg-white px-4 py-3"
+                        >
+                            <div
+                                class="flex min-w-0 items-center gap-3"
+                            >
+                                <Upload
+                                    class="h-5 w-5 shrink-0 text-indigo-600"
+                                />
 
-                        <p class="text-xs text-gray-700 mt-1">
-                            Upload the QR payment screenshot or receipt if you paid via UPI.
+                                <div class="min-w-0">
+                                    <p
+                                        class="truncate text-sm font-medium text-gray-800"
+                                    >
+                                        {{
+                                            form
+                                                .registration_payment_proof
+                                                .name
+                                        }}
+                                    </p>
+
+                                    <p
+                                        class="text-[10px] text-gray-500"
+                                    >
+                                        {{
+                                            (
+                                                form
+                                                    .registration_payment_proof
+                                                    .size /
+                                                1024 /
+                                                1024
+                                            ).toFixed(2)
+                                        }}
+                                        MB
+                                    </p>
+                                </div>
+                            </div>
+
+                            <button
+                                type="button"
+                                class="rounded-lg p-2 text-red-500 hover:bg-red-50"
+                                @click="removePaymentProof"
+                            >
+                                <X class="h-4 w-4" />
+                            </button>
+                        </div>
+
+                        <p
+                            v-if="
+                                form.errors
+                                    .registration_payment_proof
+                            "
+                            class="mt-2 text-xs font-medium text-red-600"
+                        >
+                            {{
+                                form.errors
+                                    .registration_payment_proof
+                            }}
                         </p>
-
-                        <InputError
-                            :message="form.errors.registration_payment_proof"
-                        />
                     </div>
 
                     <!-- Declaration -->
@@ -1931,11 +2253,32 @@ const handleSubmit = async () => {
                         class="flex items-center gap-2 px-6 py-2.5 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         <span v-if="isProcessing">Processing...</span>
-                        <span v-else>{{
-                            form.payment_method === "razorpay"
-                                ? t.payNow
-                                : t.submitApplication
-                        }}</span>
+                        <span v-else>
+                            <div
+                                v-if="
+                                    form.payment_method ===
+                                    'razorpay'
+                                "
+                            >
+                                {{ t.payNow }}
+                            </div>
+
+                            <div
+                                v-else-if="
+                                    form.payment_method === 'upi'
+                                "
+                            >
+                                {{
+                                    lang === "hi"
+                                        ? "UPI भुगतान जमा करें"
+                                        : "Submit UPI Payment"
+                                }}
+                            </div>
+
+                            <div v-else>
+                                {{ t.submitApplication }}
+                            </div>
+                        </span>
                     </button>
                 </div>
             </form>

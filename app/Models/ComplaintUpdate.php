@@ -1,0 +1,33 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class ComplaintUpdate extends Model
+{
+    protected $fillable = [
+        'complaint_id',
+        'old_status',
+        'new_status',
+        'remarks',
+        'updated_by',
+    ];
+
+    public function complaint(): BelongsTo
+    {
+        return $this->belongsTo(
+            Complaint::class,
+            'complaint_id'
+        );
+    }
+
+    public function updatedBy(): BelongsTo
+    {
+        return $this->belongsTo(
+            User::class,
+            'updated_by'
+        );
+    }
+}

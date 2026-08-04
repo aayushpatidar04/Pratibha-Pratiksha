@@ -2,6 +2,7 @@
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import Modal from "@/Components/Modal.vue";
 import InputLabel from "@/Components/InputLabel.vue";
+import InputError from "@/Components/InputError.vue";
 import TextInput from "@/Components/TextInput.vue";
 import PrimaryButton from "@/Components/PrimaryButton.vue";
 import DangerButton from "@/Components/DangerButton.vue";
@@ -17,12 +18,13 @@ import {
     Banknote,
     CreditCard,
     CheckCircle,
-    XCircle,
-    Snowflake,
-    Wifi,
-    Bath,
-    Sun,
-    Table2,
+    Eye,
+    FileText,
+    Download,
+    Upload,
+    QrCode,
+    X,
+    AlertTriangle,
     DoorOpen,
     Calendar,
     Clock3,
@@ -49,6 +51,66 @@ const formatCurrency = (amount) =>
     "₹" +
     Number(amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 });
 
+const paymentProofOpen = ref(false);
+
+const registrationPaymentProofUrl = computed(() => {
+    if (!props.application.registration_payment_proof) {
+        return null;
+    }
+
+    const path = String(props.application.registration_payment_proof);
+
+    /*
+     * Supports either:
+     * registration-payment-proofs/file.jpg
+     *
+     * or:
+     * /storage/registration-payment-proofs/file.jpg
+     */
+    if (
+        path.startsWith("http://") ||
+        path.startsWith("https://") ||
+        path.startsWith("/storage/")
+    ) {
+        return path;
+    }
+
+    return `/storage/${path.replace(/^\/+/, "")}`;
+});
+
+const registrationPaymentProofExtension = computed(() => {
+    const path = props.application.registration_payment_proof || "";
+
+    return String(path).split("?")[0].split(".").pop()?.toLowerCase();
+});
+
+const registrationPaymentProofIsPdf = computed(() => {
+    return registrationPaymentProofExtension.value === "pdf";
+});
+
+const registrationPaymentProofIsImage = computed(() => {
+    return ["jpg", "jpeg", "png", "webp", "gif"].includes(
+        registrationPaymentProofExtension.value,
+    );
+});
+
+const openRegistrationPaymentProof = () => {
+    if (!registrationPaymentProofUrl.value) {
+        return;
+    }
+
+    if (registrationPaymentProofIsPdf.value) {
+        window.open(
+            registrationPaymentProofUrl.value,
+            "_blank",
+            "noopener,noreferrer",
+        );
+
+        return;
+    }
+
+    paymentProofOpen.value = true;
+};
 // --- Approve modal: pick building/floor/room/bed, see amenities + rent ---
 const approveOpen = ref(false);
 const approveForm = useForm({
@@ -105,34 +167,58 @@ const reject = () => {
     });
 };
 
-const cashPaymentOpen = ref(false);
+const manualPaymentOpen = ref(false);
 
-const cashPaymentForm = useForm({
+const manualPaymentForm = useForm({
     payment_date: new Date().toISOString().slice(0, 10),
+
     notes: "",
-    proofs: [],
+
+    /*
+     * Optional replacement/additional proof uploaded
+     * by the administrator.
+     */
+    proof: null,
 });
 
-const openCashPayment = () => {
-    cashPaymentForm.reset();
-    cashPaymentForm.payment_date = new Date().toISOString().slice(0, 10);
+const openManualPayment = () => {
+    /*
+     * UPI must already have a proof uploaded by the
+     * applicant before verification.
+     */
+    if (
+        props.application.payment_method === "upi" &&
+        !props.application.registration_payment_proof
+    ) {
+        alert(
+            "UPI payment cannot be verified because no payment proof was uploaded.",
+        );
 
-    cashPaymentOpen.value = true;
+        return;
+    }
+
+    manualPaymentForm.reset();
+    manualPaymentForm.clearErrors();
+
+    manualPaymentForm.payment_date = new Date().toISOString().slice(0, 10);
+
+    manualPaymentOpen.value = true;
 };
 
-const onCashProofChange = (e) => {
-    cashPaymentForm.proofs = [...e.target.files];
+const onManualProofChange = (event) => {
+    manualPaymentForm.proof = event.target.files?.[0] || null;
 };
 
-const submitCashPayment = () => {
-    cashPaymentForm.post(
+const submitManualPayment = () => {
+    manualPaymentForm.post(
         `/registrations/${props.application.id}/mark-cash-paid`,
         {
             forceFormData: true,
+            preserveScroll: true,
 
             onSuccess: () => {
-                cashPaymentOpen.value = false;
-                cashPaymentForm.reset();
+                manualPaymentOpen.value = false;
+                manualPaymentForm.reset();
             },
         },
     );
@@ -259,15 +345,37 @@ watch(
                 <div class="flex gap-2">
                     <button
                         v-if="
-                            application.payment_method === 'cash' &&
+                            ['cash', 'upi'].includes(
+                                application.payment_method,
+                            ) &&
                             application.payment_status ===
                                 'pending_verification'
                         "
-                        @click="openCashPayment"
-                        class="px-3 py-1.5 bg-orange-500 text-white text-xs font-medium rounded-lg hover:bg-orange-600 flex items-center gap-1.5"
+                        type="button"
+                        :disabled="
+                            application.payment_method === 'upi' &&
+                            !application.registration_payment_proof
+                        "
+                        class="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-white transition disabled:cursor-not-allowed disabled:bg-gray-400"
+                        :class="
+                            application.payment_method === 'upi'
+                                ? 'bg-purple-600 hover:bg-purple-700'
+                                : 'bg-orange-500 hover:bg-orange-600'
+                        "
+                        @click="openManualPayment"
                     >
-                        <Banknote class="w-3.5 h-3.5" />
-                        Mark Cash Paid
+                        <QrCode
+                            v-if="application.payment_method === 'upi'"
+                            class="h-3.5 w-3.5"
+                        />
+
+                        <Banknote v-else class="h-3.5 w-3.5" />
+
+                        {{
+                            application.payment_method === "upi"
+                                ? "Verify UPI Payment"
+                                : "Mark Cash Paid"
+                        }}
                     </button>
                     <button
                         v-if="application.status !== 'approved'"
@@ -608,51 +716,263 @@ watch(
                     </div>
 
                     <div
-                        class="bg-white rounded-xl border border-gray-100 shadow-sm p-5"
+                        class="rounded-xl border border-gray-100 bg-white p-5 shadow-sm"
                     >
-                        <h3
-                            class="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2"
+                        <div
+                            class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
                         >
-                            <IndianRupee class="w-4 h-4 text-blue-500" />
-                            Payment
-                        </h3>
-                        <div class="grid grid-cols-2 gap-4 text-sm">
-                            <div class="flex">
-                                <span class="font-medium me-5">Mode: </span>
+                            <h3
+                                class="flex items-center gap-2 text-sm font-semibold text-gray-900"
+                            >
+                                <IndianRupee class="h-4 w-4 text-blue-500" />
+                                Payment
+                            </h3>
+
+                            <span
+                                class="inline-flex w-fit rounded-full px-2.5 py-1 text-[10px] font-bold capitalize"
+                                :class="
+                                    application.payment_status === 'paid'
+                                        ? 'bg-green-100 text-green-700'
+                                        : application.payment_status ===
+                                            'pending_verification'
+                                          ? 'bg-amber-100 text-amber-700'
+                                          : 'bg-gray-100 text-gray-700'
+                                "
+                            >
+                                {{
+                                    application.payment_status?.replaceAll(
+                                        "_",
+                                        " ",
+                                    ) || "Pending"
+                                }}
+                            </span>
+                        </div>
+
+                        <div
+                            class="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2"
+                        >
+                            <div>
+                                <span class="font-medium"> Mode: </span>
+
                                 <span
-                                    class="text-gray-700 flex items-center gap-1"
+                                    class="ml-2 inline-flex items-center gap-1 capitalize text-gray-700"
                                 >
                                     <CreditCard
                                         v-if="
                                             application.payment_method ===
                                             'razorpay'
                                         "
-                                        class="w-3 h-3"
+                                        class="h-3.5 w-3.5"
                                     />
-                                    <Banknote v-else class="w-3 h-3" />
-                                    {{ application.payment_method }}
+
+                                    <QrCode
+                                        v-else-if="
+                                            application.payment_method === 'upi'
+                                        "
+                                        class="h-3.5 w-3.5 text-purple-600"
+                                    />
+
+                                    <Banknote
+                                        v-else
+                                        class="h-3.5 w-3.5 text-green-600"
+                                    />
+
+                                    {{ application.payment_method || "-" }}
                                 </span>
                             </div>
+
                             <div>
-                                <span class="font-medium">Amount: </span>
-                                <span class="text-gray-700">{{
-                                    formatCurrency(application.registration_fee)
-                                }}</span>
+                                <span class="font-medium"> Amount: </span>
+
+                                <span class="ml-2 text-gray-700">
+                                    {{
+                                        formatCurrency(
+                                            application.registration_fee,
+                                        )
+                                    }}
+                                </span>
                             </div>
+
                             <div>
-                                <span class="font-medium">Status: </span>
-                                <span class="text-gray-700 capitalize">{{
-                                    application.payment_status?.replace(
-                                        "_",
-                                        " ",
-                                    )
-                                }}</span>
+                                <span class="font-medium"> Status: </span>
+
+                                <span class="ml-2 capitalize text-gray-700">
+                                    {{
+                                        application.payment_status?.replaceAll(
+                                            "_",
+                                            " ",
+                                        ) || "-"
+                                    }}
+                                </span>
                             </div>
+
                             <div v-if="application.razorpay_payment_id">
-                                <span class="font-medium">Razorpay ID: </span>
-                                <span class="font-mono text-xs">{{
-                                    application.razorpay_payment_id
-                                }}</span>
+                                <span class="font-medium"> Razorpay ID: </span>
+
+                                <span class="ml-2 break-all font-mono text-xs">
+                                    {{ application.razorpay_payment_id }}
+                                </span>
+                            </div>
+
+                            <div v-if="application.paid_at">
+                                <span class="font-medium"> Paid At: </span>
+
+                                <span class="ml-2 text-gray-700">
+                                    {{ formatDate(application.paid_at) }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Applicant payment proof -->
+                        <div
+                            v-if="
+                                ['cash', 'upi'].includes(
+                                    application.payment_method,
+                                )
+                            "
+                            class="mt-5 border-t border-gray-100 pt-5"
+                        >
+                            <div
+                                class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+                            >
+                                <div>
+                                    <p
+                                        class="text-sm font-semibold text-gray-900"
+                                    >
+                                        Registration Payment Proof
+                                    </p>
+
+                                    <p class="mt-1 text-xs text-gray-600">
+                                        <template
+                                            v-if="
+                                                application.registration_payment_proof
+                                            "
+                                        >
+                                            Uploaded by the applicant during
+                                            registration.
+                                        </template>
+
+                                        <template v-else>
+                                            No payment proof was uploaded during
+                                            registration.
+                                        </template>
+                                    </p>
+                                </div>
+
+                                <div
+                                    v-if="
+                                        application.registration_payment_proof
+                                    "
+                                    class="flex gap-2"
+                                >
+                                    <button
+                                        type="button"
+                                        class="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-100"
+                                        @click="openRegistrationPaymentProof"
+                                    >
+                                        <Eye class="h-4 w-4" />
+                                        View Proof
+                                    </button>
+
+                                    <a
+                                        :href="registrationPaymentProofUrl"
+                                        target="_blank"
+                                        download
+                                        class="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                                    >
+                                        <Download class="h-4 w-4" />
+                                        Download
+                                    </a>
+                                </div>
+                            </div>
+
+                            <!-- Image thumbnail -->
+                            <button
+                                v-if="
+                                    registrationPaymentProofUrl &&
+                                    registrationPaymentProofIsImage
+                                "
+                                type="button"
+                                class="group mt-4 block overflow-hidden rounded-xl border border-gray-200 bg-gray-50"
+                                @click="paymentProofOpen = true"
+                            >
+                                <img
+                                    :src="registrationPaymentProofUrl"
+                                    alt="Registration payment proof"
+                                    class="max-h-72 w-full object-contain transition group-hover:scale-[1.01]"
+                                />
+                            </button>
+
+                            <!-- PDF card -->
+                            <button
+                                v-else-if="
+                                    registrationPaymentProofUrl &&
+                                    registrationPaymentProofIsPdf
+                                "
+                                type="button"
+                                class="mt-4 flex w-full items-center justify-between rounded-xl border border-red-200 bg-red-50 p-4 text-left hover:bg-red-100"
+                                @click="openRegistrationPaymentProof"
+                            >
+                                <div class="flex items-center gap-3">
+                                    <div
+                                        class="flex h-10 w-10 items-center justify-center rounded-lg bg-white text-red-600"
+                                    >
+                                        <FileText class="h-5 w-5" />
+                                    </div>
+
+                                    <div>
+                                        <p
+                                            class="text-sm font-semibold text-red-900"
+                                        >
+                                            Payment Proof PDF
+                                        </p>
+
+                                        <p class="mt-1 text-xs text-red-700">
+                                            Click to open and verify the
+                                            uploaded document.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <Eye class="h-5 w-5 text-red-600" />
+                            </button>
+
+                            <!-- Missing UPI proof -->
+                            <div
+                                v-else-if="application.payment_method === 'upi'"
+                                class="mt-4 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4"
+                            >
+                                <AlertTriangle
+                                    class="mt-0.5 h-5 w-5 shrink-0 text-red-600"
+                                />
+
+                                <div>
+                                    <p
+                                        class="text-sm font-semibold text-red-900"
+                                    >
+                                        UPI proof missing
+                                    </p>
+
+                                    <p
+                                        class="mt-1 text-xs leading-5 text-red-700"
+                                    >
+                                        Do not mark this payment as received
+                                        until payment proof or another valid
+                                        payment record is available.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <!-- Missing cash proof -->
+                            <div
+                                v-else
+                                class="mt-4 rounded-xl border border-gray-200 bg-gray-50 p-4"
+                            >
+                                <p class="text-xs leading-5 text-gray-600">
+                                    Cash proof is optional. The administrator
+                                    may upload a receipt while marking the cash
+                                    payment as received.
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -1035,64 +1355,223 @@ watch(
             </form>
         </Modal>
 
-        <Modal :show="cashPaymentOpen" @close="cashPaymentOpen = false">
-            <form @submit.prevent="submitCashPayment" class="p-6 space-y-4">
-                <h2 class="text-lg font-semibold">
-                    Mark Cash Payment Received
-                </h2>
+        <Modal :show="manualPaymentOpen" @close="manualPaymentOpen = false">
+            <form class="space-y-5 p-6" @submit.prevent="submitManualPayment">
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900">
+                        {{
+                            application.payment_method === "upi"
+                                ? "Verify UPI Payment"
+                                : "Mark Cash Payment Received"
+                        }}
+                    </h2>
+
+                    <p class="mt-1 text-sm text-gray-600">
+                        <template v-if="application.payment_method === 'upi'">
+                            Review the applicant's uploaded payment proof before
+                            confirming payment.
+                        </template>
+
+                        <template v-else>
+                            Confirm that the cash registration fee has been
+                            received.
+                        </template>
+                    </p>
+                </div>
+
+                <!-- Existing proof preview -->
+                <div
+                    v-if="application.registration_payment_proof"
+                    class="rounded-xl border border-blue-200 bg-blue-50 p-4"
+                >
+                    <div class="flex items-center justify-between gap-3">
+                        <div>
+                            <p class="text-sm font-semibold text-blue-900">
+                                Applicant Payment Proof
+                            </p>
+
+                            <p class="mt-1 text-xs text-blue-700">
+                                Review this proof before confirming the payment.
+                            </p>
+                        </div>
+
+                        <button
+                            type="button"
+                            class="inline-flex shrink-0 items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700"
+                            @click="openRegistrationPaymentProof"
+                        >
+                            <Eye class="h-4 w-4" />
+                            View
+                        </button>
+                    </div>
+
+                    <img
+                        v-if="registrationPaymentProofIsImage"
+                        :src="registrationPaymentProofUrl"
+                        alt="Payment proof"
+                        class="mt-4 max-h-64 w-full rounded-lg border bg-white object-contain"
+                    />
+                </div>
 
                 <div>
                     <InputLabel value="Payment Date *" />
 
                     <TextInput
+                        v-model="manualPaymentForm.payment_date"
                         type="date"
-                        v-model="cashPaymentForm.payment_date"
                         required
+                        class="w-full"
                     />
 
                     <InputError
-                        :message="cashPaymentForm.errors.payment_date"
+                        :message="manualPaymentForm.errors.payment_date"
                     />
                 </div>
 
                 <div>
-                    <InputLabel value="Payment Proof" />
+                    <InputLabel
+                        :value="
+                            application.payment_method === 'cash'
+                                ? 'Receipt / Proof (Optional)'
+                                : 'Additional Proof (Optional)'
+                        "
+                    />
 
                     <input
                         type="file"
-                        multiple
-                        accept="image/*"
-                        @change="onCashProofChange"
+                        accept=".jpg,.jpeg,.png,.webp,.pdf"
                         class="block w-full text-sm"
+                        @change="onManualProofChange"
                     />
 
-                    <InputError :message="cashPaymentForm.errors.proofs" />
+                    <p class="mt-1 text-xs text-gray-500">
+                        Upload an additional admin-side receipt or payment proof
+                        where required.
+                    </p>
+
+                    <InputError :message="manualPaymentForm.errors.proof" />
                 </div>
 
                 <div>
                     <InputLabel value="Notes" />
 
                     <textarea
+                        v-model="manualPaymentForm.notes"
                         rows="3"
-                        v-model="cashPaymentForm.notes"
                         class="w-full rounded-lg border-gray-300 text-sm"
-                    />
+                        placeholder="Verification reference, transaction details or receipt notes..."
+                    ></textarea>
+
+                    <InputError :message="manualPaymentForm.errors.notes" />
                 </div>
 
-                <div class="flex justify-end gap-2">
+                <div
+                    class="flex justify-end gap-2 border-t border-gray-100 pt-4"
+                >
                     <button
                         type="button"
-                        class="px-4 py-2 border rounded-lg"
-                        @click="cashPaymentOpen = false"
+                        class="rounded-lg border px-4 py-2 text-sm"
+                        @click="manualPaymentOpen = false"
                     >
                         Cancel
                     </button>
 
-                    <PrimaryButton :disabled="cashPaymentForm.processing">
-                        Mark Paid
+                    <PrimaryButton :disabled="manualPaymentForm.processing">
+                        {{
+                            manualPaymentForm.processing
+                                ? "Saving..."
+                                : application.payment_method === "upi"
+                                  ? "Verify & Mark Paid"
+                                  : "Mark Paid"
+                        }}
                     </PrimaryButton>
                 </div>
             </form>
+        </Modal>
+
+        <Modal
+            :show="paymentProofOpen"
+            maxWidth="4xl"
+            @close="paymentProofOpen = false"
+        >
+            <div class="p-6">
+                <div class="mb-4 flex items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-lg font-semibold text-gray-900">
+                            Registration Payment Proof
+                        </h2>
+
+                        <p class="mt-1 text-sm text-gray-600">
+                            Uploaded by
+                            {{ application.student_name }}
+                            using
+                            <span class="font-semibold uppercase">
+                                {{ application.payment_method }}
+                            </span>
+                            payment.
+                        </p>
+                    </div>
+
+                    <button
+                        type="button"
+                        class="rounded-lg p-2 text-gray-500 hover:bg-gray-100"
+                        @click="paymentProofOpen = false"
+                    >
+                        <X class="h-5 w-5" />
+                    </button>
+                </div>
+
+                <div
+                    class="overflow-hidden rounded-xl border border-gray-200 bg-gray-50"
+                >
+                    <img
+                        v-if="registrationPaymentProofIsImage"
+                        :src="registrationPaymentProofUrl"
+                        alt="Registration payment proof"
+                        class="max-h-[70vh] w-full object-contain"
+                    />
+
+                    <div
+                        v-else
+                        class="flex flex-col items-center justify-center px-6 py-16 text-center"
+                    >
+                        <FileText class="h-12 w-12 text-red-500" />
+
+                        <p class="mt-4 text-sm font-semibold text-gray-900">
+                            This proof cannot be previewed as an image.
+                        </p>
+
+                        <a
+                            :href="registrationPaymentProofUrl"
+                            target="_blank"
+                            class="mt-4 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white"
+                        >
+                            <Eye class="h-4 w-4" />
+                            Open File
+                        </a>
+                    </div>
+                </div>
+
+                <div class="mt-4 flex justify-end gap-2">
+                    <a
+                        :href="registrationPaymentProofUrl"
+                        target="_blank"
+                        download
+                        class="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700"
+                    >
+                        <Download class="h-4 w-4" />
+                        Download
+                    </a>
+
+                    <button
+                        type="button"
+                        class="rounded-lg bg-gray-800 px-4 py-2 text-sm font-semibold text-white"
+                        @click="paymentProofOpen = false"
+                    >
+                        Close
+                    </button>
+                </div>
+            </div>
         </Modal>
     </AuthenticatedLayout>
 </template>

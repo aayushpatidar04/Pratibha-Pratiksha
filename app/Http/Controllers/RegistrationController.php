@@ -99,11 +99,11 @@ class RegistrationController extends Controller
             'guardian2_mobile' => 'nullable|string|max:15',
             'guardian2_occupation' => 'nullable|string|max:100',
             'guardian2_address' => 'nullable|string',
-            'payment_method' => 'required|in:razorpay,cash',
+            'payment_method' => 'required|in:razorpay,cash,upi',
             'razorpay_order_id' => 'nullable|string',
             'razorpay_payment_id' => 'nullable|string',
             'razorpay_signature' => 'nullable|string',
-            'registration_payment_proof' => ['nullable','image','mimes:jpg,jpeg,png,webp,pdf','max:5120'],
+            'registration_payment_proof' => ['nullable', 'required_if:payment_method,upi', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
         ]);
 
         // Handle file uploads
@@ -134,13 +134,18 @@ class RegistrationController extends Controller
         $application = RegistrationApplication::create($validated);
 
         // If cash payment, mark as pending admin approval
-        if ($validated['payment_method'] === 'cash') {
+        if (in_array($validated['payment_method'], ['cash', 'upi'], true)) {
             $application->update([
                 'status' => 'pending',
                 'payment_status' => 'pending_verification',
             ]);
+
+            $message = $validated['payment_method'] === 'upi'
+                ? 'Application submitted. Your UPI payment is awaiting verification.'
+                : 'Application submitted. Please pay the registration fee at the hostel office.';
+
             return redirect()->route('register.success', $application)
-                ->with('message', 'Application submitted. Please pay registration fee at the office.');
+                ->with('message', $message);
         }
 
         // For Razorpay, verify payment
@@ -286,8 +291,8 @@ class RegistrationController extends Controller
             'rent_amount' => 'nullable|numeric',
             'deposit_amount' => 'nullable|numeric',
             'remarks' => 'nullable|string',
-            'billing_basis' => [ 'required', 'in:monthly,daily'],
-            'daily_rate' => [ 'nullable', 'numeric', 'min:0', 'required_if:billing_basis,daily'],
+            'billing_basis' => ['required', 'in:monthly,daily'],
+            'daily_rate' => ['nullable', 'numeric', 'min:0', 'required_if:billing_basis,daily'],
         ]);
 
         try {
@@ -309,7 +314,7 @@ class RegistrationController extends Controller
                     if ($lastCode) {
                         // Extract the numeric part after the year
                         preg_match('/PP-' . $year . '-(\d+)/', $lastCode, $matches);
-                        $seq = isset($matches[1]) ? (int)$matches[1] + 1 : 1;
+                        $seq = isset($matches[1]) ? (int) $matches[1] + 1 : 1;
                     } else {
                         $seq = 1;
                     }
@@ -426,14 +431,33 @@ class RegistrationController extends Controller
     public function markCashPaid(Request $request, RegistrationApplication $application): RedirectResponse
     {
         $validated = $request->validate([
-            'payment_date' => ['required','date'],
-            'notes' => ['nullable','string'],
-            'proofs' => ['nullable','array'],
-            'proofs.*' => ['image','max:5120'],
+            'payment_date' => ['required', 'date'],
+            'notes' => ['nullable', 'string'],
+            'proofs' => ['nullable', 'array'],
+            'proofs.*' => ['image', 'max:5120'],
         ]);
 
-        if ($application->payment_method !== 'cash') {
-            return back()->with('error', 'This application was not paid via cash.');
+        if (
+            !in_array(
+                $application->payment_method,
+                ['cash', 'upi'],
+                true
+            )
+        ) {
+            return back()->with(
+                'error',
+                'Only cash or UPI registration payments can be verified manually.'
+            );
+        }
+
+        if (
+            $application->payment_method === 'upi'
+            && !$application->registration_payment_proof
+        ) {
+            return back()->with(
+                'error',
+                'UPI payment cannot be verified because no payment proof was uploaded.'
+            );
         }
 
         $application->update([

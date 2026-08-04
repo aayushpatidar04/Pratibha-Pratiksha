@@ -3,8 +3,11 @@
 namespace App\Http\Controllers\ResidentPortal;
 
 use App\Http\Controllers\Controller;
+use App\Models\Complaint;
+use App\Models\EmergencyAlert;
 use App\Models\FeeInvoice;
 use App\Models\LeaveRequest;
+use App\Models\Notice;
 use App\Models\Payment;
 use App\Models\Resident;
 use Illuminate\Http\Request;
@@ -90,6 +93,10 @@ class DashboardController extends Controller
                 'payment_date',
                 'receipt_number',
             ]);
+
+        $visibleNotices = Notice::query()
+            ->published()
+            ->visibleToResident($resident);
 
         return Inertia::render(
             'ResidentPortal/Dashboard',
@@ -185,10 +192,71 @@ class DashboardController extends Controller
                             ]
                         )
                         ->count(),
-                    'open_complaints' => 0,
+                    'open_complaints' => Complaint::query()
+                        ->where('resident_id', $resident->id)
+                        ->whereIn('status', [
+                            'open',
+                            'in_progress',
+                            'escalated',
+                        ])
+                        ->count(),
+                    'active_emergency_alerts' =>
+                        EmergencyAlert::query()
+                            ->where(
+                                'resident_id',
+                                $resident->id
+                            )
+                            ->whereIn('status', [
+                                'active',
+                                'escalated',
+                            ])
+                            ->count(),
                     'pending_requests' => 0,
                     'unread_notices' => 0,
                 ],
+
+                'unread_notices' =>
+                    (clone $visibleNotices)
+                        ->whereDoesntHave(
+                            'reads',
+                            fn ($query) =>
+                                $query->where(
+                                    'resident_id',
+                                    $resident->id
+                                )
+                        )
+                        ->count(),
+
+                'notice_acknowledgements_pending' =>
+                    (clone $visibleNotices)
+                        ->where(
+                            'requires_acknowledgement',
+                            true
+                        )
+                        ->where(function ($query) use ($resident) {
+                            $query
+                                ->whereDoesntHave(
+                                    'reads',
+                                    fn ($readQuery) =>
+                                        $readQuery->where(
+                                            'resident_id',
+                                            $resident->id
+                                        )
+                                )
+                                ->orWhereHas(
+                                    'reads',
+                                    fn ($readQuery) =>
+                                        $readQuery
+                                            ->where(
+                                                'resident_id',
+                                                $resident->id
+                                            )
+                                            ->whereNull(
+                                                'acknowledged_at'
+                                            )
+                                );
+                        })
+                        ->count(),
             ]
         );
     }

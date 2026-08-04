@@ -230,52 +230,272 @@ class AnalyticsController extends Controller
         ];
     }
 
-    // ------------------------------------------------------------------
-    // Leaves tab
-    // ------------------------------------------------------------------
     protected function leavesData(Request $request): array
     {
-        [$from, $to] = $this->resolveDateRange($request, 'leave_range', 'leave_from', 'leave_to');
+        [$from, $to] = $this->resolveDateRange(
+            $request,
+            'leave_range',
+            'leave_from',
+            'leave_to'
+        );
 
-        $query = LeaveRequest::query();
+        /*
+         * All requests whose leave start date falls in the selected period.
+         */
+        $query = LeaveRequest::query()
+            ->with([
+                'resident.currentStay.building',
+            ]);
+
         if ($from && $to) {
-            $query->whereBetween('from_date', [$from, $to]);
+            $query->whereDate('from_date', '>=', $from)
+                ->whereDate('from_date', '<=', $to);
         }
 
-        $leaves = $query->with('resident.currentStay.building')->get();
+
+        $leaves = $query->get();
+
+        /*
+         * Requests by final status.
+         */
+        $approvedLeaves = $leaves
+            ->where('final_status', 'approved')
+            ->values();
+
+        $pendingLeaves = $leaves
+            ->whereIn('final_status', [
+                'pending',
+                'parent_approval_pending',
+            ])
+            ->values();
+
+        $rejectedLeaves = $leaves
+            ->where('final_status', 'rejected')
+            ->values();
+
+        $cancelledLeaves = $leaves
+            ->where('final_status', 'cancelled')
+            ->values();
+
+        $expiredLeaves = $leaves
+            ->where('final_status', 'expired')
+            ->values();
+
+        /*
+         * Currently on leave must always mean:
+         *
+         * 1. Leave is approved.
+         * 2. Today's date lies between from_date and to_date.
+         *
+         * This query is intentionally independent of the selected analytics
+         * period, because "currently on leave" should always represent today.
+         */
+        $today = now()->toDateString();
+
+        $currentlyOnLeave = LeaveRequest::query()
+            ->with([
+                'resident.currentStay.building',
+            ])
+            ->where('final_status', 'approved')
+            ->whereDate('from_date', '<=', $today)
+            ->whereDate('to_date', '>=', $today)
+            ->get();
 
         $totalRequests = $leaves->count();
-        $totalStudentsOnLeave = $leaves->pluck('resident_id')->unique()->count();
 
-        $buildings = Building::orderBy('name')->get();
-        $hostelWise = $buildings->map(function ($building) use ($leaves) {
-            $forBuilding = $leaves->filter(fn($l) => $l->resident?->currentStay?->building_id === $building->id);
+        $approvedCount = $approvedLeaves->count();
 
-            return [
-                'building_id' => $building->id,
-                'name' => $building->name,
-                'total_requests' => $forBuilding->count(),
-                'students_on_leave' => $forBuilding->pluck('resident_id')->unique()->count(),
-            ];
-        })->filter(fn($b) => $b['total_requests'] > 0)->values();
+        $pendingCount = $pendingLeaves->count();
 
-        $dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+        $rejectedCount = $rejectedLeaves->count();
+
+        $cancelledCount = $cancelledLeaves->count();
+
+        $expiredCount = $expiredLeaves->count();
+
+        $currentlyOnLeaveCount = $currentlyOnLeave
+            ->pluck('resident_id')
+            ->unique()
+            ->count();
+
+        /*
+         * Approval percentage based on resolved requests only.
+         *
+         * Pending requests are excluded because no final decision has
+         * been made yet.
+         */
+        $resolvedCount =
+            $approvedCount
+            + $rejectedCount
+            + $cancelledCount
+            + $expiredCount;
+
+        $approvalRate = $resolvedCount > 0
+            ? round(
+                ($approvedCount / $resolvedCount) * 100,
+                1
+            )
+            : 0;
+
+        /*
+         * Building-wise analytics for the selected period.
+         */
+        $buildings = Building::query()
+            ->orderBy('name')
+            ->get();
+
+        $hostelWise = $buildings
+            ->map(function (Building $building) use ($leaves, $approvedLeaves, $pendingLeaves, $currentlyOnLeave) {
+                $requestsForBuilding = $leaves
+                    ->filter(
+                        fn(LeaveRequest $leave) =>
+                        (int) (
+                            $leave
+                                ->resident
+                                ?->currentStay
+                                    ?->building_id
+                        ) === (int) $building->id
+                    );
+
+                $approvedForBuilding = $approvedLeaves
+                    ->filter(
+                        fn(LeaveRequest $leave) =>
+                        (int) (
+                            $leave
+                                ->resident
+                                ?->currentStay
+                                    ?->building_id
+                        ) === (int) $building->id
+                    );
+
+                $pendingForBuilding = $pendingLeaves
+                    ->filter(
+                        fn(LeaveRequest $leave) =>
+                        (int) (
+                            $leave
+                                ->resident
+                                ?->currentStay
+                                    ?->building_id
+                        ) === (int) $building->id
+                    );
+
+                $currentlyOnLeaveForBuilding =
+                    $currentlyOnLeave->filter(
+                        fn(LeaveRequest $leave) =>
+                        (int) (
+                            $leave
+                                ->resident
+                                ?->currentStay
+                                    ?->building_id
+                        ) === (int) $building->id
+                    );
+
+                return [
+                    'building_id' =>
+                        $building->id,
+
+                    'name' =>
+                        $building->name,
+
+                    'total_requests' =>
+                        $requestsForBuilding->count(),
+
+                    'approved_leaves' =>
+                        $approvedForBuilding->count(),
+
+                    'pending_requests' =>
+                        $pendingForBuilding->count(),
+
+                    'currently_on_leave' =>
+                        $currentlyOnLeaveForBuilding
+                            ->pluck('resident_id')
+                            ->unique()
+                            ->count(),
+                ];
+            })
+            ->filter(
+                fn(array $building) =>
+                $building['total_requests'] > 0
+                || $building['currently_on_leave'] > 0
+            )
+            ->values();
+
+        /*
+         * Leave frequency should count actual approved leaves only.
+         *
+         * Rejected, pending and cancelled requests must not influence
+         * behavioural analytics.
+         */
+        $dayNames = [
+            'Monday',
+            'Tuesday',
+            'Wednesday',
+            'Thursday',
+            'Friday',
+            'Saturday',
+            'Sunday',
+        ];
+
         $frequency = collect($dayNames)->map(function ($day) use ($leaves) {
             $count = $leaves->filter(fn($l) => Carbon::parse($l->from_date)->format('l') === $day)->count();
             return ['day' => $day, 'count' => $count];
         });
 
+        /*
+         * Leave types should also represent approved leaves.
+         */
+        $leaveTypes = collect([
+            'home_leave' => 'Home Leave',
+            'medical_leave' => 'Medical Leave',
+            'emergency_leave' => 'Emergency Leave',
+            'day_out' => 'Day Out',
+            'night_pass' => 'Night Pass',
+        ])->map(function (string $label, string $type) use ($approvedLeaves) {
+            return [
+                'type' => $type,
+                'label' => $label,
+                'count' => $approvedLeaves
+                    ->where('leave_type', $type)
+                    ->count(),
+            ];
+        })->values();
+
         return [
-            'total_requests' => $totalRequests,
-            'total_students_on_leave' => $totalStudentsOnLeave,
-            'hostel_wise' => $hostelWise,
-            'frequency' => $frequency,
+            'total_requests' =>
+                $totalRequests,
+
+            'approved_leaves' =>
+                $approvedCount,
+
+            'pending_requests' =>
+                $pendingCount,
+
+            'rejected_requests' =>
+                $rejectedCount,
+
+            'cancelled_requests' =>
+                $cancelledCount,
+
+            'expired_requests' =>
+                $expiredCount,
+
+            'currently_on_leave' =>
+                $currentlyOnLeaveCount,
+
+            'approval_rate' =>
+                $approvalRate,
+
+            'hostel_wise' =>
+                $hostelWise,
+
+            'frequency' =>
+                $frequency,
+
+            'leave_types' =>
+                $leaveTypes,
         ];
     }
 
-    // ------------------------------------------------------------------
-    // Complaints tab
-    // ------------------------------------------------------------------
     protected function complaintsData(Request $request): array
     {
         [$from, $to] = $this->resolveDateRange($request, 'complaint_range', 'complaint_from', 'complaint_to');

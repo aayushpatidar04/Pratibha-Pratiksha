@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -147,6 +148,22 @@ class Resident extends Authenticatable
         return $this->hasOne(ResidentAmenityOverride::class, 'resident_id');
     }
 
+    public function emergencyAlerts(): HasMany
+    {
+        return $this->hasMany(
+            EmergencyAlert::class,
+            'resident_id'
+        );
+    }
+
+    public function roomChangeRequests(): HasMany
+    {
+        return $this->hasMany(
+            RoomChangeRequest::class,
+            'resident_id'
+        );
+    }
+
     // Get effective amenity config (override or default)
     public function getEffectiveAmenity(string $amenity, MonthlyBillingConfig $config = null): array
     {
@@ -167,5 +184,21 @@ class Resident extends Authenticatable
             'enabled' => $enabled,
             'custom_amount' => $customAmount,
         ];
+    }
+
+    public function targetedNotices(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Notice::class,
+            'notice_resident'
+        )->withTimestamps();
+    }
+
+    public function noticeReads(): HasMany
+    {
+        return $this->hasMany(
+            NoticeRead::class,
+            'resident_id'
+        );
     }
 }

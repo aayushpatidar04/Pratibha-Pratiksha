@@ -2,10 +2,14 @@
 
 use App\Http\Controllers\ResidentPortal\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\ResidentPortal\BillingController;
+use App\Http\Controllers\ResidentPortal\ComplaintController;
 use App\Http\Controllers\ResidentPortal\DashboardController;
+use App\Http\Controllers\ResidentPortal\EmergencyAlertController;
 use App\Http\Controllers\ResidentPortal\MyStayController;
+use App\Http\Controllers\ResidentPortal\NoticeController as ResidentNoticeController;
 use App\Http\Controllers\ResidentPortal\LeaveController;
 use App\Http\Controllers\ResidentPortal\PaymentController;
+use App\Http\Controllers\ResidentPortal\RoomChangeRequestController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('resident')
@@ -93,6 +97,105 @@ Route::prefix('resident')
                         '/{residentLeave}/cancel',
                         [LeaveController::class, 'cancel']
                     )->name('cancel');
+                });
+
+            Route::prefix('complaints')
+                ->name('complaints.')
+                ->group(function () {
+                    Route::get(
+                        '/',
+                        [ComplaintController::class, 'index']
+                    )->name('index');
+
+                    Route::post(
+                        '/',
+                        [ComplaintController::class, 'store']
+                    )->name('store');
+
+                    Route::get(
+                        '/{complaint}',
+                        [ComplaintController::class, 'show']
+                    )->name('show');
+
+                    Route::post(
+                        '/{complaint}/rate',
+                        [ComplaintController::class, 'rate']
+                    )->name('rate');
+
+                    Route::delete(
+                        '/{complaint}',
+                        [ComplaintController::class, 'destroy']
+                    )->name('destroy');
+                });
+
+            Route::prefix('room-change-requests')
+                ->name('room-change-requests.')
+                ->group(function () {
+                    Route::get(
+                        '/',
+                        [RoomChangeRequestController::class, 'index']
+                    )->name('index');
+
+                    Route::post(
+                        '/',
+                        [RoomChangeRequestController::class, 'store']
+                    )->name('store');
+
+                    Route::get(
+                        '/{roomChangeRequest}',
+                        [RoomChangeRequestController::class, 'show']
+                    )->name('show');
+
+                    Route::post(
+                        '/{roomChangeRequest}/cancel',
+                        [RoomChangeRequestController::class, 'cancel']
+                    )->name('cancel');
+                });
+
+            Route::prefix('emergency')
+                ->name('emergency.')
+                ->group(function () {
+                    Route::get(
+                        '/',
+                        [EmergencyAlertController::class, 'index']
+                    )->name('index');
+
+                    Route::post(
+                        '/',
+                        [EmergencyAlertController::class, 'store']
+                    )->name('store');
+
+                    Route::get(
+                        '/{alert}',
+                        [EmergencyAlertController::class, 'show']
+                    )->name('show');
+                });
+
+            Route::prefix('notices')
+                ->name('notices.')
+                ->group(function () {
+                    Route::get(
+                        '/',
+                        [ResidentNoticeController::class, 'index']
+                    )->name('index');
+
+                    Route::get(
+                        '/{notice}',
+                        [ResidentNoticeController::class, 'show']
+                    )->name('show');
+
+                    Route::post(
+                        '/{notice}/acknowledge',
+                        [ResidentNoticeController::class, 'acknowledge']
+                    )->name('acknowledge');
+
+                    Route::get(
+                        '/{notice}/attachments/{attachment}/download',
+                        [
+                            ResidentNoticeController::class,
+                            'downloadAttachment',
+                        ]
+                    )->name('attachments.download');
                 });
         });
 

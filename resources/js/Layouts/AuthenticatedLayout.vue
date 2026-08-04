@@ -20,6 +20,7 @@ import {
     Gavel,
     ChevronDown,
     ChevronRight,
+    Megaphone,
     Menu,
     LogOut,
     Settings,
@@ -148,6 +149,12 @@ const rawNav = [
         icon: MessageCircle,
         path: "/whatsapp",
         module: "whatsapp",
+    },
+    {
+        label: "Notices & Circulars",
+        icon: Megaphone,
+        path: "/notices",
+        module: "notices",
     },
     {
         label: "Student Support",
