@@ -12,13 +12,14 @@ use App\Models\Resident;
 use App\Models\ResidentStay;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
-use Illuminate\Validation\ValidationException;
 
 class BillingController extends Controller
 {
@@ -732,6 +733,23 @@ class BillingController extends Controller
         return back()->with('success', 'Invoice created successfully.');
     }
 
+    public function checkTransactionId(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'transaction_id' => ['required', 'string', 'max:100'],
+        ]);
+
+        $existing = \App\Models\Payment::where('transaction_id', $validated['transaction_id'])
+            ->first(['id', 'receipt_number', 'invoice_id']);
+
+        return response()->json([
+            'exists' => (bool) $existing,
+            'message' => $existing
+                ? "This transaction ID was already recorded for receipt {$existing->receipt_number}."
+                : null,
+        ]);
+    }
+
     // ==================== RECORD PAYMENT WITH PROOF ====================
     public function recordPayment(
         Request $request,
@@ -895,6 +913,27 @@ class BillingController extends Controller
         return $pdf->stream(
             $invoice->invoice_number . '-english.pdf'
         );
+    }
+
+    public function previewEnglish(FeeInvoice $invoice)
+    {
+        $invoice->load([
+            'resident',
+            'application',
+            'stay.room',
+            'stay.bed',
+            'items',
+            'payments.proofs',
+            'monthlyConfig',
+            'waivedByUser',
+        ]);
+ 
+        $invoice->status = $invoice->computed_status;
+        $invoice->late_fee_amount = $invoice->effective_late_fee_amount;
+ 
+        return view('pdf.invoices.english-preview', [
+            'invoice' => $invoice,
+        ]);
     }
 
     public function exportPdfHindi(FeeInvoice $invoice)

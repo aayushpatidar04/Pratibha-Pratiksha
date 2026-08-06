@@ -67,6 +67,7 @@ Route::prefix('resident')
                     )->name('show');
     
                     Route::get('/{invoice}/pdf/en', [BillingController::class, 'exportPdfEnglish'])->name('pdf.en');
+                    Route::get('/{invoice}/print/en', [BillingController::class, 'previewEnglish'])->name('print.en');
                     Route::get('/{invoice}/pdf/hi', [BillingController::class, 'exportPdfHindi'])->name('pdf.hi');
                     Route::get('/{invoice}/print/hi', [BillingController::class, 'previewHindi'])->name('print.hi');
                     Route::get('/payments/{payment}/receipt', [BillingController::class, 'paymentReceipt'])->name('payments.receipt');
@@ -282,6 +283,14 @@ Route::prefix('resident')
                             'updatePassword',
                         ]
                     )->name('password.update');
+
+                    Route::put(
+                        '/{stay}/expected-checkout-date',
+                        [
+                            ResidentProfileController::class,
+                            'updateExpectedCheckoutDate'
+                        ]
+                    )->name('update-expected-checkout');
                 });
 
             Route::prefix('vehicles')

@@ -697,14 +697,7 @@ const balanceClass = (balance) => {
                                         </Link>
 
                                         <a
-                                            :href="
-                                                route(
-                                                    'resident.billing.pdf.en',
-                                                    {
-                                                        invoice: invoice.id,
-                                                    },
-                                                )
-                                            " target="_blank"
+                                            :href="route('resident.billing.print.en', invoice.id)"
                                             class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700"
                                             title="Download invoice"
                                         >

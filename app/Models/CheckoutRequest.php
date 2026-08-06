@@ -92,6 +92,7 @@ class CheckoutRequest extends Model
 
         'dues_clearance_status',
         'outstanding_amount_at_request',
+        'outstanding_dues_deduction',
         'short_notice_charge_final',
         'asset_damage_charge',
         'other_checkout_charge',
@@ -157,6 +158,8 @@ class CheckoutRequest extends Model
 
             'outstanding_amount_at_request' =>
                 'decimal:2',
+
+            'outstanding_dues_deduction' => 'decimal:2',
 
             'short_notice_charge_final' =>
                 'decimal:2',
@@ -345,5 +348,40 @@ class CheckoutRequest extends Model
             + (float) $this->other_checkout_charge,
             2
         );
+    }
+
+    public function totalCheckoutDeductions(): float
+    {
+        return round(
+            (float) $this->short_notice_charge_final
+            + (float) $this->asset_damage_charge
+            + (float) $this->other_checkout_charge
+            + (float) $this->outstanding_dues_deduction,
+            2
+        );
+    }
+
+    public function refundableSecurityDeposit(
+        float $securityDeposit
+    ): float {
+        return max(
+            0,
+            round(
+                $securityDeposit
+                - $this->totalCheckoutDeductions(),
+                2
+            )
+        );
+    }
+
+    public function securityDepositInvoice(): BelongsTo
+    {
+        return $this->belongsTo(
+            FeeInvoice::class,
+            'resident_stay_id',
+            'stay_id'
+        )
+            ->where('resident_id', $this->resident_id)
+            ->where('fee_type', 'security-deposit');
     }
 }

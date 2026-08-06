@@ -1,29 +1,13 @@
 <!DOCTYPE html>
-<html lang="hi">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>{{ $invoice->invoice_number }} - हिंदी रसीद</title>
+    <title>{{ $invoice->invoice_number }} - Receipt</title>
 
     <style>
-        @font-face {
-            font-family: "Aparajita";
-            src: url("{{ asset('assets/fonts/Aparajita-Regular.ttf') }}") format("truetype");
-            font-style: normal;
-            font-weight: 400;
-            font-display: swap;
-        }
-
-        @font-face {
-            font-family: "Aparajita";
-            src: url("{{ asset('assets/fonts/Aparajita-Bold.ttf') }}") format("truetype");
-            font-style: normal;
-            font-weight: 700;
-            font-display: swap;
-        }
-
         :root {
             --primary: #2563eb;
             --primary-dark: #1d4ed8;
@@ -46,7 +30,7 @@
         body {
             background: var(--background);
             color: #111;
-            font-family: "Aparajita", "Nirmala UI", "Mangal", serif;
+            font-family: DejaVu Sans, "Arial", sans-serif;
             font-size: 11px;
             line-height: 1.3;
         }
@@ -123,6 +107,7 @@
             overflow: hidden;
             background: #fff;
             box-shadow: 0 5px 22px rgba(0, 0, 0, 0.15);
+            font-family: DejaVu Sans, Arial, sans-serif;
         }
 
         .center {
@@ -178,12 +163,12 @@
         }
 
         .info-label {
-            width: 20%;
+            width: 24%;
             font-weight: 700;
         }
 
         .info-value {
-            width: 30%;
+            width: 26%;
         }
 
         .items-table {
@@ -292,6 +277,23 @@
                 text-align: center;
             }
         }
+
+        @media print {
+            .preview-toolbar {
+                display: none;
+            }
+
+            .receipt-wrapper {
+                padding: 0;
+                background: #fff;
+            }
+
+            .receipt-page {
+                box-shadow: none;
+                margin: 0;
+                padding: 0;
+            }
+        }
     </style>
 </head>
 
@@ -323,35 +325,24 @@
             : ($application?->student_mobile ?? '-');
 
         $referenceLabel = $resident
-            ? 'प्रवेश क्रमांक'
-            : 'आवेदन क्रमांक';
+            ? 'Admission No.'
+            : 'Application No.';
 
         $referenceNumber = $resident
             ? ($resident->resident_code ?? '-')
             : ($application?->application_no ?? '-');
 
         $receiptTitle = $isRegistrationInvoice
-            ? 'पंजीकरण शुल्क रसीद'
-            : 'छात्रावास शुल्क रसीद';
+            ? 'Registration Fee Receipt'
+            : 'Hostel Fee Receipt';
 
         $payment = $invoice->payments
             ->sortByDesc('payment_date')
             ->first();
 
-        $paymentModeLabels = [
-            'cash' => 'नकद',
-            'upi' => 'यूपीआई',
-            'card' => 'कार्ड',
-            'bank_transfer' => 'बैंक हस्तांतरण',
-            'other' => 'अन्य',
-        ];
-
         $paymentMode = $payment
-            ? (
-                $paymentModeLabels[$payment->payment_mode]
-                ?? ucwords(str_replace('_', ' ', $payment->payment_mode))
-            )
-            : 'लंबित';
+            ? ucwords(str_replace('_', ' ', $payment->payment_mode))
+            : 'Pending';
 
         $invoiceDate = optional($invoice->created_at)->format('d-m-Y') ?? '-';
 
@@ -364,18 +355,6 @@
         $billingMonth = $invoice->monthlyConfig?->billing_month
             ? \Carbon\Carbon::parse($invoice->monthlyConfig->billing_month)->format('M-Y')
             : optional($invoice->due_date)->format('M-Y');
-
-        $itemLabels = [
-            'rent' => 'छात्रावास शुल्क',
-            'hostel_fee' => 'छात्रावास शुल्क',
-            'mess' => 'भोजन शुल्क',
-            'mess_fee' => 'भोजन शुल्क',
-            'caution_money' => 'सावधानी राशि',
-            'security_deposit' => 'सुरक्षा जमा राशि',
-            'registration_fee' => 'पंजीकरण शुल्क',
-            'amenity' => 'सुविधा शुल्क',
-            'other' => 'अन्य शुल्क',
-        ];
 
         $numberFormatter = \NumberFormatter::create(
             'en_IN',
@@ -390,32 +369,34 @@
             'assets/images/pratibha-pratiksha-logo-text.png'
         );
 
-        $fileName = $invoice->invoice_number . '-hindi.pdf';
+        $fileName = $invoice->invoice_number . '-english.pdf';
     @endphp
 
     <div class="preview-toolbar">
         <button type="button" id="downloadPdfButton" class="toolbar-button download-button"
             onclick="downloadReceiptPdf()">
-            PDF डाउनलोड करें
+            Download PDF
         </button>
 
         <button type="button" class="toolbar-button close-button" onclick="window.close()">
-            बंद करें
+            Close
         </button>
 
         <span id="downloadStatus" class="preview-message">
-            यह रसीद A6 आकार में डाउनलोड होगी।
+            This receipt will be downloaded in A6 size.
         </span>
     </div>
 
     <div class="receipt-wrapper">
         <div class="receipt-page" id="receiptPdf">
             <div class="center">
-                <img src="{{ $logoUrl }}" class="logo" alt="प्रतिभा प्रतिष्ठान" crossorigin="anonymous">
+                <img src="{{ $logoUrl }}" class="logo" alt="Pratibha Pratiksha" crossorigin="anonymous">
+
+                <div class="title">Pratibha Pratiksha, Indore</div>
 
                 <div class="subtitle">
-                    श्री चंद्रप्रभ दिगंबर जैन मंदिर 11-12, उदयनगर बिचौली मर्दाना<br>
-                    रोड फीनिक्स अस्पताल के पीछे इंदौर-452016 म.प्र
+                    Shri Chandraprabh Digambar Jain Mandir 11-12, Udayanagar<br>
+                    Bicholi Mardana Road, Near Phoenix Hospital, Indore - 452016 M.P.
                 </div>
             </div>
 
@@ -425,19 +406,19 @@
 
             <table class="info-table">
                 <tr>
-                    <td class="info-label">रसीद संख्या</td>
+                    <td class="info-label">Invoice No.</td>
                     <td class="info-value">
                         {{ $invoice->invoice_number }}
                     </td>
 
-                    <td class="info-label">दिनांक</td>
+                    <td class="info-label">Date</td>
                     <td class="info-value">
                         {{ $invoiceDate }}
                     </td>
                 </tr>
 
                 <tr>
-                    <td class="info-label">नाम</td>
+                    <td class="info-label">Student Name</td>
                     <td class="info-value">
                         {{ $personName }}
                     </td>
@@ -449,12 +430,12 @@
                 </tr>
 
                 <tr>
-                    <td class="info-label">पिता का नाम</td>
+                    <td class="info-label">Father Name</td>
                     <td class="info-value">
                         {{ $fatherName }}
                     </td>
 
-                    <td class="info-label">मोबाइल नं.</td>
+                    <td class="info-label">Mobile No.</td>
                     <td class="info-value">
                         {{ $mobile }}
                     </td>
@@ -462,11 +443,10 @@
 
                 @if (!$isRegistrationInvoice && $resident)
                     <tr>
-                        <td class="info-label">कमरा / बेड</td>
+                        <td class="info-label">Room / Stay</td>
                         <td class="info-value">
                             @if ($invoice->stay)
                                 {{ $invoice->stay->room?->room_number ?? '-' }}
-
                                 @if ($invoice->stay->bed)
                                             /
                                             {{ $invoice->stay->bed->bed_number
@@ -487,8 +467,8 @@
                 <table class="items-table">
                     <thead>
                         <tr>
-                            <th style="width: 72%;">विवरण</th>
-                            <th style="width: 28%;">राशि (₹)</th>
+                            <th style="width: 72%;">Particular</th>
+                            <th style="width: 28%;">Amount (₹)</th>
                         </tr>
                     </thead>
 
@@ -496,8 +476,7 @@
                         @forelse ($invoice->items as $item)
                                     <tr>
                                         <td>
-                                            {{ $itemLabels[$item->item_type]
-                            ?? $item->title }}
+                                            {{ $item->title }}
 
                                             @if ($item->description)
                                                 <br>
@@ -513,7 +492,7 @@
                                     </tr>
                         @empty
                             <tr>
-                                <td>पंजीकरण शुल्क</td>
+                                <td>Registration Fee</td>
                                 <td class="right">
                                     {{ number_format((float) $invoice->amount, 2) }}
                                 </td>
@@ -521,14 +500,14 @@
                         @endforelse
 
                         <tr>
-                            <td class="bold">कुल राशि</td>
+                            <td class="bold">Total</td>
                             <td class="right bold">
                                 {{ number_format((float) $invoice->amount, 2) }}
                             </td>
                         </tr>
 
                         <tr>
-                            <td class="bold">प्राप्त राशि</td>
+                            <td class="bold">Paid Amount</td>
                             <td class="right bold">
                                 {{ number_format((float) $invoice->paid_amount, 2) }}
                             </td>
@@ -536,7 +515,7 @@
 
                         @if ((float) $invoice->balance_due > 0)
                             <tr>
-                                <td class="bold">बकाया राशि</td>
+                                <td class="bold">Balance Due</td>
                                 <td class="right bold">
                                     {{ number_format((float) $invoice->balance_due, 2) }}
                                 </td>
@@ -548,9 +527,9 @@
                 <table class="items-table">
                     <thead>
                         <tr>
-                            <th style="width: 50%;">विवरण</th>
-                            <th style="width: 22%;">महीना</th>
-                            <th style="width: 28%;">राशि (₹)</th>
+                            <th style="width: 50%;">Particular</th>
+                            <th style="width: 22%;">Month</th>
+                            <th style="width: 28%;">Amount (₹)</th>
                         </tr>
                     </thead>
 
@@ -558,8 +537,7 @@
                         @forelse ($invoice->items as $item)
                                     <tr>
                                         <td>
-                                            {{ $itemLabels[$item->item_type]
-                            ?? $item->title }}
+                                            {{ $item->title }}
 
                                             @if ($item->description)
                                                 <br>
@@ -580,8 +558,7 @@
                         @empty
                                     <tr>
                                         <td>
-                                            {{ $itemLabels[$invoice->fee_type]
-                            ?? ucwords(str_replace('_', ' ', $invoice->fee_type)) }}
+                                            {{ ucwords(str_replace('_', ' ', $invoice->fee_type)) }}
                                         </td>
 
                                         <td class="text-center">
@@ -616,7 +593,7 @@
                         {{-- Late Fee --}}
                         @if ($showLateFee)
                             <tr>
-                                <td>विलंब शुल्क</td>
+                                <td>Late Fee</td>
                                 <td class="text-center">-</td>
 
                                 <td class="right">
@@ -631,7 +608,7 @@
                                 (float) $invoice->late_fee_amount > 0
                             )
                             <tr>
-                                <td>विलंब शुल्क (माफ)</td>
+                                <td>Late Fee (Waived)</td>
                                 <td class="text-center">-</td>
                                 <td class="right">
                                     -{{ number_format((float) $invoice->late_fee_amount, 2) }}
@@ -642,7 +619,7 @@
                         {{-- Total Payable --}}
                         <tr>
                             <td colspan="2" class="bold">
-                                कुल देय राशि
+                                Total Payable
                             </td>
 
                             <td class="right bold">
@@ -654,7 +631,7 @@
                         @if ((float) $invoice->paid_amount > 0)
                             <tr>
                                 <td colspan="2" class="bold">
-                                    प्राप्त राशि
+                                    Paid
                                 </td>
 
                                 <td class="right bold">
@@ -667,7 +644,7 @@
                         @if ((float) $invoice->balance_due > 0)
                             <tr>
                                 <td colspan="2" class="bold">
-                                    बकाया राशि
+                                    Balance Due
                                 </td>
 
                                 <td class="right bold">
@@ -682,24 +659,24 @@
             <div class="payment-box">
                 <table class="payment-table">
                     <tr>
-                        <td class="info-label">भुगतान माध्यम</td>
+                        <td class="info-label">Payment Mode</td>
                         <td class="info-value">
                             {{ $paymentMode }}
                         </td>
 
-                        <td class="info-label">भुगतान दिनांक</td>
+                        <td class="info-label">Payment Date</td>
                         <td class="info-value">
                             {{ $paymentDate }}
                         </td>
                     </tr>
 
                     <tr>
-                        <td class="info-label">प्राप्ति क्रमांक</td>
+                        <td class="info-label">Receipt No.</td>
                         <td class="info-value">
                             {{ $payment?->receipt_number ?? '-' }}
                         </td>
 
-                        <td class="info-label">लेनदेन क्रमांक</td>
+                        <td class="info-label">Transaction ID</td>
                         <td class="info-value">
                             {{ $payment?->transaction_id ?? '-' }}
                         </td>
@@ -709,19 +686,19 @@
 
             <div class="summary">
                 <p>
-                    <strong>शब्दों में:</strong>
+                    <strong>In Words:</strong>
                     {{ $amountInWords }} Rupees Only
                 </p>
 
                 <p>
-                    <strong>टिप्पणी:</strong>
+                    <strong>Remark:</strong>
                     {{ $invoice->description ?? '-' }}
                 </p>
 
                 @if ($invoice->late_fee_waived)
                     <p>
-                        <strong>विलंब शुल्क माफ:</strong>
-                        हाँ
+                        <strong>Late Fee Waived:</strong>
+                        Yes
                         @if ($invoice->waive_reason)
                             — {{ $invoice->waive_reason }}
                         @endif
@@ -732,17 +709,16 @@
             <table class="footer">
                 <tr>
                     <td class="footer-note">
-                        जारी दिनांक:
-                        {{ now()->format('d-m-Y h:i A') }}
-                        <br>
-                        यह कंप्यूटर द्वारा तैयार की गई रसीद है।
+                        Generated on {{ now()->format('d-m-Y h:i A') }}<br>
+                        This is a computer-generated receipt.
                     </td>
 
                     <td class="signature">
-                        अधिकृत हस्ताक्षर
+                        Authorized Signature
                     </td>
                 </tr>
             </table>
+
             @if (
                     $invoice->status !== 'paid' &&
                     !$invoice->is_overdue &&
@@ -750,12 +726,10 @@
                     !$invoice->late_fee_waived
                 )
                 <p style="font-size:10px; margin-top:6px;">
-                    <strong>नोट:</strong>
-                    यदि भुगतान
-                    {{ optional($invoice->due_date)->format('d-m-Y') }}
-                    के बाद किया जाता है, तो
-                    ₹{{ number_format((float) $invoice->late_fee_amount, 2) }}
-                    विलंब शुल्क देय होगा।
+                    <strong>Note:</strong>
+                    A late fee of ₹{{ number_format((float) $invoice->late_fee_amount, 2) }}
+                    will be applicable if payment is made after
+                    {{ optional($invoice->due_date)->format('d-m-Y') }}.
                 </p>
             @endif
         </div>
@@ -789,36 +763,24 @@
         }
 
         async function downloadReceiptPdf() {
-            const button = document.getElementById(
-                "downloadPdfButton",
-            );
-
-            const status = document.getElementById(
-                "downloadStatus",
-            );
-
+            const button = document.getElementById("downloadPdfButton");
+            const status = document.getElementById("downloadStatus");
             const receipt = document.getElementById("receiptPdf");
 
             if (typeof html2pdf !== "function") {
                 console.error("html2pdf library is not available.");
-
                 alert(
-                    "PDF library load नहीं हुई। कृपया administrator से संपर्क करें।"
+                    "PDF library failed to load. Please contact administrator."
                 );
-
                 return;
             }
 
             button.disabled = true;
-            button.textContent = "PDF तैयार हो रही है...";
-            status.textContent =
-                "फ़ॉन्ट और चित्र लोड किए जा रहे हैं...";
+            button.textContent = "Generating PDF...";
+            status.textContent = "Loading fonts and images...";
 
             try {
-                if (
-                    document.fonts
-                    && document.fonts.ready
-                ) {
+                if (document.fonts && document.fonts.ready) {
                     await document.fonts.ready;
                 }
 
@@ -858,33 +820,29 @@
                     },
                 };
 
-                status.textContent =
-                    "PDF डाउनलोड की जा रही है...";
+                status.textContent = "Downloading PDF...";
 
                 await html2pdf()
                     .set(options)
                     .from(receipt)
                     .save();
 
-                status.textContent =
-                    "PDF सफलतापूर्वक डाउनलोड हो गई।";
+                status.textContent = "PDF downloaded successfully.";
             } catch (error) {
                 console.error(
-                    "Hindi receipt PDF generation failed:",
+                    "English receipt PDF generation failed:",
                     error,
                 );
 
-                status.textContent =
-                    "PDF डाउनलोड नहीं हो सकी।";
+                status.textContent = "Failed to download PDF.";
 
                 alert(
-                    "PDF बनाते समय त्रुटि हुई। कृपया दोबारा प्रयास करें।",
+                    "Error generating PDF. Please try again.",
                 );
             } finally {
                 receipt.classList.remove("pdf-export-mode");
-
                 button.disabled = false;
-                button.textContent = "PDF डाउनलोड करें";
+                button.textContent = "Download PDF";
             }
         }
 

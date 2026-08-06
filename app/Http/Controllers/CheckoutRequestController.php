@@ -1470,6 +1470,12 @@ class CheckoutRequestController extends Controller
                 $checkoutRequest
                     ->warden_review_status,
 
+            'security_deposit' => FeeInvoice::query()->where('resident_id',$checkoutRequest->resident_id)
+                                    ->where('fee_type','security_deposit')
+                                    ->whereNull('deleted_at')
+                                    ->latest('id')
+                                    ->first(),
+
             'dues_clearance_status' =>
                 $checkoutRequest
                     ->dues_clearance_status,

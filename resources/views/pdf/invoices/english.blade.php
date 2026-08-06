@@ -273,10 +273,8 @@
                         @endif
                     </td>
 
-                    <td class="info-label">Due Date</td>
-                    <td class="info-value">
-                        : {{ optional($invoice->due_date)->format('d-M-Y') ?? '-' }}
-                    </td>
+                    <td class="info-label"></td>
+                    <td class="info-value"></td>
                 </tr>
             @endif
         </table>

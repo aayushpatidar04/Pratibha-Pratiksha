@@ -416,6 +416,27 @@ class BillingController extends Controller
         );
     }
 
+    public function previewEnglish(FeeInvoice $invoice)
+    {
+        $invoice->load([
+            'resident',
+            'application',
+            'stay.room',
+            'stay.bed',
+            'items',
+            'payments.proofs',
+            'monthlyConfig',
+            'waivedByUser',
+        ]);
+ 
+        $invoice->status = $invoice->computed_status;
+        $invoice->late_fee_amount = $invoice->effective_late_fee_amount;
+ 
+        return view('pdf.invoices.english-preview', [
+            'invoice' => $invoice,
+        ]);
+    }
+
     public function exportPdfHindi(FeeInvoice $invoice)
     {
         $invoice->load(['resident', 'items', 'payments.proofs', 'monthlyConfig', 'waivedByUser']);

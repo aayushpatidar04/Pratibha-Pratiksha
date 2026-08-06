@@ -229,12 +229,19 @@ const formatCurrency = (amount) => {
                             </td>
                             <td class="px-4 py-3 text-right">
                                 <div class="flex justify-end gap-2">
-                                    <a
+                                    <!-- <a
                                         :href="route('billing.pdf.en', inv.id)"
                                         target="_blank"
                                         class="inline-flex items-center gap-1 text-xs text-green-600 hover:underline"
                                     >
                                         <FileText class="h-3 w-3" /> EN
+                                    </a> -->
+                                    <a
+                                        :href="route('billing.print.en', inv.id)"
+                                        target="_blank"
+                                        class="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700"
+                                    >
+                                        <FileText class="h-3.5 w-3.5" /> EN
                                     </a>
                                     <a
                                         :href="route('billing.print.hi', inv.id)"

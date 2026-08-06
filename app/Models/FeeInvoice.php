@@ -34,7 +34,13 @@ class FeeInvoice extends Model
         'waive_reason',
         'status',
         'description',
-        'monthly_config_id'
+        'monthly_config_id',
+
+        'refund_status',
+        'refund_amount',
+        'refunded_at',
+        'refund_transaction_id',
+        'refund_notes',
     ];
 
     protected function casts(): array
@@ -48,6 +54,8 @@ class FeeInvoice extends Model
             'late_fee_frozen_at' => 'date:Y-m-d',
             'paid_amount' => 'decimal:2',
             'amount' => 'decimal:2',
+            'refund_amount' => 'decimal:2',
+            'refunded_at' => 'datetime',
         ];
     }
 
@@ -400,5 +408,32 @@ class FeeInvoice extends Model
             $this->late_fee_frozen_at = $paymentDate->toDateString();
             $this->save();
         }
+    }
+
+    public function isSecurityDeposit(): bool
+    {
+        return $this->fee_type === 'security_deposit';
+    }
+
+    public function isRefunded(): bool
+    {
+        return $this->refund_status === 'refunded';
+    }
+
+    public function isPartiallyRefunded(): bool
+    {
+        return $this->refund_status === 'partially_refunded';
+    }
+
+    public function isRefundable(): bool
+    {
+        return in_array(
+            $this->refund_status,
+            [
+                'not_refunded',
+                'partially_refunded',
+            ],
+            true
+        );
     }
 }

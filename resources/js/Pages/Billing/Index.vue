@@ -8,7 +8,7 @@ import InputError from "@/Components/InputError.vue";
 import PrimaryButton from "@/Components/PrimaryButton.vue";
 import Badge from "@/Components/Badge.vue";
 import { Head, useForm, router, Link } from "@inertiajs/vue3";
-import { ref, reactive, computed } from "vue";
+import { ref, reactive, computed, watch } from "vue";
 import {
     Receipt,
     Plus,
@@ -48,6 +48,7 @@ const statusColor = {
     overdue: "red",
     late_fee_pending: "purple",
     waived: "gray",
+    refunded: "green",
 };
 
 const statusLabel = {
@@ -57,6 +58,7 @@ const statusLabel = {
     overdue: "Overdue",
     late_fee_pending: "Late Fee Pending",
     waived: "Waived",
+    refunded: "Refunded",
 };
 
 const filters = reactive({
@@ -91,6 +93,7 @@ const waiveOpen = ref(false);
 const payingInvoice = ref(null);
 const waivingInvoice = ref(null);
 const paymentProofs = ref([]);
+const transactionIdChecked = ref(false);
 
 const createForm = useForm({
     resident_id: "",
@@ -120,11 +123,21 @@ const payForm = useForm({
     proofs: [],
 });
 
+watch(
+    () => payForm.transaction_id,
+    () => {
+        transactionIdChecked.value = false;
+    },
+);
+
 const openPay = (inv) => {
     payingInvoice.value = inv;
     payForm.amount = inv.balance_due || 0;
+    payForm.transaction_id = "";
+    payForm.notes = "";
     payForm.proofs = [];
     paymentProofs.value = [];
+    transactionIdChecked.value = false;
     payOpen.value = true;
 };
 
@@ -134,7 +147,46 @@ const handleProofUpload = (e) => {
     paymentProofs.value = files.map((f) => URL.createObjectURL(f));
 };
 
-const submitPay = () => {
+const submitPay = async () => {
+    // ── DUPLICATE TRANSACTION ID CHECK ──
+    if (payForm.transaction_id && !transactionIdChecked.value) {
+        try {
+            const response = await fetch(route("billing.check-transaction"), {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRF-TOKEN": document.querySelector(
+                        'meta[name="csrf-token"]',
+                    ).content,
+                },
+                body: JSON.stringify({
+                    transaction_id: payForm.transaction_id,
+                }),
+            });
+
+            if (!response.ok) throw new Error("Network response was not ok");
+
+            const data = await response.json();
+
+            if (data.exists) {
+                const msg =
+                    (data.message ? data.message + "\n\n" : "") +
+                    "Are you sure you want to record another payment with this same transaction ID?";
+                const confirmed = window.confirm(msg);
+
+                if (!confirmed) return; // user cancelled
+            }
+
+            // Mark as checked so we don't ask again on resubmit
+            transactionIdChecked.value = true;
+        } catch (err) {
+            console.error("Transaction ID check failed:", err);
+            alert("Could not verify transaction ID. Please try again.");
+            return;
+        }
+    }
+
+    // ── NORMAL SUBMISSION ──
     const formData = new FormData();
     formData.append("amount", payForm.amount);
     formData.append("payment_mode", payForm.payment_mode);
@@ -147,16 +199,19 @@ const submitPay = () => {
     });
 
     payForm.post(`/billing/${payingInvoice.value.id}/payments`, formData, {
-        onSuccess: (response) => {
+        onSuccess: () => {
             payOpen.value = false;
             payForm.reset();
             paymentProofs.value = [];
+            transactionIdChecked.value = false;
         },
         onError: (errors) => {
             console.error("Payment validation errors:", errors);
+            transactionIdChecked.value = false;
         },
         onFinish: () => {
             console.log("Request finished");
+            transactionIdChecked.value = false;
         },
         preserveScroll: true,
     });
@@ -359,7 +414,7 @@ const paymentBalanceDue = computed(() => {
                         <button
                             v-if="filters.search"
                             @click="clearSearch"
-                            class="pr-3 text-gray-400 hover:text-gray-600"
+                            class="p-3 text-gray-400 hover:text-gray-600"
                             title="Clear search"
                         >
                             <X class="h-4 w-4" />
@@ -455,6 +510,10 @@ const paymentBalanceDue = computed(() => {
                                 <p class="font-medium text-gray-900">
                                     {{ inv.invoice_number }}
                                 </p>
+                                <Badge v-if="inv.fee_type === 'security_deposit' && inv.refund_status === 'refunded'" :color="statusColor[inv.refund_status]">
+                                    {{ statusLabel[inv.refund_status] || inv._refund_status }}
+                                </Badge>
+
                                 <span
                                     v-if="inv.deleted_at"
                                     class="inline-flex mt-1 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-medium text-red-700"
@@ -611,7 +670,7 @@ const paymentBalanceDue = computed(() => {
 
                                         <!-- PDFs -->
                                         <a
-                                            :href="`/billing/${inv.id}/pdf/en`"
+                                            :href="`/billing/${inv.id}/print/en`"
                                             target="_blank"
                                             class="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700"
                                         >

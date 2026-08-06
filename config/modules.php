@@ -17,7 +17,7 @@ return [
         ['key' => 'checkout_inspections', 'label' => 'Operations: Checkout Inspections', 'actions' => ['view', 'start', 'save', 'approve', 'hold', 'reject']],
         ['key' => 'checkout_gate', 'label' => 'Operations: Checkout Gate Verification', 'actions' => ['view', 'verify_exit', 'complete_checkout']],
         ['key' => 'notices', 'label' => 'Communication: Notices & Circulars', 'actions' => ['view', 'create', 'edit', 'delete', 'publish']],
-        ['key' => 'billing', 'label' => 'Billing', 'actions' => ['view', 'create', 'edit', 'delete']],
+        ['key' => 'billing', 'label' => 'Billing', 'actions' => ['view', 'create', 'edit', 'delete', 'refund_security_deposit']],
         ['key' => 'whatsapp', 'label' => 'WhatsApp Communication', 'actions' => ['view', 'create']],
         ['key' => 'complaints', 'label' => 'Student Support: Complaints', 'actions' => ['view', 'create', 'edit', 'delete']],
         ['key' => 'leaves', 'label' => 'Student Support: Leaves', 'actions' => ['view', 'create', 'edit', 'delete']],

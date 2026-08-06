@@ -28,6 +28,7 @@ use App\Http\Controllers\ResidentAmenityOverrideController;
 use App\Http\Controllers\ResidentController;
 use App\Http\Controllers\RoomChangeRequestController;
 use App\Http\Controllers\RoomController;
+use App\Http\Controllers\SecurityDepositRefundController;
 use App\Http\Controllers\TrackingController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VehicleController;
@@ -127,6 +128,9 @@ Route::middleware(['auth', 'user.active'])->group(function () {
             Route::put('/{checkoutRequest}/final-hold', [CheckoutRequestController::class, 'finalHold'])->name('final-hold')->middleware('permission:checkout_requests,hold');
             Route::put('/{checkoutRequest}/final-reject', [CheckoutRequestController::class, 'finalReject'])->name('final-reject')->middleware('permission:checkout_requests,reject');
             Route::put('/{checkoutRequest}/regenerate-exit-token', [CheckoutRequestController::class, 'regenerateExitToken'])->name('regenerate-exit-token')->middleware('permission:checkout_requests,regenerate_exit_token');
+
+            Route::get('/{checkoutRequest}/security-deposit/refund-details', [SecurityDepositRefundController::class, 'show'])->name('security-deposit.refund-details');
+            Route::post('/{checkoutRequest}/security-deposit/refund', [SecurityDepositRefundController::class, 'store'])->name('security-deposit.refund');
         });
 
     Route::prefix('warden-checkout-inspections')
@@ -190,11 +194,13 @@ Route::middleware(['auth', 'user.active'])->group(function () {
         // Main billing
         Route::get('/', [BillingController::class, 'index'])->name('billing.index')->middleware('permission:billing,view');
         Route::post('/', [BillingController::class, 'store'])->name('billing.store')->middleware('permission:billing,create');
+        Route::post('/check-transaction-id', [BillingController::class, 'checkTransactionId'])->name('billing.check-transaction');
         Route::post('/{invoice}/payments', [BillingController::class, 'recordPayment'])->name('billing.payments.store')->middleware('permission:billing,edit');
         Route::post('/{invoice}/waive-late-fee', [BillingController::class, 'waiveLateFee'])->name('billing.waive-late-fee')->middleware('permission:billing,edit');
         Route::delete('/{invoice}', [BillingController::class, 'destroy'])->name('billing.destroy')->middleware('permission:billing,delete');
         Route::patch('/{invoice}/restore', [BillingController::class, 'restore'])->name('billing.restore')->middleware('permission:billing,delete');
         Route::get('/{invoice}/pdf/en', [BillingController::class, 'exportPdfEnglish'])->name('billing.pdf.en');
+        Route::get('/{invoice}/print/en', [BillingController::class, 'previewEnglish'])->name('billing.print.en');
         Route::get('/{invoice}/pdf/hi', [BillingController::class, 'exportPdfHindi'])->name('billing.pdf.hi');
         Route::get('/{invoice}/print/hi', [BillingController::class, 'previewHindi'])->name('billing.print.hi');
         Route::get('/payments/{payment}/receipt', [BillingController::class, 'paymentReceipt'])->name('billing.payments.receipt')->middleware('permission:billing,view');

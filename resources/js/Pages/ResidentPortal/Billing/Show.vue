@@ -180,7 +180,7 @@ const printPage = () => {
 
                     <a
                         :href="
-                            route('resident.billing.pdf.en', {
+                            route('resident.billing.print.en', {
                                 invoice: invoice.id,
                             })
                         " target="_blank"

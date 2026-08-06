@@ -1,4 +1,3 @@
-<!-- resources/js/Pages/Registration/Form.vue -->
 <script setup>
 import { Head, useForm } from "@inertiajs/vue3";
 import { ref, computed, nextTick, watch } from "vue";
@@ -45,6 +44,7 @@ const fieldSteps = {
     father_mobile: 1,
     mother_mobile: 1,
     email: 1,
+    aadhar_number: 1,
     permanent_address: 1,
     current_address: 1,
     father_photo: 1,
@@ -94,6 +94,7 @@ const fieldLabels = computed(() => ({
     father_mobile: t.value.fatherMobile.replace(" *", ""),
     mother_mobile: t.value.motherMobile,
     email: t.value.email.replace(" *", ""),
+    aadhar_number: t.value.aadharNumber.replace(" *", ""),
     permanent_address: t.value.permanentAddress.replace(" *", ""),
     current_address: t.value.currentAddress,
     father_photo: t.value.fatherPhoto,
@@ -235,6 +236,7 @@ const t = computed(() => ({
     motherMobile:
         props.lang === "hi" ? "माता का मोबाइल नंबर" : "Mother's Mobile No.",
     email: props.lang === "hi" ? "ईमेल *" : "Email *",
+    aadharNumber: props.lang === "hi" ? "आधार नंबर *" : "Aadhar Number *",
     permanentAddress:
         props.lang === "hi" ? "स्थायी पता *" : "Permanent Address *",
     currentAddress: props.lang === "hi" ? "वर्तमान पता" : "Current Address",
@@ -319,30 +321,21 @@ const t = computed(() => ({
             ? "ऑनलाइन भुगतान (Razorpay)"
             : "Online Payment (Razorpay)",
 
-    cashPayment:
-        props.lang === "hi"
-            ? "नकद भुगतान"
-            : "Cash Payment",
+    cashPayment: props.lang === "hi" ? "नकद भुगतान" : "Cash Payment",
 
     cashPaymentDescription:
         props.lang === "hi"
             ? "छात्रावास कार्यालय में नकद भुगतान करें"
             : "Pay cash at the hostel office",
 
-    upiPayment:
-        props.lang === "hi"
-            ? "यूपीआई भुगतान"
-            : "UPI Payment",
+    upiPayment: props.lang === "hi" ? "यूपीआई भुगतान" : "UPI Payment",
 
     upiPaymentDescription:
         props.lang === "hi"
             ? "कार्यालय के QR कोड या UPI ID पर भुगतान करें"
             : "Pay using the hostel QR code or UPI ID",
 
-    paymentProof:
-        props.lang === "hi"
-            ? "भुगतान प्रमाण"
-            : "Payment Proof",
+    paymentProof: props.lang === "hi" ? "भुगतान प्रमाण" : "Payment Proof",
 
     paymentProofRequired:
         props.lang === "hi"
@@ -386,6 +379,7 @@ const form = useForm({
     father_mobile: "",
     mother_mobile: "",
     email: "",
+    aadhar_number: "",
     permanent_address: "",
     current_address: "",
 
@@ -492,6 +486,7 @@ const validateBeforeSubmit = () => {
         dob: form.dob,
         age: form.age,
         student_mobile: form.student_mobile,
+        aadhar_number: form.aadhar_number,
         permanent_address: form.permanent_address,
         institution_name: form.institution_name,
         course_name: form.course_name,
@@ -557,10 +552,7 @@ const validateBeforeSubmit = () => {
         );
     }
 
-    if (
-        form.payment_method === "upi" &&
-        !form.registration_payment_proof
-    ) {
+    if (form.payment_method === "upi" && !form.registration_payment_proof) {
         form.setError(
             "registration_payment_proof",
             props.lang === "hi"
@@ -666,20 +658,14 @@ const handleSubmit = async () => {
 watch(
     () => form.payment_method,
     (newMethod, oldMethod) => {
-        form.clearErrors(
-            "registration_payment_proof"
-        );
+        form.clearErrors("registration_payment_proof");
 
         /*
          * Do not silently keep a UPI screenshot if the
          * resident switches to Razorpay.
          */
-        if (
-            newMethod === "razorpay" &&
-            oldMethod !== "razorpay"
-        ) {
-            form.registration_payment_proof =
-                null;
+        if (newMethod === "razorpay" && oldMethod !== "razorpay") {
+            form.registration_payment_proof = null;
         }
     },
 );
@@ -688,15 +674,12 @@ const paymentProofInput = ref(null);
 const paymentProofName = ref("");
 
 const handlePaymentProofChange = (event) => {
-    const file =
-        event.target.files?.[0] || null;
+    const file = event.target.files?.[0] || null;
 
     form.registration_payment_proof = file;
     paymentProofName.value = file?.name || "";
 
-    form.clearErrors(
-        "registration_payment_proof"
-    );
+    form.clearErrors("registration_payment_proof");
 };
 
 const removePaymentProof = () => {
@@ -706,6 +689,21 @@ const removePaymentProof = () => {
     if (paymentProofInput.value) {
         paymentProofInput.value.value = "";
     }
+};
+
+// Add this method to your component's script section
+const copyToClipboard = (text) => {
+    navigator.clipboard
+        .writeText(text)
+        .then(() => {
+            // Optional: Show toast notification
+            alert("UPI ID copied to clipboard!");
+            // Or use a toast library for better UX:
+            // $toast.success('UPI ID copied!', { duration: 2000 });
+        })
+        .catch(() => {
+            alert("Failed to copy UPI ID");
+        });
 };
 </script>
 
@@ -717,13 +715,17 @@ const removePaymentProof = () => {
         <div class="bg-white border-b border-gray-200 sticky top-0 z-10">
             <div class="max-w-4xl mx-auto px-4 py-4">
                 <div class="flex items-center justify-between">
-                    <div>
-                        <h1 class="text-xl font-bold text-gray-900">
+                    <div class="min-w-0">
+                        <h1
+                            class="text-lg sm:text-xl font-bold text-gray-900 truncate"
+                        >
                             {{ t.title }}
                         </h1>
-                        <p class="text-sm text-gray-700">{{ t.subtitle }}</p>
+                        <p class="text-xs sm:text-sm text-gray-700 truncate">
+                            {{ t.subtitle }}
+                        </p>
                     </div>
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-2 shrink-0 ml-3">
                         <a
                             :href="
                                 route('register.form', {
@@ -739,65 +741,70 @@ const removePaymentProof = () => {
             </div>
         </div>
 
-        <div class="max-w-4xl mx-auto px-4 py-8">
+        <div class="max-w-4xl mx-auto px-4 py-6 sm:py-8">
             <!-- Progress Steps -->
-            <div class="mb-8">
-                <div class="flex items-center justify-between">
-                    <div
-                        v-for="step in totalSteps"
-                        :key="step"
-                        class="flex items-center"
-                    >
-                        <button
-                            type="button"
-                            class="relative flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold transition-colors"
-                            :class="[
-                                step <= currentStep
-                                    ? 'bg-indigo-600 text-white'
-                                    : 'bg-gray-200 text-gray-700',
-                                stepErrors[step]
-                                    ? 'ring-2 ring-red-300 ring-offset-2'
-                                    : '',
-                            ]"
-                            @click="currentStep = step"
-                        >
-                            <Check
-                                v-if="step < currentStep && !stepErrors[step]"
-                                class="h-4 w-4"
-                            />
-                            <span v-else>{{ step }}</span>
-
-                            <span
-                                v-if="stepErrors[step]"
-                                class="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white"
-                            >
-                                {{ stepErrors[step] }}
-                            </span>
-                        </button>
+            <div class="mb-6 sm:mb-8 overflow-x-auto p-2">
+                <div class="min-w-[280px]">
+                    <div class="flex items-center justify-between">
                         <div
-                            v-if="step < totalSteps"
-                            class="w-16 h-0.5 mx-2"
-                            :class="
-                                step < currentStep
-                                    ? 'bg-indigo-600'
-                                    : 'bg-gray-200'
-                            "
-                        />
+                            v-for="step in totalSteps"
+                            :key="step"
+                            class="flex items-center"
+                        >
+                            <button
+                                type="button"
+                                class="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold transition-colors"
+                                :class="[
+                                    step <= currentStep
+                                        ? 'bg-indigo-600 text-white'
+                                        : 'bg-gray-200 text-gray-700',
+                                    stepErrors[step]
+                                        ? 'ring-2 ring-red-300 ring-offset-2'
+                                        : '',
+                                ]"
+                                @click="currentStep = step"
+                            >
+                                <Check
+                                    v-if="
+                                        step < currentStep && !stepErrors[step]
+                                    "
+                                    class="h-4 w-4"
+                                />
+                                <span v-else>{{ step }}</span>
+
+                                <span
+                                    v-if="stepErrors[step]"
+                                    class="absolute -right-1.5 -top-1.5 flex h-4 w-4 sm:h-5 sm:w-5 sm:min-w-5 items-center justify-center rounded-full bg-red-600 px-0.5 sm:px-1 text-[9px] sm:text-[10px] font-bold text-white"
+                                >
+                                    {{ stepErrors[step] }}
+                                </span>
+                            </button>
+                            <div
+                                v-if="step < totalSteps"
+                                class="h-0.5 mx-1 sm:mx-2"
+                                :class="[
+                                    step < currentStep
+                                        ? 'bg-indigo-600'
+                                        : 'bg-gray-200',
+                                    'w-3 sm:w-8 md:w-16',
+                                ]"
+                            />
+                        </div>
                     </div>
-                </div>
-                <div class="flex justify-between mt-2">
-                    <span
-                        v-for="(label, idx) in t.steps"
-                        :key="idx"
-                        class="text-xs text-center w-20"
-                        :class="
-                            idx + 1 === currentStep
-                                ? 'text-indigo-600 font-medium'
-                                : 'text-gray-600'
-                        "
-                    >
-                        {{ label }}
-                    </span>
+                    <div class="flex justify-between mt-2">
+                        <span
+                            v-for="(label, idx) in t.steps"
+                            :key="idx"
+                            class="text-[10px] sm:text-xs text-center w-12 sm:w-20 leading-tight"
+                            :class="
+                                idx + 1 === currentStep
+                                    ? 'text-indigo-600 font-medium'
+                                    : 'text-gray-600'
+                            "
+                        >
+                            {{ label }}
+                        </span>
+                    </div>
                 </div>
             </div>
 
@@ -818,7 +825,7 @@ const removePaymentProof = () => {
                         <div
                             class="flex flex-wrap items-center justify-between gap-2"
                         >
-                            <div>
+                            <div class="min-w-0">
                                 <h2 class="text-sm font-semibold text-red-800">
                                     {{ validationTitle }}
                                 </h2>
@@ -828,7 +835,7 @@ const removePaymentProof = () => {
                             </div>
 
                             <span
-                                class="rounded-full bg-red-600 px-2.5 py-1 text-xs font-semibold text-white"
+                                class="rounded-full bg-red-600 px-2.5 py-1 text-xs font-semibold text-white shrink-0"
                             >
                                 {{ validationSummary.length }}
                                 {{
@@ -877,12 +884,12 @@ const removePaymentProof = () => {
                 <!-- Step 1: Personal Details -->
                 <div
                     v-show="currentStep === 1"
-                    class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-6"
+                    class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 space-y-6"
                 >
                     <div
                         class="flex items-center gap-2 pb-4 border-b border-gray-100"
                     >
-                        <User class="w-5 h-5 text-indigo-600" />
+                        <User class="w-5 h-5 text-indigo-600 shrink-0" />
                         <h2 class="text-lg font-semibold text-gray-900">
                             {{ t.steps[0] }}
                         </h2>
@@ -893,7 +900,7 @@ const removePaymentProof = () => {
                         <div class="md:col-span-2 flex justify-center">
                             <div class="text-center">
                                 <div
-                                    class="relative w-32 h-40 mx-auto mb-2 border-2 border-dashed border-gray-300 rounded-xl overflow-hidden bg-gray-50"
+                                    class="relative w-28 h-36 sm:w-32 sm:h-40 mx-auto mb-2 border-2 border-dashed border-gray-300 rounded-xl overflow-hidden bg-gray-50"
                                 >
                                     <img
                                         v-if="photoPreviews.student_photo"
@@ -1110,6 +1117,19 @@ const removePaymentProof = () => {
                         <div>
                             <label
                                 class="block text-sm font-medium text-gray-700 mb-1"
+                                >{{ t.aadharNumber }}</label
+                            >
+                            <input
+                                id="aadhar_number"
+                                v-model="form.aadhar_number"
+                                type="tel"
+                                class="w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
+                            />
+                        </div>
+
+                        <div>
+                            <label
+                                class="block text-sm font-medium text-gray-700 mb-1"
                                 >{{ t.email }}</label
                             >
                             <input
@@ -1167,7 +1187,7 @@ const removePaymentProof = () => {
                     >
                         <div class="text-center">
                             <div
-                                class="relative w-24 h-32 mx-auto mb-2 border-2 border-dashed border-gray-300 rounded-xl overflow-hidden bg-gray-50"
+                                class="relative w-20 h-28 sm:w-24 sm:h-32 mx-auto mb-2 border-2 border-dashed border-gray-300 rounded-xl overflow-hidden bg-gray-50"
                             >
                                 <img
                                     v-if="photoPreviews.father_photo"
@@ -1200,7 +1220,7 @@ const removePaymentProof = () => {
                         </div>
                         <div class="text-center">
                             <div
-                                class="relative w-24 h-32 mx-auto mb-2 border-2 border-dashed border-gray-300 rounded-xl overflow-hidden bg-gray-50"
+                                class="relative w-20 h-28 sm:w-24 sm:h-32 mx-auto mb-2 border-2 border-dashed border-gray-300 rounded-xl overflow-hidden bg-gray-50"
                             >
                                 <img
                                     v-if="photoPreviews.mother_photo"
@@ -1237,12 +1257,14 @@ const removePaymentProof = () => {
                 <!-- Step 2: Education Details -->
                 <div
                     v-show="currentStep === 2"
-                    class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-6"
+                    class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 space-y-6"
                 >
                     <div
                         class="flex items-center gap-2 pb-4 border-b border-gray-100"
                     >
-                        <GraduationCap class="w-5 h-5 text-indigo-600" />
+                        <GraduationCap
+                            class="w-5 h-5 text-indigo-600 shrink-0"
+                        />
                         <h2 class="text-lg font-semibold text-gray-900">
                             {{ t.steps[1] }}
                         </h2>
@@ -1357,7 +1379,7 @@ const removePaymentProof = () => {
                                 class="block text-sm font-medium text-gray-700 mb-1"
                                 >{{ t.stayDuration }}</label
                             >
-                            <div class="grid grid-cols-2 gap-4">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
                                     <span class="text-xs text-gray-700">{{
                                         t.from
@@ -1414,12 +1436,12 @@ const removePaymentProof = () => {
                 <!-- Step 3: Health & Vehicle -->
                 <div
                     v-show="currentStep === 3"
-                    class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-6"
+                    class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 space-y-6"
                 >
                     <div
                         class="flex items-center gap-2 pb-4 border-b border-gray-100"
                     >
-                        <Heart class="w-5 h-5 text-indigo-600" />
+                        <Heart class="w-5 h-5 text-indigo-600 shrink-0" />
                         <h2 class="text-lg font-semibold text-gray-900">
                             {{ t.steps[2] }}
                         </h2>
@@ -1559,12 +1581,12 @@ const removePaymentProof = () => {
                 <!-- Step 4: Guardian Details -->
                 <div
                     v-show="currentStep === 4"
-                    class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-6"
+                    class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 space-y-6"
                 >
                     <div
                         class="flex items-center gap-2 pb-4 border-b border-gray-100"
                     >
-                        <Shield class="w-5 h-5 text-indigo-600" />
+                        <Shield class="w-5 h-5 text-indigo-600 shrink-0" />
                         <h2 class="text-lg font-semibold text-gray-900">
                             {{ t.steps[3] }}
                         </h2>
@@ -1688,7 +1710,7 @@ const removePaymentProof = () => {
                     <div class="pt-4 border-t border-gray-100">
                         <div class="text-center">
                             <div
-                                class="relative w-24 h-32 mx-auto mb-2 border-2 border-dashed border-gray-300 rounded-xl overflow-hidden bg-gray-50"
+                                class="relative w-20 h-28 sm:w-24 sm:h-32 mx-auto mb-2 border-2 border-dashed border-gray-300 rounded-xl overflow-hidden bg-gray-50"
                             >
                                 <img
                                     v-if="photoPreviews.guardian_photo"
@@ -1732,7 +1754,7 @@ const removePaymentProof = () => {
                         <div class="grid grid-cols-2 gap-4">
                             <div class="text-center">
                                 <div
-                                    class="relative w-24 h-32 mx-auto mb-2 border-2 border-dashed border-gray-300 rounded-xl overflow-hidden bg-gray-50"
+                                    class="relative w-20 h-28 sm:w-24 sm:h-32 mx-auto mb-2 border-2 border-dashed border-gray-300 rounded-xl overflow-hidden bg-gray-50"
                                 >
                                     <img
                                         v-if="photoPreviews.family_photo1"
@@ -1768,7 +1790,7 @@ const removePaymentProof = () => {
                             </div>
                             <div class="text-center">
                                 <div
-                                    class="relative w-24 h-32 mx-auto mb-2 border-2 border-dashed border-gray-300 rounded-xl overflow-hidden bg-gray-50"
+                                    class="relative w-20 h-28 sm:w-24 sm:h-32 mx-auto mb-2 border-2 border-dashed border-gray-300 rounded-xl overflow-hidden bg-gray-50"
                                 >
                                     <img
                                         v-if="photoPreviews.family_photo2"
@@ -1809,23 +1831,25 @@ const removePaymentProof = () => {
                 <!-- Step 5: Payment -->
                 <div
                     v-show="currentStep === 5"
-                    class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-6"
+                    class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 space-y-6"
                 >
                     <div
                         class="flex items-center gap-2 pb-4 border-b border-gray-100"
                     >
-                        <CreditCard class="w-5 h-5 text-indigo-600" />
+                        <CreditCard class="w-5 h-5 text-indigo-600 shrink-0" />
                         <h2 class="text-lg font-semibold text-gray-900">
                             {{ t.steps[4] }}
                         </h2>
                     </div>
 
                     <!-- Fee Display -->
-                    <div class="bg-indigo-50 rounded-xl p-6 text-center">
+                    <div class="bg-indigo-50 rounded-xl p-4 sm:p-6 text-center">
                         <p class="text-sm text-indigo-600 mb-1">
                             {{ t.registrationFee }}
                         </p>
-                        <p class="text-3xl font-bold text-indigo-900">
+                        <p
+                            class="text-2xl sm:text-3xl font-bold text-indigo-900"
+                        >
                             ₹{{ registrationFee }}
                         </p>
                     </div>
@@ -1840,7 +1864,7 @@ const removePaymentProof = () => {
 
                         <!-- Razorpay -->
                         <label
-                            class="flex cursor-pointer items-center gap-4 rounded-xl border-2 p-4 transition-colors"
+                            class="flex cursor-pointer items-center gap-3 sm:gap-4 rounded-xl border-2 p-3 sm:p-4 transition-colors"
                             :class="
                                 form.payment_method === 'razorpay'
                                     ? 'border-indigo-500 bg-indigo-50'
@@ -1855,30 +1879,26 @@ const removePaymentProof = () => {
                             />
 
                             <div
-                                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white shadow-sm"
+                                class="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-lg bg-white shadow-sm"
                             >
-                                <CreditCard
-                                    class="h-5 w-5 text-indigo-600"
-                                />
+                                <CreditCard class="h-5 w-5 text-indigo-600" />
                             </div>
 
-                            <div class="flex-1">
-                                <p class="font-medium text-gray-900">
+                            <div class="flex-1 min-w-0">
+                                <p
+                                    class="font-medium text-gray-900 text-sm sm:text-base"
+                                >
                                     {{ t.onlinePayment }}
                                 </p>
 
                                 <p class="text-xs text-gray-600">
-                                    UPI, card or net banking through
-                                    Razorpay
+                                    UPI, card or net banking through Razorpay
                                 </p>
                             </div>
 
                             <div
-                                v-if="
-                                    form.payment_method ===
-                                    'razorpay'
-                                "
-                                class="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-600"
+                                v-if="form.payment_method === 'razorpay'"
+                                class="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-600 shrink-0"
                             >
                                 <Check class="h-3 w-3 text-white" />
                             </div>
@@ -1886,7 +1906,7 @@ const removePaymentProof = () => {
 
                         <!-- UPI -->
                         <label
-                            class="flex cursor-pointer items-center gap-4 rounded-xl border-2 p-4 transition-colors"
+                            class="flex cursor-pointer items-center gap-3 sm:gap-4 rounded-xl border-2 p-3 sm:p-4 transition-colors"
                             :class="
                                 form.payment_method === 'upi'
                                     ? 'border-indigo-500 bg-indigo-50'
@@ -1901,15 +1921,15 @@ const removePaymentProof = () => {
                             />
 
                             <div
-                                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white shadow-sm"
+                                class="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-lg bg-white shadow-sm"
                             >
-                                <QrCode
-                                    class="h-5 w-5 text-purple-600"
-                                />
+                                <QrCode class="h-5 w-5 text-purple-600" />
                             </div>
 
-                            <div class="flex-1">
-                                <p class="font-medium text-gray-900">
+                            <div class="flex-1 min-w-0">
+                                <p
+                                    class="font-medium text-gray-900 text-sm sm:text-base"
+                                >
                                     {{ t.upiPayment }}
                                 </p>
 
@@ -1920,15 +1940,75 @@ const removePaymentProof = () => {
 
                             <div
                                 v-if="form.payment_method === 'upi'"
-                                class="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-600"
+                                class="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-600 shrink-0"
                             >
                                 <Check class="h-3 w-3 text-white" />
                             </div>
                         </label>
 
+                        <!-- UPI Details Box -->
+                        <div
+                            v-if="form.payment_method === 'upi'"
+                            class="space-y-4 bg-blue-50 rounded-lg p-3 sm:p-4 border border-blue-200"
+                        >
+                            <div class="flex flex-col items-center gap-4">
+                                <!-- QR Code Image -->
+                                <div class="flex justify-center">
+                                    <img
+                                        src="/assets/images/Pratibha QR.jpeg"
+                                        alt="UPI Payment QR Code"
+                                        class="w-36 h-36 sm:w-48 sm:h-48 border-2 border-blue-300 rounded-lg shadow-md max-w-full"
+                                    />
+                                </div>
+
+                                <!-- UPI ID Display -->
+                                <div
+                                    class="w-full bg-white rounded-lg p-3 border border-gray-200"
+                                >
+                                    <p
+                                        class="text-xs text-gray-600 mb-1 text-center sm:text-left"
+                                    >
+                                        UPI ID
+                                    </p>
+                                    <div
+                                        class="flex flex-col sm:flex-row items-center justify-between gap-2"
+                                    >
+                                        <p
+                                            class="text-xs sm:text-sm font-mono font-semibold text-gray-900 break-all text-center sm:text-left"
+                                        >
+                                            pratibhamandalnyas.82235785@hdfcbank
+                                        </p>
+                                        <button
+                                            type="button"
+                                            @click="
+                                                copyToClipboard(
+                                                    'pratibhamandalnyas.82235785@hdfcbank',
+                                                )
+                                            "
+                                            class="inline-flex items-center gap-1 px-2 py-1 text-xs rounded bg-blue-100 text-blue-700 hover:bg-blue-200 font-medium shrink-0"
+                                            title="Copy UPI ID"
+                                        >
+                                            📋 Copy
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Payment Status Note -->
+                            <p
+                                class="text-xs text-blue-700 mt-2 flex items-center justify-center gap-1 text-center"
+                            >
+                                <span>ℹ️</span>
+                                <span
+                                    >Payment will be verified after transaction
+                                    ID is recorded</span
+                                >
+                            </p>
+                        </div>
+
                         <!-- Cash -->
                         <label
-                            class="flex cursor-pointer items-center gap-4 rounded-xl border-2 p-4 transition-colors"
+                            class="flex cursor-pointer items-center gap-3 sm:gap-4 rounded-xl border-2 p-3 sm:p-4 transition-colors"
                             :class="
                                 form.payment_method === 'cash'
                                     ? 'border-indigo-500 bg-indigo-50'
@@ -1943,15 +2023,15 @@ const removePaymentProof = () => {
                             />
 
                             <div
-                                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white shadow-sm"
+                                class="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-lg bg-white shadow-sm"
                             >
-                                <Banknote
-                                    class="h-5 w-5 text-green-600"
-                                />
+                                <Banknote class="h-5 w-5 text-green-600" />
                             </div>
 
-                            <div class="flex-1">
-                                <p class="font-medium text-gray-900">
+                            <div class="flex-1 min-w-0">
+                                <p
+                                    class="font-medium text-gray-900 text-sm sm:text-base"
+                                >
                                     {{ t.cashPayment }}
                                 </p>
 
@@ -1962,7 +2042,7 @@ const removePaymentProof = () => {
 
                             <div
                                 v-if="form.payment_method === 'cash'"
-                                class="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-600"
+                                class="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-600 shrink-0"
                             >
                                 <Check class="h-3 w-3 text-white" />
                             </div>
@@ -1978,12 +2058,8 @@ const removePaymentProof = () => {
 
                     <!-- Manual payment proof -->
                     <div
-                        v-if="
-                            ['cash', 'upi'].includes(
-                                form.payment_method,
-                            )
-                        "
-                        class="rounded-2xl border p-5"
+                        v-if="['cash', 'upi'].includes(form.payment_method)"
+                        class="rounded-2xl border p-4 sm:p-5"
                         :class="
                             form.payment_method === 'upi'
                                 ? 'border-purple-200 bg-purple-50'
@@ -1993,10 +2069,10 @@ const removePaymentProof = () => {
                         <div
                             class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"
                         >
-                            <div>
+                            <div class="min-w-0">
                                 <div class="flex items-center gap-2">
                                     <Upload
-                                        class="h-5 w-5"
+                                        class="h-5 w-5 shrink-0"
                                         :class="
                                             form.payment_method === 'upi'
                                                 ? 'text-purple-700'
@@ -2015,10 +2091,7 @@ const removePaymentProof = () => {
                                         {{ t.paymentProof }}
 
                                         <span
-                                            v-if="
-                                                form.payment_method ===
-                                                'upi'
-                                            "
+                                            v-if="form.payment_method === 'upi'"
                                             class="text-red-600"
                                         >
                                             *
@@ -2051,14 +2124,13 @@ const removePaymentProof = () => {
                         </div>
 
                         <label
-                            class="mt-4 flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed bg-white p-6 text-center transition"
+                            class="mt-4 flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed bg-white p-4 sm:p-6 text-center transition"
                             :class="
-                                form.errors
-                                    .registration_payment_proof
+                                form.errors.registration_payment_proof
                                     ? 'border-red-400'
                                     : form.payment_method === 'upi'
-                                    ? 'border-purple-300 hover:border-purple-500'
-                                    : 'border-green-300 hover:border-green-500'
+                                      ? 'border-purple-300 hover:border-purple-500'
+                                      : 'border-green-300 hover:border-green-500'
                             "
                         >
                             <Upload
@@ -2070,9 +2142,7 @@ const removePaymentProof = () => {
                                 "
                             />
 
-                            <p
-                                class="mt-2 text-sm font-semibold text-gray-800"
-                            >
+                            <p class="mt-2 text-sm font-semibold text-gray-800">
                                 {{
                                     paymentProofName ||
                                     (lang === "hi"
@@ -2081,11 +2151,8 @@ const removePaymentProof = () => {
                                 }}
                             </p>
 
-                            <p
-                                class="mt-1 text-xs text-gray-500"
-                            >
-                                JPG, JPEG, PNG, WEBP or PDF · Maximum
-                                5 MB
+                            <p class="mt-1 text-xs text-gray-500">
+                                JPG, JPEG, PNG, WEBP or PDF · Maximum 5 MB
                             </p>
 
                             <input
@@ -2099,14 +2166,10 @@ const removePaymentProof = () => {
                         </label>
 
                         <div
-                            v-if="
-                                form.registration_payment_proof
-                            "
-                            class="mt-3 flex items-center justify-between rounded-xl border border-gray-200 bg-white px-4 py-3"
+                            v-if="form.registration_payment_proof"
+                            class="mt-3 flex items-center justify-between rounded-xl border border-gray-200 bg-white px-3 sm:px-4 py-3 gap-2"
                         >
-                            <div
-                                class="flex min-w-0 items-center gap-3"
-                            >
+                            <div class="flex min-w-0 items-center gap-3">
                                 <Upload
                                     class="h-5 w-5 shrink-0 text-indigo-600"
                                 />
@@ -2116,19 +2179,14 @@ const removePaymentProof = () => {
                                         class="truncate text-sm font-medium text-gray-800"
                                     >
                                         {{
-                                            form
-                                                .registration_payment_proof
-                                                .name
+                                            form.registration_payment_proof.name
                                         }}
                                     </p>
 
-                                    <p
-                                        class="text-[10px] text-gray-500"
-                                    >
+                                    <p class="text-[10px] text-gray-500">
                                         {{
                                             (
-                                                form
-                                                    .registration_payment_proof
+                                                form.registration_payment_proof
                                                     .size /
                                                 1024 /
                                                 1024
@@ -2141,7 +2199,7 @@ const removePaymentProof = () => {
 
                             <button
                                 type="button"
-                                class="rounded-lg p-2 text-red-500 hover:bg-red-50"
+                                class="rounded-lg p-2 text-red-500 hover:bg-red-50 shrink-0"
                                 @click="removePaymentProof"
                             >
                                 <X class="h-4 w-4" />
@@ -2149,30 +2207,26 @@ const removePaymentProof = () => {
                         </div>
 
                         <p
-                            v-if="
-                                form.errors
-                                    .registration_payment_proof
-                            "
+                            v-if="form.errors.registration_payment_proof"
                             class="mt-2 text-xs font-medium text-red-600"
                         >
-                            {{
-                                form.errors
-                                    .registration_payment_proof
-                            }}
+                            {{ form.errors.registration_payment_proof }}
                         </p>
                     </div>
 
                     <!-- Declaration -->
                     <div
-                        class="p-4 bg-amber-50 rounded-xl border border-amber-100"
+                        class="p-3 sm:p-4 bg-amber-50 rounded-xl border border-amber-100"
                     >
                         <label class="flex items-start gap-3 cursor-pointer">
                             <input
                                 type="checkbox"
                                 required
-                                class="mt-1 text-indigo-600 focus:ring-indigo-500 rounded"
+                                class="mt-1 text-indigo-600 focus:ring-indigo-500 rounded shrink-0"
                             />
-                            <p class="text-sm text-gray-700">
+                            <p
+                                class="text-xs sm:text-sm text-gray-700 leading-relaxed"
+                            >
                                 {{ t.declaration }}
                             </p>
                         </label>
@@ -2194,7 +2248,7 @@ const removePaymentProof = () => {
                 <button
                     v-if="validationSummary.length"
                     type="button"
-                    class="sticky bottom-3 z-10 flex w-full items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-left shadow-lg"
+                    class="sticky bottom-3 z-10 flex w-full items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-3 sm:px-4 py-3 text-left shadow-lg"
                     @click="scrollToValidationSummary"
                 >
                     <span class="flex min-w-0 items-center gap-2">
@@ -2224,15 +2278,17 @@ const removePaymentProof = () => {
                 </button>
 
                 <!-- Navigation Buttons -->
-                <div class="flex items-center justify-between pt-4">
+                <div
+                    class="flex items-center justify-between pt-2 sm:pt-4 gap-3"
+                >
                     <button
                         v-if="currentStep > 1"
                         type="button"
                         @click="prevStep"
-                        class="flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                        class="flex items-center gap-2 px-4 sm:px-5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                     >
                         <ChevronLeft class="w-4 h-4" />
-                        {{ t.previous }}
+                        <span class="hidden sm:inline">{{ t.previous }}</span>
                     </button>
                     <div v-else></div>
 
@@ -2240,9 +2296,9 @@ const removePaymentProof = () => {
                         v-if="currentStep < totalSteps"
                         type="button"
                         @click="nextStep"
-                        class="flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors"
+                        class="flex items-center gap-2 px-4 sm:px-5 py-2.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors"
                     >
-                        {{ t.next }}
+                        <span class="hidden sm:inline">{{ t.next }}</span>
                         <ChevronRight class="w-4 h-4" />
                     </button>
 
@@ -2250,34 +2306,25 @@ const removePaymentProof = () => {
                         v-else
                         type="submit"
                         :disabled="isProcessing"
-                        class="flex items-center gap-2 px-6 py-2.5 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        class="flex items-center gap-2 px-5 sm:px-6 py-2.5 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         <span v-if="isProcessing">Processing...</span>
                         <span v-else>
-                            <div
-                                v-if="
-                                    form.payment_method ===
-                                    'razorpay'
-                                "
-                            >
+                            <span v-if="form.payment_method === 'razorpay'">
                                 {{ t.payNow }}
-                            </div>
+                            </span>
 
-                            <div
-                                v-else-if="
-                                    form.payment_method === 'upi'
-                                "
-                            >
+                            <span v-else-if="form.payment_method === 'upi'">
                                 {{
                                     lang === "hi"
                                         ? "UPI भुगतान जमा करें"
                                         : "Submit UPI Payment"
                                 }}
-                            </div>
+                            </span>
 
-                            <div v-else>
+                            <span v-else>
                                 {{ t.submitApplication }}
-                            </div>
+                            </span>
                         </span>
                     </button>
                 </div>

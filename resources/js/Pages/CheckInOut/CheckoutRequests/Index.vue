@@ -15,6 +15,7 @@ import {
     Eye,
     Filter,
     History,
+    Loader2,
     IndianRupee,
     LogOut,
     PauseCircle,
@@ -23,10 +24,12 @@ import {
     ShieldAlert,
     UserRoundCheck,
     Users,
+    WalletCards,
     X,
     XCircle,
 } from "lucide-vue-next";
 import { computed, ref, watch } from "vue";
+import { usePermissions } from "@/Composables/usePermissions";
 
 const props = defineProps({
     requests: Object,
@@ -38,6 +41,10 @@ const props = defineProps({
     buildings: Array,
     policy: Object,
 });
+
+const {
+    can,
+} = usePermissions();
 
 const search = ref(props.filters.search || "");
 const status = ref(props.filters.status || "");
@@ -388,6 +395,108 @@ const humanize = (value) =>
     String(value || "")
         .replaceAll("_", " ")
         .replace(/\b\w/g, (character) => character.toUpperCase());
+
+const refundModalOpen = ref(false);
+
+const refundLoading = ref(false);
+
+const refundSubmitting = ref(false);
+
+const refundRequest = ref(null);
+
+const refundDetails = ref(null);
+
+const refundTransactionId = ref("");
+
+const refundNotes = ref("");
+
+const canRefundSecurityDeposit = computed(() =>
+    can(
+        "billing",
+        "refund_security_deposit",
+    ),
+);
+
+const openRefundModal = async (checkoutRequest) => {
+    refundRequest.value =
+        checkoutRequest;
+
+    refundModalOpen.value = true;
+
+    refundLoading.value = true;
+
+    refundDetails.value = null;
+
+    refundTransactionId.value = "";
+
+    refundNotes.value = "";
+
+    try {
+        const response =
+            await axios.get(
+                route(
+                    "checkout-requests.security-deposit.refund-details",
+                    checkoutRequest.id,
+                ),
+            );
+        refundDetails.value =
+            response.data;
+    } catch (error) {
+        refundModalOpen.value = false;
+
+        alert(
+            error?.response?.data?.message ||
+                "Unable to load refund details.",
+        );
+    } finally {
+        refundLoading.value = false;
+    }
+};
+
+const submitSecurityDepositRefund = () => {
+    if (!refundRequest.value) {
+        return;
+    }
+
+    if (!refundTransactionId.value.trim()) {
+        return;
+    }
+
+    refundSubmitting.value = true;
+
+    router.post(
+        route(
+            "checkout-requests.security-deposit.refund",
+            refundRequest.value.id,
+        ),
+        {
+            refund_transaction_id:
+                refundTransactionId.value.trim(),
+
+            refund_notes:
+                refundNotes.value || null,
+        },
+        {
+            preserveScroll: true,
+
+            onSuccess: () => {
+                refundModalOpen.value = false;
+
+                refundRequest.value = null;
+
+                refundDetails.value = null;
+
+                refundTransactionId.value = "";
+
+                refundNotes.value = "";
+            },
+
+            onFinish: () => {
+                refundSubmitting.value = false;
+            },
+        },
+    );
+};
 </script>
 
 <template>
@@ -726,6 +835,19 @@ const humanize = (value) =>
                                     @click="openReject(request)"
                                 >
                                     Reject
+                                </button>
+
+                                <button
+                                    v-if="canRefundSecurityDeposit && request.status === 'completed' && request.security_deposit?.refund_status != 'refunded'"
+                                    type="button"
+                                    class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
+                                    @click="
+                                        openRefundModal(request)
+                                    "
+                                >
+                                    <WalletCards class="h-4 w-4" />
+
+                                    Refund Security Deposit
                                 </button>
                             </div>
                         </div>
@@ -1180,5 +1302,347 @@ const humanize = (value) =>
                 </div>
             </div>
         </Modal>
+
+        <div
+            v-if="refundModalOpen"
+            class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 p-4"
+        >
+            <div
+                class="w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl"
+            >
+                <div
+                    class="border-b border-slate-200 bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-5 text-white"
+                >
+                    <div
+                        class="flex items-start justify-between gap-4"
+                    >
+                        <div>
+                            <h2
+                                class="text-xl font-bold"
+                            >
+                                Security Deposit Refund
+                            </h2>
+
+                            <p
+                                class="mt-1 text-sm text-emerald-50"
+                            >
+                                Review the complete deduction
+                                and refund calculation before
+                                confirming.
+                            </p>
+                        </div>
+
+                        <button
+                            type="button"
+                            class="rounded-lg p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
+                            @click="
+                                refundModalOpen = false
+                            "
+                        >
+                            <X class="h-5 w-5" />
+                        </button>
+                    </div>
+                </div>
+
+                <div
+                    class="max-h-[75vh] overflow-y-auto p-6"
+                >
+                    <div
+                        v-if="refundLoading"
+                        class="flex items-center justify-center py-12"
+                    >
+                        <div
+                            class="text-sm font-medium text-slate-500"
+                        >
+                            Loading refund details...
+                        </div>
+                    </div>
+
+                    <template
+                        v-else-if="refundDetails"
+                    >
+                        <div
+                            class="rounded-xl border border-slate-200 bg-slate-50 p-4"
+                        >
+                            <div
+                                class="flex items-center justify-between"
+                            >
+                                <div>
+                                    <p
+                                        class="text-sm font-medium text-slate-500"
+                                    >
+                                        Security Deposit
+                                    </p>
+
+                                    <p
+                                        class="mt-1 text-2xl font-bold text-slate-900"
+                                    >
+                                        ₹{{
+                                            Number(
+                                                refundDetails.security_deposit_amount,
+                                            ).toFixed(2)
+                                        }}
+                                    </p>
+                                </div>
+
+                                <div
+                                    class="rounded-xl bg-white px-3 py-2 text-right shadow-sm"
+                                >
+                                    <p
+                                        class="text-xs text-slate-500"
+                                    >
+                                        Invoice
+                                    </p>
+
+                                    <p
+                                        class="text-sm font-bold text-slate-900"
+                                    >
+                                        {{
+                                            refundDetails.invoice
+                                                ?.invoice_number
+                                        }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-5">
+                            <h3
+                                class="text-sm font-bold text-slate-900"
+                            >
+                                Checkout Deductions
+                            </h3>
+
+                            <div
+                                class="mt-3 divide-y divide-slate-200 rounded-xl border border-slate-200"
+                            >
+                                <div
+                                    class="flex items-center justify-between px-4 py-3"
+                                >
+                                    <span
+                                        class="text-sm text-slate-600"
+                                    >
+                                        Short Notice Charge
+                                    </span>
+
+                                    <span
+                                        class="text-sm font-semibold text-slate-900"
+                                    >
+                                        ₹{{
+                                            Number(
+                                                refundDetails.short_notice_charge,
+                                            ).toFixed(2)
+                                        }}
+                                    </span>
+                                </div>
+
+                                <div
+                                    class="flex items-center justify-between px-4 py-3"
+                                >
+                                    <span
+                                        class="text-sm text-slate-600"
+                                    >
+                                        Asset Damage Charge
+                                    </span>
+
+                                    <span
+                                        class="text-sm font-semibold text-slate-900"
+                                    >
+                                        ₹{{
+                                            Number(
+                                                refundDetails.asset_damage_charge,
+                                            ).toFixed(2)
+                                        }}
+                                    </span>
+                                </div>
+
+                                <div
+                                    class="flex items-center justify-between px-4 py-3"
+                                >
+                                    <span
+                                        class="text-sm text-slate-600"
+                                    >
+                                        Outstanding Dues
+                                    </span>
+
+                                    <span
+                                        class="text-sm font-semibold text-slate-900"
+                                    >
+                                        ₹{{
+                                            Number(
+                                                refundDetails.outstanding_dues_deduction,
+                                            ).toFixed(2)
+                                        }}
+                                    </span>
+                                </div>
+
+                                <div
+                                    class="flex items-center justify-between px-4 py-3"
+                                >
+                                    <span
+                                        class="text-sm text-slate-600"
+                                    >
+                                        Other Checkout Charges
+                                    </span>
+
+                                    <span
+                                        class="text-sm font-semibold text-slate-900"
+                                    >
+                                        ₹{{
+                                            Number(
+                                                refundDetails.other_checkout_charge,
+                                            ).toFixed(2)
+                                        }}
+                                    </span>
+                                </div>
+
+                                <div
+                                    class="flex items-center justify-between bg-slate-50 px-4 py-3"
+                                >
+                                    <span
+                                        class="text-sm font-bold text-slate-700"
+                                    >
+                                        Total Deductions
+                                    </span>
+
+                                    <span
+                                        class="text-sm font-bold text-red-600"
+                                    >
+                                        ₹{{
+                                            Number(
+                                                refundDetails.total_deductions,
+                                            ).toFixed(2)
+                                        }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div
+                            class="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 p-5"
+                        >
+                            <div
+                                class="flex items-center justify-between gap-4"
+                            >
+                                <div>
+                                    <p
+                                        class="text-sm font-medium text-emerald-700"
+                                    >
+                                        Refundable Amount
+                                    </p>
+
+                                    <p
+                                        class="mt-1 text-3xl font-extrabold text-emerald-700"
+                                    >
+                                        ₹{{
+                                            Number(
+                                                refundDetails.refund_amount,
+                                            ).toFixed(2)
+                                        }}
+                                    </p>
+                                </div>
+
+                                <WalletCards
+                                    class="h-8 w-8 text-emerald-600"
+                                />
+                            </div>
+                        </div>
+
+                        <div class="mt-6 space-y-4">
+                            <div>
+                                <label
+                                    class="mb-1.5 block text-sm font-semibold text-slate-700"
+                                >
+                                    Refund Transaction ID
+                                    <span class="text-red-500">
+                                        *
+                                    </span>
+                                </label>
+
+                                <input
+                                    v-model="
+                                        refundTransactionId
+                                    "
+                                    type="text"
+                                    maxlength="150"
+                                    placeholder="Enter bank / UPI / transaction reference"
+                                    class="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                                />
+                            </div>
+
+                            <div>
+                                <label
+                                    class="mb-1.5 block text-sm font-semibold text-slate-700"
+                                >
+                                    Refund Notes
+                                </label>
+
+                                <textarea
+                                    v-model="
+                                        refundNotes
+                                    "
+                                    rows="3"
+                                    maxlength="2000"
+                                    placeholder="Optional refund notes..."
+                                    class="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                                />
+                            </div>
+                        </div>
+
+                        <div
+                            class="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800"
+                        >
+                            <strong>
+                                Please verify before confirming.
+                            </strong>
+
+                            The refund amount is calculated by
+                            the system from the security deposit
+                            and finalized checkout deductions.
+                        </div>
+
+                        <div
+                            class="mt-6 flex justify-end gap-3"
+                        >
+                            <button
+                                type="button"
+                                class="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                                @click="
+                                    refundModalOpen = false
+                                "
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                type="button"
+                                :disabled="
+                                    refundSubmitting ||
+                                    !refundTransactionId.trim() ||
+                                    Number(
+                                        refundDetails.refund_amount,
+                                    ) <= 0
+                                "
+                                class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                @click="
+                                    submitSecurityDepositRefund
+                                "
+                            >
+                                <Loader2
+                                    v-if="refundSubmitting"
+                                    class="h-4 w-4 animate-spin"
+                                />
+
+                                {{
+                                    refundSubmitting
+                                        ? "Processing..."
+                                        : "Confirm Refund"
+                                }}
+                            </button>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
     </AuthenticatedLayout>
 </template>

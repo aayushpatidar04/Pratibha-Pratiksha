@@ -4,6 +4,7 @@ namespace App\Http\Controllers\ResidentPortal;
 
 use App\Http\Controllers\Controller;
 use App\Models\Resident;
+use App\Models\ResidentStay;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -509,6 +510,12 @@ class ProfileController extends Controller
 
                     'mother_name',
                     'mother_phone',
+
+                    'expected_check_out_date' =>
+                        optional(
+                            $currentStay
+                                ->expected_check_out_date
+                        )?->toDateString(),
                 ],
 
                 'readOnlyFields' => [
@@ -901,5 +908,20 @@ class ProfileController extends Controller
             ),
             '/'
         );
+    }
+
+    public function updateExpectedCheckoutDate(Request $request, ResidentStay $stay): RedirectResponse
+    {
+        $validated = $request->validate([
+                'expected_check_out_date' => [
+                    'nullable', 'date', 'after_or_equal:' . $stay->check_in_date->toDateString(),
+                ],
+            ]);
+        if ($stay->actual_check_out_date || !in_array($stay->status, ['active', 'upcoming'], true)) {
+            return back()->with('error', 'The expected checkout date cannot be changed for this stay.');
+        }
+        $stay->update(['expected_check_out_date' => $validated['expected_check_out_date'] ?? null,]);
+
+        return back()->with('success', 'Expected checkout date updated successfully.');
     }
 }

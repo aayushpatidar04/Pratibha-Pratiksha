@@ -35,7 +35,7 @@ import {
     Users,
     X,
 } from "lucide-vue-next";
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 
 const props = defineProps({
     resident: {
@@ -139,6 +139,7 @@ const profileForm = useForm({
 
     mother_name: props.resident.mother_name || "",
     mother_phone: props.resident.mother_phone || "",
+
 });
 
 const photoForm = useForm({
@@ -380,6 +381,35 @@ const maskedAadhaar = computed(() => {
 
     return `XXXX XXXX ${value.slice(-4)}`;
 });
+
+const stayForm = useForm({
+    expected_check_out_date:
+        props.currentStay?.expected_check_out_date ?? "",
+});
+
+watch(
+    () => props.currentStay.value?.expected_check_out_date,
+    (value) => {
+        stayForm.expected_check_out_date = value ?? "";
+    },
+    { immediate: true },
+);
+
+const updateExpectedCheckout = () => {
+    if (!currentStay.value?.id) {
+        return;
+    }
+
+    stayForm.patch(
+        route(
+            "resident.hostel.stay.expected-checkout.update",
+            currentStay.value.id,
+        ),
+        {
+            preserveScroll: true,
+        },
+    );
+};
 </script>
 
 <template>
@@ -1402,7 +1432,7 @@ const maskedAadhaar = computed(() => {
                 </form>
 
                 <!-- Hostel -->
-                <div v-else-if="activeTab === 'hostel'" class="p-5 md:p-6">
+                <form v-else-if="activeTab === 'hostel'" class="p-5 md:p-6">
                     <div>
                         <h2 class="text-base font-bold text-slate-900">
                             Current Hostel Stay
@@ -1522,19 +1552,22 @@ const maskedAadhaar = computed(() => {
                             </div>
 
                             <div>
-                                <p class="text-xs text-slate-500">
-                                    Expected Checkout
-                                </p>
+                                <InputLabel
+                                    for="expected_check_out_date"
+                                    value="Expected Checkout"
+                                />
 
-                                <p
-                                    class="mt-1 text-sm font-bold text-slate-900"
-                                >
-                                    {{
-                                        formatDate(
-                                            currentStay.expected_check_out_date,
-                                        )
-                                    }}
-                                </p>
+                                <input
+                                    id="expected_check_out_date"
+                                    v-model="stayForm.expected_check_out_date"
+                                    type="date"
+                                    class="mt-1 w-full rounded-xl border-slate-300 bg-white text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                />
+
+                                <InputError
+                                    class="mt-1"
+                                    :message="stayForm.errors.expected_check_out_date"
+                                />
                             </div>
 
                             <div>
@@ -1585,6 +1618,18 @@ const maskedAadhaar = computed(() => {
                                 </p>
                             </div>
                         </div>
+
+                        <div class="mt-6 flex justify-end border-t border-slate-100 pt-5">
+                            <PrimaryButton :disabled="stayForm.processing">
+                                <Save class="mr-2 h-4 w-4" />
+
+                                {{
+                                    stayForm.processing
+                                        ? "Saving..."
+                                        : "Update Checkout Date"
+                                }}
+                            </PrimaryButton>
+                        </div>
                     </template>
 
                     <div
@@ -1602,7 +1647,7 @@ const maskedAadhaar = computed(() => {
                             available.
                         </p>
                     </div>
-                </div>
+                </form>
 
                 <!-- Registration -->
                 <div
