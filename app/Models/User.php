@@ -49,42 +49,72 @@ class User extends Authenticatable
         return $this->role === 'super_admin';
     }
 
-    /**
-     * Check whether this user can perform $action (view/create/edit/delete) on $module.
-     * super_admin always passes. Other roles fall back to their explicit permissions
-     * array (set from Admin > Users > Manage Permissions); no entry means no access.
-     */
-    public function hasPermission(string $module, string $action = 'view'): bool
+    public static function availableModules(): array
     {
-        if ($this->hasFullAccess()) {
+        return config('modules.modules', []);
+    }
+
+    public static function defaultPermissions(): array
+    {
+        return collect(
+            static::availableModules()
+        )
+            ->mapWithKeys(
+                fn (array $module): array => [
+                    $module['key'] => [],
+                ]
+            )
+            ->all();
+    }
+
+    public function hasPermission(
+        string $module,
+        string $action = 'view'
+    ): bool {
+        if ($this->role === 'super_admin') {
             return true;
         }
 
-        $modulePermissions = $this->permissions[$module] ?? [];
+        $permissions = $this->permissions ?? [];
 
-        return in_array($action, $modulePermissions, true);
+        return in_array(
+            $action,
+            $permissions[$module] ?? [],
+            true
+        );
     }
 
-    /**
-     * Default permission set granted to a brand-new non-super-admin account: view-only
-     * everywhere, so they can see the app immediately but a super admin has to
-     * deliberately grant create/edit/delete access module by module.
-     */
-    public static function defaultPermissions(): array
-    {
-        $permissions = [];
-        foreach (config('modules.modules') as $module) {
-            // The Admin/User-management module itself is never granted by default —
-            // only super_admin (which bypasses this map entirely) can reach it unless
-            // a super admin explicitly opts a user into it later.
-            if (in_array($module['key'], ['admin_users', 'kyc_settings'], true)) {
-                $permissions[$module['key']] = [];
-                continue;
-            }
-
-            $permissions[$module['key']] = ['view'];
+    public function hasAnyPermission(
+        string $module,
+        array $actions
+    ): bool {
+        if ($this->role === 'super_admin') {
+            return true;
         }
 
-        return $permissions;
+        foreach ($actions as $action) {
+            if ($this->hasPermission($module, $action)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function hasAllPermissions(
+        string $module,
+        array $actions
+    ): bool {
+        if ($this->role === 'super_admin') {
+            return true;
+        }
+
+        foreach ($actions as $action) {
+            if (!$this->hasPermission($module, $action)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

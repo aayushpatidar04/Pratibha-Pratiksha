@@ -1087,6 +1087,7 @@ class ResidentController extends Controller
         $gender = strtolower(
             trim((string) ($data['gender'] ?? ''))
         );
+        $aadhar_number = $data['aadhar_number'] ?? '';
 
         $residentStatus = strtolower(
             trim((string) ($data['status'] ?? 'upcoming'))
@@ -1145,6 +1146,7 @@ class ResidentController extends Controller
                 ),
 
             'gender' => $gender,
+            'aadhar_number' => $aadhar_number,
 
             'blood_group' =>
                 $this->nullableString(
@@ -1168,7 +1170,7 @@ class ResidentController extends Controller
 
             'country' =>
                 $this->nullableString(
-                    $data['country'] ?? 'India'
+                    $data['country'] ?? 'Bharat'
                 ),
 
             'pincode' =>

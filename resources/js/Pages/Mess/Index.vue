@@ -5,26 +5,77 @@ import InputLabel from "@/Components/InputLabel.vue";
 import TextInput from "@/Components/TextInput.vue";
 import PrimaryButton from "@/Components/PrimaryButton.vue";
 import { Head, useForm, router } from "@inertiajs/vue3";
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import { UtensilsCrossed, Plus, Pencil, Trash2 } from "lucide-vue-next";
 
 const props = defineProps({
     menus: Array,
     weekStart: String,
+    buildings: Array,
+    selectedBuildingId: [Number, String],
 });
+
+const buildingId = ref(
+    Number(props.selectedBuildingId) || "",
+);
 
 const normalizeDate = (date) => {
     if (!date) return "";
     return String(date).slice(0, 10);
 };
 
-const days = computed(() =>
-    Array.from({ length: 7 }, (_, i) => {
-        const d = new Date(props.weekStart);
-        d.setDate(d.getDate() + i);
-        return d.toISOString().slice(0, 10);
-    }),
-);
+const parseDate = (value) => {
+    if (!value) return null;
+
+    const [year, month, day] = String(value)
+        .slice(0, 10)
+        .split("-")
+        .map(Number);
+
+    return new Date(
+        year,
+        month - 1,
+        day,
+        12,
+        0,
+        0,
+    );
+};
+
+const formatLocalDate = (date) => {
+    const year = date.getFullYear();
+
+    const month = String(
+        date.getMonth() + 1,
+    ).padStart(2, "0");
+
+    const day = String(
+        date.getDate(),
+    ).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+};
+
+const days = computed(() => {
+    const start = parseDate(
+        props.weekStart,
+    );
+
+    if (!start) return [];
+
+    return Array.from(
+        { length: 7 },
+        (_, index) => {
+            const date = new Date(start);
+
+            date.setDate(
+                start.getDate() + index,
+            );
+
+            return formatLocalDate(date);
+        },
+    );
+});
 
 const meals = ["breakfast", "lunch", "snacks", "dinner"];
 
@@ -38,6 +89,7 @@ const editOpen = ref(false);
 
 const form = useForm({
     id: null,
+    building_id: Number(props.selectedBuildingId) || "",
     menu_date: "",
     meal_type: "",
     items: "",
@@ -51,10 +103,15 @@ const openEdit = (date, meal) => {
     form.reset();
 
     form.id = existing?.id || null;
+
+    form.building_id =
+        Number(buildingId.value);
+
     form.menu_date = date;
     form.meal_type = meal;
     form.items = existing?.items || "";
-    form.special_notes = existing?.special_notes || "";
+    form.special_notes =
+        existing?.special_notes || "";
 
     editOpen.value = true;
 };
@@ -81,37 +138,99 @@ const deleteMenu = (menu) => {
     });
 };
 
+const changeWeek = (weeks) => {
+    const date = parseDate(
+        props.weekStart,
+    );
+
+    if (!date) return;
+
+    date.setDate(
+        date.getDate() + weeks * 7,
+    );
+
+    router.get(
+        "/mess",
+        {
+            week: formatLocalDate(date),
+            building_id:
+                Number(buildingId.value),
+        },
+        {
+            preserveScroll: true,
+            preserveState: false,
+            replace: false,
+        },
+    );
+};
+
 const prevWeek = () => {
-    const d = new Date(props.weekStart);
-    d.setDate(d.getDate() - 7);
-    router.get("/mess", { week: d.toISOString().slice(0, 10) });
+    changeWeek(-1);
 };
 
 const nextWeek = () => {
-    const d = new Date(props.weekStart);
-    d.setDate(d.getDate() + 7);
-    router.get("/mess", { week: d.toISOString().slice(0, 10) });
+    changeWeek(1);
 };
 
 const currentWeekLabel = computed(() => {
-    const start = new Date(props.weekStart);
-    const end = new Date(props.weekStart);
-    end.setDate(end.getDate() + 6);
-
-    return (
-        start.toLocaleDateString("en-IN", {
-            day: "2-digit",
-            month: "short",
-            year: "numeric",
-        }) +
-        " - " +
-        end.toLocaleDateString("en-IN", {
-            day: "2-digit",
-            month: "short",
-            year: "numeric",
-        })
+    const start = parseDate(
+        props.weekStart,
     );
+
+    if (!start) return "";
+
+    const end = new Date(start);
+
+    end.setDate(
+        start.getDate() + 6,
+    );
+
+    const options = {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+    };
+
+    return `${start.toLocaleDateString(
+        "en-IN",
+        options,
+    )} - ${end.toLocaleDateString(
+        "en-IN",
+        options,
+    )}`;
 });
+
+const changeBuilding = () => {
+    router.get(
+        "/mess",
+        {
+            week: props.weekStart,
+            building_id:
+                Number(buildingId.value),
+        },
+        {
+            preserveState: false,
+            preserveScroll: true,
+            replace: true,
+        },
+    );
+};
+
+watch(
+    () => props.selectedBuildingId,
+    (value) => {
+        buildingId.value =
+            Number(value) || "";
+    },
+);
+
+watch(
+    buildingId,
+    (value) => {
+        form.building_id =
+            Number(value) || "";
+    },
+);
 </script>
 
 <template>
@@ -140,6 +259,19 @@ const currentWeekLabel = computed(() => {
                 </div>
 
                 <div class="flex gap-2">
+                    <select
+                        v-model="buildingId"
+                        class="rounded-lg border-gray-300 text-sm"
+                        @change="changeBuilding"
+                    >
+                        <option
+                            v-for="building in buildings"
+                            :key="building.id"
+                            :value="building.id"
+                        >
+                            {{ building.name }}
+                        </option>
+                    </select>
                     <button
                         class="px-3 py-1.5 text-sm rounded-lg border border-gray-300 hover:bg-gray-50"
                         @click="prevWeek"

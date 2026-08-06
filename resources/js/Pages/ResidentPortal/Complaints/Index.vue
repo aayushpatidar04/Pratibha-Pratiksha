@@ -384,30 +384,46 @@ const complaintLocation = (complaint) => {
         <div class="space-y-6">
             <!-- Header -->
             <section
-                class="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:flex-row md:items-center md:justify-between"
+                class="overflow-hidden rounded-3xl border border-orange-200 bg-[linear-gradient(135deg,#9a3412_0%,#ea580c_55%,#fb923c_100%)] p-6 text-white shadow-xl"
             >
-                <div>
-                    <h2
-                        class="flex items-center gap-2 text-xl font-bold text-slate-900"
+                <div class="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+
+                    <div>
+                        <div class="flex items-center gap-3">
+
+                            <div class="rounded-2xl bg-white/15 p-3">
+                                <MessageSquareWarning class="h-7 w-7" />
+                            </div>
+
+                            <div>
+                                <p class="text-xs font-bold uppercase tracking-[0.2em] text-orange-100">
+                                    Complaint Portal
+                                </p>
+
+                                <h2 class="text-2xl font-bold">
+                                    My Complaints
+                                </h2>
+                            </div>
+
+                        </div>
+
+                        <p class="mt-4 max-w-2xl text-sm leading-6 text-orange-50">
+                            Report maintenance issues, cleanliness problems,
+                            electrical faults and track their resolution.
+                        </p>
+
+                    </div>
+
+                    <button
+                        type="button"
+                        class="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-bold text-orange-700 shadow-lg transition hover:scale-105"
+                        @click="createOpen = true"
                     >
-                        <MessageSquareWarning class="h-6 w-6 text-indigo-600" />
+                        <Plus class="h-4 w-4" />
+                        Raise Complaint
+                    </button>
 
-                        My Complaints
-                    </h2>
-
-                    <p class="mt-1 text-sm text-slate-500">
-                        Report hostel issues and track their resolution status.
-                    </p>
                 </div>
-
-                <button
-                    type="button"
-                    class="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700"
-                    @click="createOpen = true"
-                >
-                    <Plus class="h-4 w-4" />
-                    Raise Complaint
-                </button>
             </section>
 
             <!-- Current stay notice -->

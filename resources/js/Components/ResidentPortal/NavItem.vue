@@ -4,44 +4,69 @@ import { Link } from "@inertiajs/vue3";
 defineProps({
     href: {
         type: String,
-        required: true,
+        default: "#",
     },
-    active: {
-        type: Boolean,
-        default: false,
-    },
+
     label: {
         type: String,
         required: true,
     },
-    badge: {
-        type: [String, Number],
-        default: null,
+
+    active: {
+        type: Boolean,
+        default: false,
     },
+
     disabled: {
         type: Boolean,
         default: false,
     },
+
+    badge: {
+        type: [Number, String],
+        default: null,
+    },
+
+    badgeTone: {
+        type: String,
+        default: "indigo",
+    },
 });
+
+const badgeClasses = {
+    indigo: "bg-indigo-100 text-indigo-700",
+
+    blue: "bg-blue-100 text-blue-700",
+
+    amber: "bg-amber-100 text-amber-700",
+
+    red: "bg-red-100 text-red-700",
+
+    green: "bg-emerald-100 text-emerald-700",
+
+    purple: "bg-purple-100 text-purple-700",
+};
 </script>
 
 <template>
-    <Link
-        v-if="!disabled"
-        :href="href"
-        class="group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition"
-        :class="
+    <component
+        :is="disabled ? 'div' : Link"
+        :href="disabled ? undefined : href"
+        class="group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition"
+        :class="[
             active
-                ? 'bg-indigo-600 text-white shadow-sm'
-                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-        "
+                ? 'bg-indigo-50 text-indigo-700'
+                : disabled
+                  ? 'cursor-not-allowed text-slate-300'
+                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900',
+        ]"
     >
         <span
-            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition"
+            class="shrink-0 transition"
             :class="
                 active
-                    ? 'bg-white/15 text-white'
-                    : 'bg-slate-100 text-slate-500 group-hover:bg-white'
+                    ? 'text-indigo-600'
+                    : 'text-slate-400 group-hover:text-slate-600'
             "
         >
             <slot name="icon" />
@@ -52,34 +77,21 @@ defineProps({
         </span>
 
         <span
-            v-if="badge !== null && Number(badge) > 0"
+            v-if="badge !== null && badge !== undefined && Number(badge) > 0"
             class="inline-flex min-w-5 items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-bold"
-            :class="
-                active
-                    ? 'bg-white text-indigo-700'
-                    : 'bg-red-100 text-red-700'
-            "
+            :class="badgeClasses[badgeTone] || badgeClasses.indigo"
         >
-            {{ badge }}
-        </span>
-    </Link>
-
-    <div
-        v-else
-        class="flex cursor-not-allowed items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-300"
-    >
-        <span
-            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-50"
-        >
-            <slot name="icon" />
+            {{ Number(badge) > 99 ? "99+" : badge }}
         </span>
 
-        <span class="min-w-0 flex-1 truncate">
-            {{ label }}
-        </span>
+        <span v-else-if="badge === 'active'" class="relative flex h-3 w-3">
+            <span
+                class="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75"
+            ></span>
 
-        <span class="text-[9px] uppercase tracking-wide">
-            Soon
+            <span
+                class="relative inline-flex h-3 w-3 rounded-full bg-red-500"
+            ></span>
         </span>
-    </div>
+    </component>
 </template>

@@ -22,6 +22,14 @@ class MyStayController extends Controller
             'currentStay.bed:id,bed_number,status',
             'currentStay.checkedInByUser:id,name',
             'currentStay.checkoutReviewedBy:id,name',
+            'currentStay.inventoryAssignments' => function ($query) {
+                $query
+                    ->with([
+                        'inventory:id,item_name,category,unit',
+                    ])
+                    ->orderByDesc('assigned_at')
+                    ->orderByDesc('id');
+            },
         ]);
 
         $stay = $resident->currentStay;
@@ -89,6 +97,133 @@ class MyStayController extends Controller
                             $stay->checkout_reviewed_at,
                     ]
                     : null,
+                
+                'assignedAssets' => $stay
+                    ? $stay->inventoryAssignments
+                        ->map(function ($assignment) {
+                            $processedQuantity =
+                                (int) $assignment->returned_good_quantity
+                                + (int) $assignment->returned_damaged_quantity
+                                + (int) $assignment->missing_quantity;
+
+                            $outstandingQuantity = max(
+                                0,
+                                (int) $assignment->quantity
+                                - $processedQuantity
+                            );
+
+                            return [
+                                'id' => $assignment->id,
+
+                                'inventory_id' =>
+                                    $assignment->inventory_id,
+
+                                'item_name' =>
+                                    $assignment->inventory?->item_name
+                                    ?? 'Inventory Item',
+
+                                'category' =>
+                                    $assignment->inventory?->category,
+
+                                'unit' =>
+                                    $assignment->inventory?->unit
+                                    ?? 'pieces',
+
+                                'quantity' =>
+                                    (int) $assignment->quantity,
+
+                                'condition_at_issue' =>
+                                    $assignment->condition_at_issue,
+
+                                'issue_notes' =>
+                                    $assignment->issue_notes,
+
+                                'assigned_at' =>
+                                    $assignment->assigned_at,
+
+                                'is_returned' =>
+                                    (bool) $assignment->is_returned,
+
+                                'returned_quantity' =>
+                                    (int) $assignment->returned_quantity,
+
+                                'returned_good_quantity' =>
+                                    (int) $assignment
+                                        ->returned_good_quantity,
+
+                                'returned_damaged_quantity' =>
+                                    (int) $assignment
+                                        ->returned_damaged_quantity,
+
+                                'missing_quantity' =>
+                                    (int) $assignment->missing_quantity,
+
+                                'outstanding_quantity' =>
+                                    $outstandingQuantity,
+
+                                'condition_at_return' =>
+                                    $assignment->condition_at_return,
+
+                                'return_notes' =>
+                                    $assignment->return_notes,
+
+                                'returned_at' =>
+                                    $assignment->returned_at,
+
+                                'return_review_status' =>
+                                    $assignment->return_review_status,
+                            ];
+                        })
+                        ->values()
+                    : [],
+
+                'assetSummary' => $stay
+                    ? [
+                        'total_types' =>
+                            $stay
+                                ->inventoryAssignments
+                                ->count(),
+
+                        'total_quantity' =>
+                            $stay
+                                ->inventoryAssignments
+                                ->sum('quantity'),
+
+                        'active_quantity' =>
+                            $stay
+                                ->inventoryAssignments
+                                ->sum(function ($assignment) {
+                                    return max(
+                                        0,
+                                        (int) $assignment->quantity
+                                        - (int) $assignment
+                                            ->returned_good_quantity
+                                        - (int) $assignment
+                                            ->returned_damaged_quantity
+                                        - (int) $assignment
+                                            ->missing_quantity
+                                    );
+                                }),
+
+                        'damaged_quantity' =>
+                            $stay
+                                ->inventoryAssignments
+                                ->sum(
+                                    'returned_damaged_quantity'
+                                ),
+
+                        'missing_quantity' =>
+                            $stay
+                                ->inventoryAssignments
+                                ->sum('missing_quantity'),
+                    ]
+                    : [
+                        'total_types' => 0,
+                        'total_quantity' => 0,
+                        'active_quantity' => 0,
+                        'damaged_quantity' => 0,
+                        'missing_quantity' => 0,
+                    ],
             ]
         );
     }

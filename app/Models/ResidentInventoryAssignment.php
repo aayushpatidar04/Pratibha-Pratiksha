@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ResidentInventoryAssignment extends Model
 {
@@ -72,6 +73,25 @@ class ResidentInventoryAssignment extends Model
         return $this->belongsTo(
             User::class,
             'returned_by'
+        );
+    }
+
+    public function getOutstandingQuantityAttribute(): int
+    {
+        return max(
+            0,
+            (int) $this->quantity
+            - (int) $this->returned_good_quantity
+            - (int) $this->returned_damaged_quantity
+            - (int) $this->missing_quantity
+        );
+    }
+
+    public function checkoutReviews(): HasMany
+    {
+        return $this->hasMany(
+            CheckoutInventoryReview::class,
+            'resident_inventory_assignment_id'
         );
     }
 }

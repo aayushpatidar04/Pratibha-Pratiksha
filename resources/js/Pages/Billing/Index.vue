@@ -29,6 +29,8 @@ import {
     User,
     History,
     RotateCcw,
+    Search,
+    X,
 } from "lucide-vue-next";
 
 const props = defineProps({
@@ -58,15 +60,18 @@ const statusLabel = {
 };
 
 const filters = reactive({
+    search: props.filters?.search || "",
     status: props.filters?.status || "all",
     month: props.filters?.month || "",
     year: props.filters?.year || "",
     deleted: props.filters?.deleted || "active",
 });
+
 const applyFilters = () =>
     router.get(
         "/billing",
         {
+            search: filters.search || undefined,
             status: filters.status !== "all" ? filters.status : undefined,
             month: filters.month || undefined,
             year: filters.year || undefined,
@@ -74,6 +79,11 @@ const applyFilters = () =>
         },
         { preserveState: true, preserveScroll: true, replace: true },
     );
+
+const clearSearch = () => {
+    filters.search = "";
+    applyFilters();
+};
 
 const createOpen = ref(false);
 const payOpen = ref(false);
@@ -331,55 +341,90 @@ const paymentBalanceDue = computed(() => {
                 </div>
             </div>
 
-            <!-- Filters -->
-            <div class="flex flex-wrap gap-3">
-                <select
-                    v-model="filters.status"
-                    @change="applyFilters"
-                    class="rounded-lg border-gray-300 text-sm"
-                >
-                    <option value="all">All Status</option>
-                    <option value="pending">Pending</option>
-                    <option value="partial">Partial</option>
-                    <option value="late_fee_pending">Late Fee Pending</option>
-                    <option value="paid">Paid</option>
-                    <option value="overdue">Overdue</option>
-                    <option value="waived">Waived</option>
-                </select>
-                <select
-                    v-model="filters.month"
-                    @change="applyFilters"
-                    class="rounded-lg border-gray-300 text-sm"
-                >
-                    <option value="">All Months</option>
-                    <option v-for="m in 12" :key="m" :value="m">
-                        {{
-                            new Date(2026, m - 1).toLocaleString("default", {
-                                month: "long",
-                            })
-                        }}
-                    </option>
-                </select>
-                <select
-                    v-model="filters.year"
-                    @change="applyFilters"
-                    class="rounded-lg border-gray-300 text-sm"
-                >
-                    <option value="">All Years</option>
-                    <option value="2026">2026</option>
-                    <option value="2025">2025</option>
-                </select>
-                <select
-                    v-model="filters.deleted"
-                    @change="applyFilters"
-                    class="rounded-lg border-gray-300 text-sm"
-                >
-                    <option value="active">Active Invoices</option>
-                    <option value="only">
-                        Deleted Invoices ({{ stats.deletedCount || 0 }})
-                    </option>
-                    <option value="with">All Including Deleted</option>
-                </select>
+            <!-- Search and Filters -->
+            <div class="space-y-3">
+                <!-- Search Bar -->
+                <div class="relative">
+                    <div
+                        class="flex items-center bg-white rounded-lg border border-gray-300"
+                    >
+                        <Search class="h-5 w-5 text-gray-400 mx-3" />
+                        <TextInput
+                            v-model="filters.search"
+                            @keyup.enter="applyFilters"
+                            type="text"
+                            placeholder="Search by resident name, invoice number, code..."
+                            class="flex-1 px-3 py-2.5 text-sm outline-none bg-transparent"
+                        />
+                        <button
+                            v-if="filters.search"
+                            @click="clearSearch"
+                            class="pr-3 text-gray-400 hover:text-gray-600"
+                            title="Clear search"
+                        >
+                            <X class="h-4 w-4" />
+                        </button>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">
+                        Press Enter to search or use the filters below
+                    </p>
+                </div>
+
+                <!-- Filters -->
+                <div class="flex flex-wrap gap-3">
+                    <select
+                        v-model="filters.status"
+                        @change="applyFilters"
+                        class="rounded-lg border-gray-300 text-sm"
+                    >
+                        <option value="all">All Status</option>
+                        <option value="pending">Pending</option>
+                        <option value="partial">Partial</option>
+                        <option value="late_fee_pending">
+                            Late Fee Pending
+                        </option>
+                        <option value="paid">Paid</option>
+                        <option value="overdue">Overdue</option>
+                        <option value="waived">Waived</option>
+                    </select>
+                    <select
+                        v-model="filters.month"
+                        @change="applyFilters"
+                        class="rounded-lg border-gray-300 text-sm"
+                    >
+                        <option value="">All Months</option>
+                        <option v-for="m in 12" :key="m" :value="m">
+                            {{
+                                new Date(2026, m - 1).toLocaleString(
+                                    "default",
+                                    {
+                                        month: "long",
+                                    },
+                                )
+                            }}
+                        </option>
+                    </select>
+                    <select
+                        v-model="filters.year"
+                        @change="applyFilters"
+                        class="rounded-lg border-gray-300 text-sm"
+                    >
+                        <option value="">All Years</option>
+                        <option value="2026">2026</option>
+                        <option value="2025">2025</option>
+                    </select>
+                    <select
+                        v-model="filters.deleted"
+                        @change="applyFilters"
+                        class="rounded-lg border-gray-300 text-sm"
+                    >
+                        <option value="active">Active Invoices</option>
+                        <option value="only">
+                            Deleted Invoices ({{ stats.deletedCount || 0 }})
+                        </option>
+                        <option value="with">All Including Deleted</option>
+                    </select>
+                </div>
             </div>
 
             <!-- Table -->

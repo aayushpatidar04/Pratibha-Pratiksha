@@ -5,6 +5,8 @@ use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\BuildingController;
 use App\Http\Controllers\CheckInOutController;
+use App\Http\Controllers\CheckoutGateController;
+use App\Http\Controllers\CheckoutRequestController;
 use App\Http\Controllers\ComplaintController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentController;
@@ -29,6 +31,7 @@ use App\Http\Controllers\RoomController;
 use App\Http\Controllers\TrackingController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VehicleController;
+use App\Http\Controllers\WardenCheckoutRequestController;
 use App\Http\Controllers\WhatsappController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -85,6 +88,7 @@ Route::middleware(['auth', 'user.active'])->group(function () {
     Route::post('/residents/{resident}/documents', [DocumentController::class, 'store'])->name('documents.store')->middleware('permission:kyc,create');
     Route::put('/documents/{document}', [DocumentController::class, 'updateStatus'])->name('documents.update')->middleware('permission:kyc,edit');
     Route::delete('/documents/{document}', [DocumentController::class, 'destroy'])->name('documents.destroy')->middleware('permission:kyc,edit');
+    Route::get('/documents/{document}/download', [DocumentController::class, 'download'])->name('documents.download');
 
     Route::get('/residents/{resident}/profile-print', [ResidentController::class, 'profilePrint'])->name('residents.profile.print');
 
@@ -106,10 +110,45 @@ Route::middleware(['auth', 'user.active'])->group(function () {
 
     // Check-In / Check-Out (room allotment)
     Route::get('/checkinout', [CheckInOutController::class, 'index'])->name('checkinout.index')->middleware('permission:checkinout,view');
-    Route::post('/checkinout/allot-room', [CheckInOutController::class, 'allotRoom'])->name('checkinout.allot');
-    Route::post('/checkinout/{stay}/confirm-checkin', [CheckInOutController::class, 'confirmCheckin'])->name('checkinout.confirm-checkin');
-    Route::post('/checkinout/{stay}/checkout-review', [CheckInOutController::class, 'reviewCheckout'])->name('checkinout.checkout-review');
+    Route::post('/checkinout/allot-room', [CheckInOutController::class, 'allotRoom'])->name('checkinout.allot')->middleware('permission:checkinout,allot_room');
+    Route::post('/checkinout/{stay}/confirm-checkin', [CheckInOutController::class, 'confirmCheckin'])->name('checkinout.confirm-checkin')->middleware('permission:checkinout,confirm_checkin');
 
+    Route::prefix('checkout-requests')
+        ->name('checkout-requests.')
+        ->group(function () {
+            Route::get('/', [CheckoutRequestController::class, 'index'])->name('index')->middleware('permission:checkout_requests,view');;
+            Route::post('/', [CheckoutRequestController::class, 'store'])->name('store')->middleware('permission:checkout_requests,create');
+            Route::get('/{checkoutRequest}', [CheckoutRequestController::class, 'show'])->name('show')->middleware('permission:checkout_requests,view');
+            Route::put('/{checkoutRequest}/start-review', [CheckoutRequestController::class, 'startReview'])->name('start-review')->middleware('permission:checkout_requests,start_review');
+            Route::put('/{checkoutRequest}/assign-warden', [CheckoutRequestController::class, 'assignWarden'])->name('assign-warden')->middleware('permission:checkout_requests,assign_inspector');
+            Route::put('/{checkoutRequest}/hold', [CheckoutRequestController::class, 'hold'])->name('hold')->middleware('permission:checkout_requests,hold');
+            Route::put('/{checkoutRequest}/reject', [CheckoutRequestController::class, 'reject'])->name('reject')->middleware('permission:checkout_requests,reject');
+            Route::put('/{checkoutRequest}/final-approve', [CheckoutRequestController::class, 'finalApprove'])->name('final-approve')->middleware('permission:checkout_requests,final_approve');
+            Route::put('/{checkoutRequest}/final-hold', [CheckoutRequestController::class, 'finalHold'])->name('final-hold')->middleware('permission:checkout_requests,hold');
+            Route::put('/{checkoutRequest}/final-reject', [CheckoutRequestController::class, 'finalReject'])->name('final-reject')->middleware('permission:checkout_requests,reject');
+            Route::put('/{checkoutRequest}/regenerate-exit-token', [CheckoutRequestController::class, 'regenerateExitToken'])->name('regenerate-exit-token')->middleware('permission:checkout_requests,regenerate_exit_token');
+        });
+
+    Route::prefix('warden-checkout-inspections')
+        ->name('warden-checkout-inspections.')
+        ->group(function () {
+            Route::get('/', [WardenCheckoutRequestController::class, 'index'])->name('index')->middleware('permission:checkout_inspections,view');
+            Route::get('/{checkoutRequest}', [WardenCheckoutRequestController::class, 'show'])->name('show')->middleware('permission:checkout_inspections,view');
+            Route::put('/{checkoutRequest}/start', [WardenCheckoutRequestController::class, 'start'])->name('start')->middleware('permission:checkout_inspections,start');
+            Route::put('/{checkoutRequest}/save', [WardenCheckoutRequestController::class, 'save'])->name('save')->middleware('permission:checkout_inspections,save');
+            Route::put('/{checkoutRequest}/approve', [WardenCheckoutRequestController::class, 'approve'])->name('approve')->middleware('permission:checkout_inspections,approve');
+            Route::put('/{checkoutRequest}/hold', [WardenCheckoutRequestController::class, 'hold'])->name('hold')->middleware('permission:checkout_inspections,hold');
+            Route::put('/{checkoutRequest}/reject', [WardenCheckoutRequestController::class, 'reject'])->name('reject')->middleware('permission:checkout_inspections,reject');
+        });
+
+    Route::prefix('checkout-gate')
+        ->name('checkout-gate.')
+        ->group(function () {
+            Route::get('/', [CheckoutGateController::class, 'index'])->name('index')->middleware('permission:checkout_gate,view');
+            Route::post('/verify', [CheckoutGateController::class, 'verify'])->name('verify')->middleware('permission:checkout_gate,verify_exit');
+            Route::post('/{checkoutRequest}/complete', [CheckoutGateController::class, 'complete'])->name('complete')->middleware('permission:checkout_gate,complete_checkout');
+        });
+        
     Route::put('/residents/{resident}/stay-dates', [ResidentController::class, 'updateStayDates'])->name('residents.stay-dates.update')->middleware('permission:residents,edit');
     Route::get('/residents/bulk-upload/template/csv', [ResidentController::class, 'downloadBulkCsvTemplate'])->name('residents.bulk.template.csv');
     Route::get('/residents/bulk-upload/template/excel', [ResidentController::class, 'downloadBulkExcelTemplate'])->name('residents.bulk.template.xlsx');

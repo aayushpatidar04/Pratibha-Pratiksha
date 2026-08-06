@@ -1,6 +1,8 @@
 <script setup>
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import { Head, Link, router } from "@inertiajs/vue3";
+import { usePermissions } from "@/Composables/usePermissions";
+
 import {
     Search,
     Eye,
@@ -19,6 +21,11 @@ const props = defineProps({
     filters: Object,
     stats: Object,
 });
+
+const {
+    can,
+    canAny,
+} = usePermissions();
 
 const search = ref(props.filters?.search || "");
 const statusFilter = ref(props.filters?.status || "all");

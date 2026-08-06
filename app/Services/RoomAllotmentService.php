@@ -200,32 +200,127 @@ class RoomAllotmentService
     /**
      * Check a resident out: closes the active stay and frees up the bed.
      */
-    public static function checkout(ResidentStay $stay, ?string $checkOutDate = null): ResidentStay
-    {
-        return DB::transaction(function () use ($stay, $checkOutDate) {
-            $stay->update([
-                'status' => 'ended',
-                'actual_check_out_date' => $checkOutDate ?? now()->toDateString(),
-            ]);
+    public static function checkout(
+        ResidentStay $stay,
+        ?string $checkOutDate = null
+    ): ResidentStay {
+        return DB::transaction(
+            function () use (
+                $stay,
+                $checkOutDate
+            ) {
+                $stay =
+                    ResidentStay::query()
+                        ->lockForUpdate()
+                        ->findOrFail(
+                            $stay->id
+                        );
 
-            $bed = Bed::find($stay->bed_id);
-            if ($bed) {
-                $bed->update(['status' => 'vacant', 'resident_id' => null]);
-            }
+                if (
+                    in_array(
+                        $stay->status,
+                        [
+                            'ended',
+                            'transferred',
+                        ],
+                        true
+                    )
+                ) {
+                    return $stay;
+                }
 
-            $room = Room::find($stay->room_id);
-            if ($room) {
-                $room->decrement('occupied_beds');
-                $room->refresh();
-                $room->update([
-                    'status' => $room->occupied_beds <= 0 ? 'available' : 'partially_occupied',
+                $bed =
+                    Bed::query()
+                        ->lockForUpdate()
+                        ->find(
+                            $stay->bed_id
+                        );
+
+                $room =
+                    Room::query()
+                        ->lockForUpdate()
+                        ->find(
+                            $stay->room_id
+                        );
+
+                $stay->update([
+                    'status' =>
+                        'ended',
+
+                    'actual_check_out_date' =>
+                        $checkOutDate
+                        ?? now()
+                            ->toDateString(),
+
+                    'check_in_status' =>
+                        false,
+
+                    'checkout_status' =>
+                        'approved',
                 ]);
+
+                if (
+                    $bed
+                    && (
+                        !$bed->resident_id
+                        || (int) $bed->resident_id
+                            === (int) $stay->resident_id
+                    )
+                ) {
+                    $bed->update([
+                        'status' =>
+                            'vacant',
+
+                        'resident_id' =>
+                            null,
+                    ]);
+                }
+
+                if ($room) {
+                    $occupancy = max(
+                        0,
+                        (int) $room
+                            ->occupied_beds - 1
+                    );
+
+                    $room->update([
+                        'occupied_beds' =>
+                            $occupancy,
+
+                        'status' =>
+                            $room->status ===
+                            'maintenance'
+                                ? 'maintenance'
+                                : (
+                                    $occupancy <= 0
+                                        ? 'available'
+                                        : (
+                                            $occupancy >=
+                                            (int) $room
+                                                ->capacity
+                                                ? 'occupied'
+                                                : 'partially_occupied'
+                                        )
+                                ),
+                    ]);
+                }
+
+                Building::query()
+                    ->whereKey(
+                        $stay->building_id
+                    )
+                    ->where(
+                        'occupied',
+                        '>',
+                        0
+                    )
+                    ->decrement(
+                        'occupied'
+                    );
+
+                return $stay;
             }
-
-            Building::where('id', $stay->building_id)->decrement('occupied');
-
-            return $stay;
-        });
+        );
     }
 
     public static function reviewCheckout(

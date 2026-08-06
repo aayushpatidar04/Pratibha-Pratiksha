@@ -11,12 +11,56 @@ use Inertia\Response;
 
 class UserController extends Controller
 {
-    public function index(): Response
-    {
-        return Inertia::render('Admin/Users', [
-            'users' => User::orderBy('name')->get(['id', 'name', 'email', 'role', 'phone', 'is_active', 'last_sign_in_at', 'created_at', 'permissions']),
-            'modules' => config('modules.modules'),
-        ]);
+    public function index(
+        Request $request
+    ): Response {
+        $query = User::query();
+
+        if (
+            $search = trim(
+                $request->string('search')->toString()
+            )
+        ) {
+            $query->where(function ($query) use ($search) {
+                $query
+                    ->where(
+                        'name',
+                        'like',
+                        "%{$search}%"
+                    )
+                    ->orWhere(
+                        'email',
+                        'like',
+                        "%{$search}%"
+                    )
+                    ->orWhere(
+                        'phone',
+                        'like',
+                        "%{$search}%"
+                    );
+            });
+        }
+
+        $users = $query
+            ->latest('id')
+            ->paginate(20)
+            ->withQueryString();
+
+        return Inertia::render(
+            'Admin/Users',
+            [
+                'users' => $users,
+
+                'modules' =>
+                    config(
+                        'modules.modules',
+                        []
+                    ),
+
+                'filters' =>
+                    $request->only('search'),
+            ]
+        );
     }
 
     public function store(Request $request): RedirectResponse
@@ -99,33 +143,76 @@ class UserController extends Controller
      * Only super admins may reach this route (enforced via the 'permission' middleware
      * on the route + the UI only exposing the button to super admins).
      */
-    public function updatePermissions(Request $request, User $user): RedirectResponse
-    {
+    public function updatePermissions(
+        Request $request,
+        User $user
+    ): RedirectResponse {
         if ($user->role === 'super_admin') {
-            return back()->with('error', 'Super admins always have full access; permissions cannot be restricted for them.');
+            return back()->with(
+                'error',
+                'Super administrators automatically have all permissions.'
+            );
         }
 
         $validated = $request->validate([
-            'permissions' => 'required|array',
-            'permissions.*' => 'array',
-            'permissions.*.*' => 'string|in:view,create,edit,delete',
+            'permissions' => [
+                'required',
+                'array',
+            ],
+
+            'permissions.*' => [
+                'array',
+            ],
+
+            'permissions.*.*' => [
+                'string',
+                'max:100',
+            ],
         ]);
 
-        $allowedModules = collect(config('modules.modules'))->pluck('key');
+        $registeredModules = collect(
+            config('modules.modules', [])
+        )->keyBy('key');
 
-        // Strip out any module keys or actions that aren't part of the registry / not
-        // valid for that specific module, so a tampered request can't grant bogus access.
-        $clean = collect($validated['permissions'])
-            ->only($allowedModules)
-            ->map(function ($actions, $moduleKey) {
-                $module = collect(config('modules.modules'))->firstWhere('key', $moduleKey);
-                return array_values(array_intersect($actions, $module['actions'] ?? []));
-            })
-            ->toArray();
+        $cleanPermissions = [];
 
-        $user->update(['permissions' => $clean]);
+        foreach (
+            $registeredModules
+            as $moduleKey => $module
+        ) {
+            $allowedActions = array_values(
+                $module['actions'] ?? []
+            );
 
-        return back()->with('success', "Permissions updated for {$user->name}.");
+            $submittedActions = $validated[
+                'permissions'
+            ][$moduleKey] ?? [];
+
+            $cleanPermissions[$moduleKey] =
+                collect($submittedActions)
+                    ->filter(
+                        fn ($action): bool =>
+                            is_string($action)
+                            && in_array(
+                                $action,
+                                $allowedActions,
+                                true
+                            )
+                    )
+                    ->unique()
+                    ->values()
+                    ->all();
+        }
+
+        $user->update([
+            'permissions' =>
+                $cleanPermissions,
+        ]);
+
+        return back()->with(
+            'success',
+            "Permissions updated successfully for {$user->name}."
+        );
     }
 
     public function destroy(Request $request, User $user): RedirectResponse

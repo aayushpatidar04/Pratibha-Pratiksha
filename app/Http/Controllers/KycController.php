@@ -19,7 +19,16 @@ class KycController extends Controller
     {
         $requiredTypes = KycRequirement::where('is_required', true)->orderBy('sort_order')->pluck('document_type');
 
-        $query = Resident::with('documents')->whereIn('status', ['active', 'upcoming']);
+        $query = Resident::with([
+            'documents' => fn ($query) =>
+                $query->orderByDesc('uploaded_at'),
+        ])->whereIn(
+            'status',
+            [
+                'active',
+                'upcoming',
+            ]
+        );
 
         if ($search = $request->string('search')->toString()) {
             $query->where(function ($q) use ($search) {
@@ -41,9 +50,31 @@ class KycController extends Controller
             'pending_verification' => 0,
             'incomplete' => 0,
         ];
-        Resident::with('documents')->whereIn('status', ['active', 'upcoming'])->get()->each(function ($r) use ($requiredTypes, &$counts) {
-            $counts[$this->computeStatus($r, $requiredTypes)]++;
-        });
+        Resident::with([
+            'documents' => fn ($query) =>
+                $query->orderByDesc('uploaded_at'),
+        ])
+            ->whereIn(
+                'status',
+                [
+                    'active',
+                    'upcoming',
+                ]
+            )
+            ->get()
+            ->each(function (
+                $resident
+            ) use (
+                $requiredTypes,
+                &$counts
+            ): void {
+                $counts[
+                    $this->computeStatus(
+                        $resident,
+                        $requiredTypes
+                    )
+                ]++;
+            });
 
         return Inertia::render('Residents/Kyc/Index', [
             'residents' => $residents,

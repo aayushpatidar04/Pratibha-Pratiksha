@@ -19,13 +19,18 @@ class Inventory extends Model
         'in_use',
         'available',
         'damaged',
+        'missing',
         'unit'
     ];
 
     protected function casts(): array
     {
         return [
-
+            'total_quantity' => 'integer',
+            'in_use' => 'integer',
+            'available' => 'integer',
+            'damaged' => 'integer',
+            'missing' => 'integer',
         ];
     }
 

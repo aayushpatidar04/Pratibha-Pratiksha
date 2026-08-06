@@ -216,25 +216,41 @@ const typeIcon = (type) => {
     <ResidentLayout title="Leaves">
         <div class="space-y-6">
             <section
-                class="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:flex-row md:items-center md:justify-between"
+                class="overflow-hidden rounded-3xl border border-emerald-200 bg-[linear-gradient(135deg,#065f46_0%,#059669_55%,#34d399_100%)] p-6 text-white shadow-xl"
             >
-                <div>
-                    <h2 class="text-xl font-bold text-slate-900">My Leaves</h2>
+                <div class="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+                    <div>
+                        <div class="flex items-center gap-3">
+                            <div class="rounded-2xl bg-white/15 p-3">
+                                <CalendarDays class="h-7 w-7" />
+                            </div>
 
-                    <p class="mt-1 text-sm text-slate-500">
-                        Apply for leave and track parent and administration
-                        approval.
-                    </p>
+                            <div>
+                                <p class="text-xs font-bold uppercase tracking-[0.2em] text-emerald-100">
+                                    Leave Management
+                                </p>
+
+                                <h2 class="text-2xl font-bold">
+                                    My Leaves
+                                </h2>
+                            </div>
+                        </div>
+
+                        <p class="mt-4 max-w-2xl text-sm leading-6 text-emerald-50">
+                            Apply for hostel leave, monitor parent approval, administration approval,
+                            and track your complete leave history.
+                        </p>
+                    </div>
+
+                    <button
+                        type="button"
+                        class="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-bold text-emerald-700 shadow-lg transition hover:scale-105"
+                        @click="applyOpen = true"
+                    >
+                        <Plus class="h-4 w-4" />
+                        Apply Leave
+                    </button>
                 </div>
-
-                <button
-                    type="button"
-                    class="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700"
-                    @click="applyOpen = true"
-                >
-                    <Plus class="h-4 w-4" />
-                    Apply Leave
-                </button>
             </section>
 
             <div

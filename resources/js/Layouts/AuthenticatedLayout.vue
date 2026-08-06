@@ -29,6 +29,7 @@ import {
     Layers,
     DoorOpen,
     ClipboardList,
+    ClipboardCheck,
     AlertTriangle,
     CalendarDays,
     MessageSquareWarning,
@@ -52,8 +53,6 @@ const currentPath = computed(() => window.location.pathname);
 const flashSuccess = computed(() => page.props.flash?.success);
 const flashError = computed(() => page.props.flash?.error);
 
-const canView = (moduleKey) =>
-    !moduleKey || (permissions.value[moduleKey] || []).includes("view");
 
 const rawNav = [
     { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
@@ -136,6 +135,18 @@ const rawNav = [
         icon: LogIn,
         path: "/checkinout",
         module: "checkinout",
+    },
+    {
+        label: "Checkout Inspections",
+        icon: ClipboardCheck,
+        path: "/warden-checkout-inspections",
+        module: "checkout_inspections",
+    },
+    {
+        label: "Exit Verification",
+        icon: ShieldCheck,
+        path: "/checkout-gate",
+        module: "checkout_gate",
     },
     {
         label: "Hostel Mess",
@@ -231,6 +242,28 @@ const isActive = (path) =>
     currentPath.value === path || currentPath.value.startsWith(path + "/");
 
 const logout = () => router.post("/logout");
+
+const can = (
+    moduleKey,
+    action = "view",
+) => {
+    if (
+        user.value?.role ===
+        "super_admin"
+    ) {
+        return true;
+    }
+
+    return (
+        permissions.value[
+            moduleKey
+        ] || []
+    ).includes(action);
+};
+
+const canView = (moduleKey) =>
+    !moduleKey ||
+    can(moduleKey, "view");
 </script>
 
 <template>

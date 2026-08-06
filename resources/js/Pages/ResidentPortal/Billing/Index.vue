@@ -155,25 +155,50 @@ const balanceClass = (balance) => {
         <div class="space-y-6">
             <!-- Page heading -->
             <section
-                class="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:flex-row md:items-center md:justify-between"
+                class="overflow-hidden rounded-3xl border border-sky-200 bg-[linear-gradient(135deg,#0c4a6e_0%,#0284c7_55%,#38bdf8_100%)] p-6 text-white shadow-xl"
             >
-                <div>
-                    <h2 class="text-xl font-bold text-slate-900">My Billing</h2>
+                <div class="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
 
-                    <p class="mt-1 text-sm text-slate-500">
-                        View invoices, outstanding amounts, due dates, payments,
-                        and receipts.
-                    </p>
-                </div>
+                    <div>
 
-                <div class="flex flex-wrap items-center gap-2">
-                    <Link
-                        :href="route('resident.payments.index')"
-                        class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-                    >
-                        <WalletCards class="h-4 w-4" />
-                        Payments
-                    </Link>
+                        <div class="flex items-center gap-3">
+
+                            <div class="rounded-2xl bg-white/15 p-3">
+                                <WalletCards class="h-7 w-7" />
+                            </div>
+
+                            <div>
+
+                                <p class="text-xs font-bold uppercase tracking-[0.2em] text-sky-100">
+                                    Finance Center
+                                </p>
+
+                                <h2 class="text-2xl font-bold">
+                                    My Billing
+                                </h2>
+
+                            </div>
+
+                        </div>
+
+                        <p class="mt-4 max-w-2xl text-sm leading-6 text-sky-50">
+                            View invoices, outstanding dues, payment history,
+                            receipts and all financial records in one place.
+                        </p>
+
+                    </div>
+
+                    <div class="flex flex-wrap gap-3">
+
+                        <Link
+                            :href="route('resident.payments.index')"
+                            class="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-bold text-sky-700 shadow-lg transition hover:scale-105"
+                        >
+                            <WalletCards class="h-4 w-4" />
+                            Payments
+                        </Link>
+
+                    </div>
 
                 </div>
             </section>

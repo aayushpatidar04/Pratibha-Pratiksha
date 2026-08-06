@@ -5,15 +5,14 @@ import InputLabel from "@/Components/InputLabel.vue";
 import InputError from "@/Components/InputError.vue";
 import TextInput from "@/Components/TextInput.vue";
 import PrimaryButton from "@/Components/PrimaryButton.vue";
-import DangerButton from "@/Components/DangerButton.vue";
 
-import { Head, useForm } from "@inertiajs/vue3";
+import { Head, router, useForm } from "@inertiajs/vue3";
 import { computed, ref, watch } from "vue";
 
 import {
+    AlertTriangle,
     BedDouble,
     Boxes,
-    Building2,
     CalendarDays,
     CheckCircle2,
     Clock3,
@@ -23,52 +22,21 @@ import {
     Search,
     UserRoundCheck,
     UserRoundPlus,
+    X,
 } from "lucide-vue-next";
 
 const props = defineProps({
-    awaitingCheckIn: {
-        type: Array,
-        default: () => [],
-    },
-
-    checkedInStays: {
-        type: Array,
-        default: () => [],
-    },
-
-    studentInventory: {
-        type: Array,
-        default: () => [],
-    },
-
-    unassignedResidents: {
-        type: Array,
-        default: () => [],
-    },
-
-    buildings: {
-        type: Array,
-        default: () => [],
-    },
-
-    floors: {
-        type: Array,
-        default: () => [],
-    },
-
-    rooms: {
-        type: Array,
-        default: () => [],
-    },
+    awaitingCheckIn: { type: Array, default: () => [] },
+    checkedInStays: { type: Array, default: () => [] },
+    studentInventory: { type: Array, default: () => [] },
+    unassignedResidents: { type: Array, default: () => [] },
+    buildings: { type: Array, default: () => [] },
+    floors: { type: Array, default: () => [] },
+    rooms: { type: Array, default: () => [] },
+    checkoutPolicy: { type: Object, required: true },
 });
 
 const today = new Date().toISOString().slice(0, 10);
-
-/*
-|--------------------------------------------------------------------------
-| Page search
-|--------------------------------------------------------------------------
-*/
 
 const unassignedSearch = ref("");
 const awaitingSearch = ref("");
@@ -77,10 +45,7 @@ const checkedInSearch = ref("");
 const normalizeText = (value) => String(value ?? "").toLowerCase();
 
 const matchesStaySearch = (stay, search) => {
-    if (!search) {
-        return true;
-    }
-
+    if (!search) return true;
     const keyword = normalizeText(search);
 
     return [
@@ -96,19 +61,16 @@ const matchesStaySearch = (stay, search) => {
 
 const filteredUnassigned = computed(() => {
     const keyword = normalizeText(unassignedSearch.value);
+    if (!keyword) return props.unassignedResidents;
 
-    if (!keyword) {
-        return props.unassignedResidents;
-    }
-
-    return props.unassignedResidents.filter((resident) => {
-        return [
+    return props.unassignedResidents.filter((resident) =>
+        [
             resident.first_name,
             resident.last_name,
             resident.resident_code,
             resident.phone,
-        ].some((value) => normalizeText(value).includes(keyword));
-    });
+        ].some((value) => normalizeText(value).includes(keyword)),
+    );
 });
 
 const filteredAwaitingCheckIn = computed(() =>
@@ -123,60 +85,49 @@ const filteredCheckedIn = computed(() =>
     ),
 );
 
-/*
-|--------------------------------------------------------------------------
-| Room allotment
-|--------------------------------------------------------------------------
-*/
-
 const allotmentOpen = ref(false);
 const allottingResident = ref(null);
 
 const allotmentForm = useForm({
     resident_id: "",
-
     building_id: "",
     floor_id: "",
     room_id: "",
     bed_id: "",
-
     check_in_date: today,
     expected_check_out_date: "",
-
     billing_basis: "monthly",
     bill_type: "monthly",
-
     rent_amount: "",
     daily_rate: 350,
     deposit_amount: "",
-
     notes: "",
 });
 
-const floorsForBuilding = computed(() => {
-    return props.floors.filter(
+const floorsForBuilding = computed(() =>
+    props.floors.filter(
         (floor) =>
             Number(floor.building_id) === Number(allotmentForm.building_id),
-    );
-});
+    ),
+);
 
-const roomsForFloor = computed(() => {
-    return props.rooms.filter(
+const roomsForFloor = computed(() =>
+    props.rooms.filter(
         (room) => Number(room.floor_id) === Number(allotmentForm.floor_id),
-    );
-});
+    ),
+);
 
-const selectedRoom = computed(() => {
-    return props.rooms.find(
+const selectedRoom = computed(() =>
+    props.rooms.find(
         (room) => Number(room.id) === Number(allotmentForm.room_id),
-    );
-});
+    ),
+);
 
-const vacantBeds = computed(() => {
-    return (
-        selectedRoom.value?.beds?.filter((bed) => bed.status === "vacant") ?? []
-    );
-});
+const vacantBeds = computed(
+    () =>
+        selectedRoom.value?.beds?.filter((bed) => bed.status === "vacant") ??
+        [],
+);
 
 const estimatedStayDays = computed(() => {
     if (
@@ -188,7 +139,6 @@ const estimatedStayDays = computed(() => {
     }
 
     const checkIn = new Date(`${allotmentForm.check_in_date}T00:00:00`);
-
     const checkOut = new Date(
         `${allotmentForm.expected_check_out_date}T00:00:00`,
     );
@@ -201,18 +151,16 @@ const estimatedStayDays = computed(() => {
         return 0;
     }
 
-    const millisecondsPerDay = 1000 * 60 * 60 * 24;
-
     return (
         Math.floor(
-            (checkOut.getTime() - checkIn.getTime()) / millisecondsPerDay,
+            (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24),
         ) + 1
     );
 });
 
-const estimatedDailyAmount = computed(() => {
-    return estimatedStayDays.value * Number(allotmentForm.daily_rate || 0);
-});
+const estimatedDailyAmount = computed(
+    () => estimatedStayDays.value * Number(allotmentForm.daily_rate || 0),
+);
 
 watch(
     () => allotmentForm.building_id,
@@ -250,7 +198,6 @@ watch(
 
         if (billingBasis === "monthly") {
             allotmentForm.daily_rate = 350;
-            allotmentForm.expected_check_out_date = "";
         } else {
             allotmentForm.rent_amount = "";
             allotmentForm.daily_rate = Number(allotmentForm.daily_rate) || 350;
@@ -280,12 +227,11 @@ const openRoomAllotment = (resident) => {
 };
 
 const closeRoomAllotment = () => {
-    if (allotmentForm.processing) {
-        return;
-    }
+    if (allotmentForm.processing) return;
 
     allotmentOpen.value = false;
     allottingResident.value = null;
+    allotmentForm.reset();
     allotmentForm.clearErrors();
 };
 
@@ -293,22 +239,15 @@ const submitRoomAllotment = () => {
     allotmentForm
         .transform((data) => ({
             ...data,
-
             rent_amount:
                 data.billing_basis === "monthly" ? data.rent_amount : null,
-
             daily_rate: data.billing_basis === "daily" ? data.daily_rate : null,
-
-            expected_check_out_date:
-                data.billing_basis === "daily"
-                    ? data.expected_check_out_date
-                    : data.expected_check_out_date || null,
-
+            expected_check_out_date: data.expected_check_out_date || null,
             deposit_amount: data.deposit_amount || 0,
+            notes: data.notes || null,
         }))
         .post(route("checkinout.allot"), {
             preserveScroll: true,
-
             onSuccess: () => {
                 allotmentOpen.value = false;
                 allottingResident.value = null;
@@ -316,12 +255,6 @@ const submitRoomAllotment = () => {
             },
         });
 };
-
-/*
-|--------------------------------------------------------------------------
-| Actual student check-in
-|--------------------------------------------------------------------------
-*/
 
 const actualCheckinOpen = ref(false);
 const checkingInStay = ref(null);
@@ -331,11 +264,10 @@ const actualCheckinForm = useForm({
     inventory: [],
 });
 
-const getInventoryItem = (inventoryId) => {
-    return props.studentInventory.find(
+const getInventoryItem = (inventoryId) =>
+    props.studentInventory.find(
         (item) => Number(item.id) === Number(inventoryId),
     );
-};
 
 const openActualCheckin = (stay) => {
     checkingInStay.value = stay;
@@ -344,7 +276,6 @@ const openActualCheckin = (stay) => {
     actualCheckinForm.clearErrors();
 
     actualCheckinForm.check_in_date = stay.check_in_date || today;
-
     actualCheckinForm.inventory = props.studentInventory.map((item) => ({
         inventory_id: item.id,
         selected: false,
@@ -357,9 +288,7 @@ const openActualCheckin = (stay) => {
 };
 
 const closeActualCheckin = () => {
-    if (actualCheckinForm.processing) {
-        return;
-    }
+    if (actualCheckinForm.processing) return;
 
     actualCheckinOpen.value = false;
     checkingInStay.value = null;
@@ -367,14 +296,11 @@ const closeActualCheckin = () => {
 };
 
 const submitActualCheckin = () => {
-    if (!checkingInStay.value) {
-        return;
-    }
+    if (!checkingInStay.value) return;
 
     actualCheckinForm
         .transform((data) => ({
             check_in_date: data.check_in_date,
-
             inventory: data.inventory
                 .filter((assignment) => assignment.selected)
                 .map((assignment) => ({
@@ -386,7 +312,6 @@ const submitActualCheckin = () => {
         }))
         .post(route("checkinout.confirm-checkin", checkingInStay.value.id), {
             preserveScroll: true,
-
             onSuccess: () => {
                 actualCheckinOpen.value = false;
                 checkingInStay.value = null;
@@ -395,142 +320,241 @@ const submitActualCheckin = () => {
         });
 };
 
-/*
-|--------------------------------------------------------------------------
-| Checkout
-|--------------------------------------------------------------------------
-*/
+const checkoutRequestOpen = ref(false);
+const selectedStay = ref(null);
 
-const checkoutOpen = ref(false);
-const checkingOutStay = ref(null);
-
-const checkoutForm = useForm({
-    actual_check_out_date: today,
-    decision: "",
-    checkout_notes: "",
-    inventory_returns: [],
+const checkoutRequestForm = useForm({
+    resident_id: "",
+    resident_stay_id: "",
+    requested_checkout_date: props.checkoutPolicy.minimum_recommended_date,
+    reason: "",
+    resident_notes: "",
+    short_notice_warning_accepted: false,
 });
 
-const openCheckout = (stay) => {
-    checkingOutStay.value = stay;
+const selectedCheckoutDate = computed(() => {
+    if (!checkoutRequestForm.requested_checkout_date) return null;
 
-    checkoutForm.reset();
-    checkoutForm.clearErrors();
+    const value = new Date(
+        `${checkoutRequestForm.requested_checkout_date}T00:00:00`,
+    );
 
-    checkoutForm.actual_check_out_date = today;
-    checkoutForm.decision = "";
-    checkoutForm.checkout_notes = "";
+    return Number.isNaN(value.getTime()) ? null : value;
+});
 
-    checkoutForm.inventory_returns =
-        stay.inventory_assignments?.map((assignment) => ({
-            assignment_id: assignment.id,
-            inventory_id: assignment.inventory_id,
-            item_name: assignment.inventory?.item_name || "Inventory Item",
-            assigned_quantity: Number(assignment.quantity || 0),
+const minimumRecommendedCheckoutDate = computed(() => {
+    const value = new Date(
+        `${props.checkoutPolicy.minimum_recommended_date}T00:00:00`,
+    );
 
-            returned_good_quantity: Number(
-                assignment.returned_good_quantity || 0,
-            ),
+    return Number.isNaN(value.getTime()) ? null : value;
+});
 
-            returned_damaged_quantity: Number(
-                assignment.returned_damaged_quantity || 0,
-            ),
+const checkoutNoticeDays = computed(() => {
+    if (!selectedCheckoutDate.value) return 0;
 
-            missing_quantity: Number(assignment.missing_quantity || 0),
+    const currentDate = new Date(`${props.checkoutPolicy.today}T00:00:00`);
+    if (Number.isNaN(currentDate.getTime())) return 0;
 
-            return_notes: assignment.return_notes || "",
-        })) || [];
+    return Math.max(
+        0,
+        Math.floor(
+            (selectedCheckoutDate.value.getTime() - currentDate.getTime()) /
+                (1000 * 60 * 60 * 24),
+        ),
+    );
+});
 
-    checkoutOpen.value = true;
-};
-
-const closeCheckout = () => {
-    if (checkoutForm.processing) {
-        return;
+const checkoutIsShortNotice = computed(() => {
+    if (!selectedCheckoutDate.value || !minimumRecommendedCheckoutDate.value) {
+        return false;
     }
 
-    checkoutOpen.value = false;
-    checkingOutStay.value = null;
-    checkoutForm.reset();
-};
-
-const reviewedQuantity = (item) => {
-    return (
-        Number(item.returned_good_quantity || 0) +
-        Number(item.returned_damaged_quantity || 0) +
-        Number(item.missing_quantity || 0)
-    );
-};
-
-const allAssetsReviewed = computed(() => {
-    return checkoutForm.inventory_returns.every(
-        (item) => reviewedQuantity(item) === Number(item.assigned_quantity),
-    );
+    return selectedCheckoutDate.value < minimumRecommendedCheckoutDate.value;
 });
 
-const submitCheckoutDecision = (decision) => {
-    if (!checkingOutStay.value) return;
+watch(
+    () => checkoutRequestForm.requested_checkout_date,
+    () => {
+        checkoutRequestForm.clearErrors(
+            "requested_checkout_date",
+            "short_notice_warning_accepted",
+        );
 
-    checkoutForm.decision = decision;
+        if (!checkoutIsShortNotice.value) {
+            checkoutRequestForm.short_notice_warning_accepted = false;
+        }
+    },
+);
 
-    checkoutForm
+const openCreateCheckoutRequest = (stay) => {
+    selectedStay.value = stay;
+
+    checkoutRequestForm.reset();
+    checkoutRequestForm.clearErrors();
+
+    checkoutRequestForm.resident_id = stay.resident?.id || "";
+    checkoutRequestForm.resident_stay_id = stay.id;
+    checkoutRequestForm.requested_checkout_date =
+        props.checkoutPolicy.minimum_recommended_date;
+    checkoutRequestForm.reason = "";
+    checkoutRequestForm.resident_notes = "";
+    checkoutRequestForm.short_notice_warning_accepted = false;
+
+    checkoutRequestOpen.value = true;
+};
+
+const closeCheckoutRequest = () => {
+    if (checkoutRequestForm.processing) return;
+
+    checkoutRequestOpen.value = false;
+    selectedStay.value = null;
+    checkoutRequestForm.reset();
+    checkoutRequestForm.clearErrors();
+};
+
+const submitCheckoutRequest = () => {
+    if (!selectedStay.value) return;
+
+    checkoutRequestForm
         .transform((data) => ({
-            actual_check_out_date: data.actual_check_out_date,
-            decision,
-            checkout_notes: data.checkout_notes || null,
-
-            inventory_returns: data.inventory_returns.map((item) => ({
-                assignment_id: item.assignment_id,
-
-                returned_good_quantity: Number(
-                    item.returned_good_quantity || 0,
-                ),
-
-                returned_damaged_quantity: Number(
-                    item.returned_damaged_quantity || 0,
-                ),
-
-                missing_quantity: Number(item.missing_quantity || 0),
-
-                return_notes: item.return_notes || null,
-            })),
+            resident_id: Number(data.resident_id),
+            resident_stay_id: Number(data.resident_stay_id),
+            requested_checkout_date: data.requested_checkout_date,
+            reason: data.reason?.trim(),
+            resident_notes: data.resident_notes?.trim() || null,
+            short_notice_warning_accepted: Boolean(
+                data.short_notice_warning_accepted,
+            ),
         }))
-        .post(route("checkinout.checkout-review", checkingOutStay.value.id), {
+        .post(route("checkout-requests.store"), {
             preserveScroll: true,
-
             onSuccess: () => {
-                checkoutOpen.value = false;
-                checkingOutStay.value = null;
-                checkoutForm.reset();
+                checkoutRequestOpen.value = false;
+                selectedStay.value = null;
+                checkoutRequestForm.reset();
             },
         });
 };
 
-/*
-|--------------------------------------------------------------------------
-| Formatting
-|--------------------------------------------------------------------------
-*/
+const checkoutStatusLabel = (status) =>
+    ({
+        pending: "Pending",
+        under_admin_review: "Under Admin Review",
+        assigned_to_warden: "Assigned to Warden",
+        warden_review_in_progress: "Warden Inspection",
+        warden_approved: "Warden Approved",
+        warden_rejected: "Warden Rejected",
+        admin_approved: "Admin Approved",
+        admin_rejected: "Admin Rejected",
+        on_hold: "On Hold",
+        ready_for_exit: "Ready for Exit",
+        completed: "Completed",
+        cancelled: "Cancelled",
+        expired: "Expired",
+    })[status] ||
+    String(status || "")
+        .replaceAll("_", " ")
+        .replace(/\b\w/g, (character) => character.toUpperCase());
 
-const formatCurrency = (amount) => {
-    return Number(amount || 0).toLocaleString("en-IN", {
+const checkoutButtonLabel = (stay) => {
+    const request = stay.checkout_request;
+
+    if (!request) return "Create Checkout Request";
+
+    return (
+        {
+            pending: "View Pending Request",
+            under_admin_review: "Continue Admin Review",
+            assigned_to_warden: "Awaiting Warden Review",
+            warden_review_in_progress: "Inspection in Progress",
+            warden_approved: "Final Admin Review",
+            warden_rejected: "Warden Rejected",
+            admin_approved: "Approved — Awaiting Exit",
+            admin_rejected: "Request Rejected",
+            on_hold: "View Held Request",
+            ready_for_exit: "Ready for Exit",
+            completed: "Checkout Completed",
+            cancelled: "Request Cancelled",
+            expired: "Request Expired",
+        }[request.status] || "View Checkout Request"
+    );
+};
+
+const checkoutButtonClasses = (stay) => {
+    const status = stay.checkout_request?.status;
+
+    if (!status) {
+        return "bg-rose-600 text-white hover:bg-rose-700";
+    }
+
+    if (
+        ["warden_approved", "admin_approved", "ready_for_exit"].includes(status)
+    ) {
+        return "bg-emerald-600 text-white hover:bg-emerald-700";
+    }
+
+    if (["admin_rejected", "warden_rejected"].includes(status)) {
+        return "border border-red-200 bg-red-50 text-red-700 hover:bg-red-100";
+    }
+
+    if (status === "on_hold") {
+        return "border border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100";
+    }
+
+    if (["cancelled", "expired"].includes(status)) {
+        return "border border-slate-200 bg-slate-50 text-slate-600";
+    }
+
+    return "border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100";
+};
+
+const handleCheckoutAction = (stay) => {
+    if (!stay.checkout_request) {
+        openCreateCheckoutRequest(stay);
+        return;
+    }
+
+    router.visit(
+        route("checkout-requests.index", {
+            search: stay.resident?.resident_code,
+        }),
+    );
+};
+
+const formatCurrency = (amount) =>
+    Number(amount || 0).toLocaleString("en-IN", {
         style: "currency",
         currency: "INR",
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
     });
-};
 
 const formatDate = (date) => {
-    if (!date) {
-        return "—";
+    if (!date) return "—";
+
+    return new Date(`${String(date).slice(0, 10)}T00:00:00`).toLocaleDateString(
+        "en-IN",
+        {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+        },
+    );
+};
+
+const residentPhotoUrl = (value) => {
+    if (!value) return null;
+
+    if (
+        value.startsWith("http://") ||
+        value.startsWith("https://") ||
+        value.startsWith("/storage/")
+    ) {
+        return value;
     }
 
-    return new Date(`${date}T00:00:00`).toLocaleDateString("en-IN", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-    });
+    return `/storage/${value}`;
 };
 </script>
 
@@ -541,7 +565,6 @@ const formatDate = (date) => {
         <template #header>Check-In / Check-Out</template>
 
         <div class="space-y-6">
-            <!-- Page header -->
             <div
                 class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
             >
@@ -555,7 +578,7 @@ const formatDate = (date) => {
 
                     <p class="mt-1 text-sm text-gray-700">
                         Reserve rooms, confirm physical check-in, assign student
-                        assets, and manage checkout.
+                        assets, and manage checkout requests.
                     </p>
                 </div>
 
@@ -577,10 +600,13 @@ const formatDate = (date) => {
                     >
                         {{ checkedInStays.length }} checked in
                     </span>
+                    <a :href="route('checkout-requests.index')" class="border border-blue-600 text-blue-600 hover:bg-blue-100 focus:ring-blue-500 rounded p-2 flex items-center gap-2">
+                        <LogOut class="h-4 w-4" />
+                        Checkout Requests
+                    </a>
                 </div>
             </div>
 
-            <!-- Workflow information -->
             <div
                 class="grid grid-cols-1 gap-3 rounded-xl border border-blue-100 bg-blue-50 p-4 md:grid-cols-3"
             >
@@ -595,9 +621,8 @@ const formatDate = (date) => {
                         <p class="text-sm font-semibold text-blue-900">
                             1. Allot Room
                         </p>
-
                         <p class="mt-0.5 text-xs text-blue-700">
-                            Reserve a building, room and bed for the resident.
+                            Reserve a building, room and bed.
                         </p>
                     </div>
                 </div>
@@ -613,9 +638,8 @@ const formatDate = (date) => {
                         <p class="text-sm font-semibold text-blue-900">
                             2. Confirm Check-In
                         </p>
-
                         <p class="mt-0.5 text-xs text-blue-700">
-                            Confirm arrival date and issue student inventory.
+                            Confirm arrival and issue inventory.
                         </p>
                     </div>
                 </div>
@@ -629,19 +653,16 @@ const formatDate = (date) => {
 
                     <div>
                         <p class="text-sm font-semibold text-blue-900">
-                            3. Check Out
+                            3. Checkout Workflow
                         </p>
-
                         <p class="mt-0.5 text-xs text-blue-700">
-                            Finalize the stay and release the room and bed.
+                            Create or continue a checkout request.
                         </p>
                     </div>
                 </div>
             </div>
 
-            <!-- Main columns -->
             <div class="grid grid-cols-1 gap-5 xl:grid-cols-3">
-                <!-- Unassigned residents -->
                 <section
                     class="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm"
                 >
@@ -654,13 +675,10 @@ const formatDate = (date) => {
                                     <UserRoundPlus
                                         class="h-4 w-4 text-blue-600"
                                     />
-
                                     Awaiting Room Allotment
                                 </h2>
-
                                 <p class="mt-1 text-xs text-gray-700">
-                                    Residents who do not have an active or
-                                    upcoming stay.
+                                    Residents without a current stay.
                                 </p>
                             </div>
 
@@ -675,9 +693,8 @@ const formatDate = (date) => {
                     <div class="p-4">
                         <div class="relative mb-3">
                             <Search
-                                class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-600"
+                                class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500"
                             />
-
                             <input
                                 v-model="unassignedSearch"
                                 type="search"
@@ -694,8 +711,12 @@ const formatDate = (date) => {
                             >
                                 <div class="flex items-center gap-3">
                                     <img
-                                        v-if="resident.photo_url"
-                                        :src="`/storage/${resident.photo_url}`"
+                                        v-if="
+                                            residentPhotoUrl(resident.photo_url)
+                                        "
+                                        :src="
+                                            residentPhotoUrl(resident.photo_url)
+                                        "
                                         class="h-12 w-12 shrink-0 rounded-full border border-gray-200 object-cover"
                                         alt="Resident photo"
                                     />
@@ -718,7 +739,6 @@ const formatDate = (date) => {
                                             {{ resident.first_name }}
                                             {{ resident.last_name }}
                                         </p>
-
                                         <p
                                             class="mt-0.5 truncate text-xs text-gray-700"
                                         >
@@ -745,7 +765,6 @@ const formatDate = (date) => {
                                 <CheckCircle2
                                     class="mx-auto h-8 w-8 text-green-500"
                                 />
-
                                 <p
                                     class="mt-2 text-sm font-medium text-gray-700"
                                 >
@@ -756,7 +775,6 @@ const formatDate = (date) => {
                     </div>
                 </section>
 
-                <!-- Room allotted, check-in pending -->
                 <section
                     class="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm"
                 >
@@ -769,13 +787,10 @@ const formatDate = (date) => {
                                     class="flex items-center gap-2 text-sm font-semibold text-amber-900"
                                 >
                                     <Clock3 class="h-4 w-4 text-amber-600" />
-
                                     Room Allotted — Check-In Pending
                                 </h2>
-
                                 <p class="mt-1 text-xs text-amber-700">
-                                    Room is reserved but physical arrival is not
-                                    confirmed.
+                                    Room reserved; arrival not confirmed.
                                 </p>
                             </div>
 
@@ -790,9 +805,8 @@ const formatDate = (date) => {
                     <div class="p-4">
                         <div class="relative mb-3">
                             <Search
-                                class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-600"
+                                class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500"
                             />
-
                             <input
                                 v-model="awaitingSearch"
                                 type="search"
@@ -809,8 +823,16 @@ const formatDate = (date) => {
                             >
                                 <div class="flex items-start gap-3">
                                     <img
-                                        v-if="stay.resident?.photo_url"
-                                        :src="`/storage/${stay.resident.photo_url}`"
+                                        v-if="
+                                            residentPhotoUrl(
+                                                stay.resident?.photo_url,
+                                            )
+                                        "
+                                        :src="
+                                            residentPhotoUrl(
+                                                stay.resident?.photo_url,
+                                            )
+                                        "
                                         class="h-12 w-12 shrink-0 rounded-full border border-gray-200 object-cover"
                                         alt="Resident photo"
                                     />
@@ -833,7 +855,6 @@ const formatDate = (date) => {
                                             {{ stay.resident?.first_name }}
                                             {{ stay.resident?.last_name }}
                                         </p>
-
                                         <p
                                             class="mt-0.5 truncate text-xs text-gray-700"
                                         >
@@ -846,7 +867,7 @@ const formatDate = (date) => {
                                     class="mt-3 grid grid-cols-2 gap-2 rounded-lg bg-white p-3 text-xs"
                                 >
                                     <div>
-                                        <p class="text-gray-600">Room</p>
+                                        <p class="text-gray-500">Room</p>
                                         <p
                                             class="mt-0.5 font-medium text-gray-800"
                                         >
@@ -857,7 +878,7 @@ const formatDate = (date) => {
                                     </div>
 
                                     <div>
-                                        <p class="text-gray-600">
+                                        <p class="text-gray-500">
                                             Planned Arrival
                                         </p>
                                         <p
@@ -868,7 +889,7 @@ const formatDate = (date) => {
                                     </div>
 
                                     <div>
-                                        <p class="text-gray-600">Building</p>
+                                        <p class="text-gray-500">Building</p>
                                         <p
                                             class="mt-0.5 font-medium text-gray-800"
                                         >
@@ -877,7 +898,7 @@ const formatDate = (date) => {
                                     </div>
 
                                     <div>
-                                        <p class="text-gray-600">Billing</p>
+                                        <p class="text-gray-500">Billing</p>
                                         <p
                                             class="mt-0.5 font-medium capitalize text-gray-800"
                                         >
@@ -905,7 +926,6 @@ const formatDate = (date) => {
                                 <CheckCircle2
                                     class="mx-auto h-8 w-8 text-green-500"
                                 />
-
                                 <p
                                     class="mt-2 text-sm font-medium text-gray-700"
                                 >
@@ -916,7 +936,6 @@ const formatDate = (date) => {
                     </div>
                 </section>
 
-                <!-- Checked-in stays -->
                 <section
                     class="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm"
                 >
@@ -931,10 +950,8 @@ const formatDate = (date) => {
                                     <LogIn class="h-4 w-4 text-green-600" />
                                     Currently Checked In
                                 </h2>
-
                                 <p class="mt-1 text-xs text-green-700">
-                                    Residents whose physical arrival has been
-                                    confirmed.
+                                    Residents currently occupying rooms.
                                 </p>
                             </div>
 
@@ -949,9 +966,8 @@ const formatDate = (date) => {
                     <div class="p-4">
                         <div class="relative mb-3">
                             <Search
-                                class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-600"
+                                class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500"
                             />
-
                             <input
                                 v-model="checkedInSearch"
                                 type="search"
@@ -968,8 +984,16 @@ const formatDate = (date) => {
                             >
                                 <div class="flex items-start gap-3">
                                     <img
-                                        v-if="stay.resident?.photo_url"
-                                        :src="`/storage/${stay.resident.photo_url}`"
+                                        v-if="
+                                            residentPhotoUrl(
+                                                stay.resident?.photo_url,
+                                            )
+                                        "
+                                        :src="
+                                            residentPhotoUrl(
+                                                stay.resident?.photo_url,
+                                            )
+                                        "
                                         class="h-12 w-12 shrink-0 rounded-full border border-gray-200 object-cover"
                                         alt="Resident photo"
                                     />
@@ -992,7 +1016,6 @@ const formatDate = (date) => {
                                             {{ stay.resident?.first_name }}
                                             {{ stay.resident?.last_name }}
                                         </p>
-
                                         <p
                                             class="mt-0.5 truncate text-xs text-gray-700"
                                         >
@@ -1011,7 +1034,7 @@ const formatDate = (date) => {
                                     class="mt-3 grid grid-cols-2 gap-2 rounded-lg bg-white p-3 text-xs"
                                 >
                                     <div>
-                                        <p class="text-gray-600">Room</p>
+                                        <p class="text-gray-500">Room</p>
                                         <p
                                             class="mt-0.5 font-medium text-gray-800"
                                         >
@@ -1022,7 +1045,7 @@ const formatDate = (date) => {
                                     </div>
 
                                     <div>
-                                        <p class="text-gray-600">Checked In</p>
+                                        <p class="text-gray-500">Checked In</p>
                                         <p
                                             class="mt-0.5 font-medium text-gray-800"
                                         >
@@ -1031,7 +1054,7 @@ const formatDate = (date) => {
                                     </div>
 
                                     <div>
-                                        <p class="text-gray-600">
+                                        <p class="text-gray-500">
                                             Assigned Assets
                                         </p>
                                         <p
@@ -1046,7 +1069,7 @@ const formatDate = (date) => {
                                     </div>
 
                                     <div>
-                                        <p class="text-gray-600">Billing</p>
+                                        <p class="text-gray-500">Billing</p>
                                         <p
                                             class="mt-0.5 font-medium capitalize text-gray-800"
                                         >
@@ -1071,13 +1094,86 @@ const formatDate = (date) => {
                                     </span>
                                 </div>
 
+                                <div
+                                    v-if="stay.checkout_request"
+                                    class="mt-3 rounded-xl border border-indigo-100 bg-indigo-50 p-3"
+                                >
+                                    <div
+                                        class="flex flex-wrap items-center justify-between gap-2"
+                                    >
+                                        <div>
+                                            <p
+                                                class="text-[10px] font-semibold uppercase tracking-wide text-indigo-500"
+                                            >
+                                                Checkout Request
+                                            </p>
+                                            <p
+                                                class="mt-1 text-xs font-bold text-indigo-900"
+                                            >
+                                                {{
+                                                    checkoutStatusLabel(
+                                                        stay.checkout_request
+                                                            .status,
+                                                    )
+                                                }}
+                                            </p>
+                                        </div>
+
+                                        <span
+                                            v-if="
+                                                stay.checkout_request
+                                                    .is_short_notice
+                                            "
+                                            class="rounded-full border border-red-200 bg-red-50 px-2 py-1 text-[10px] font-bold text-red-700"
+                                        >
+                                            Short Notice
+                                        </span>
+                                    </div>
+
+                                    <div
+                                        class="mt-2 grid grid-cols-1 gap-2 text-[11px] sm:grid-cols-2"
+                                    >
+                                        <div>
+                                            <p class="text-indigo-500">
+                                                Planned Checkout
+                                            </p>
+                                            <p
+                                                class="mt-0.5 font-semibold text-indigo-800"
+                                            >
+                                                {{
+                                                    formatDate(
+                                                        stay.checkout_request
+                                                            .requested_checkout_date,
+                                                    )
+                                                }}
+                                            </p>
+                                        </div>
+
+                                        <div>
+                                            <p class="text-indigo-500">
+                                                Assigned Warden
+                                            </p>
+                                            <p
+                                                class="mt-0.5 font-semibold text-indigo-800"
+                                            >
+                                                {{
+                                                    stay.checkout_request
+                                                        .assigned_warden
+                                                        ?.name || "Not assigned"
+                                                }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <button
                                     type="button"
-                                    class="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50"
-                                    @click="openCheckout(stay)"
+                                    class="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold transition"
+                                    :class="checkoutButtonClasses(stay)"
+                                    @click="handleCheckoutAction(stay)"
                                 >
-                                    <LogOut class="h-3.5 w-3.5" />
-                                    Check Out
+                                    <LogOut class="h-4 w-4" />
+                                    {{ checkoutButtonLabel(stay) }}
                                 </button>
                             </div>
 
@@ -1088,7 +1184,6 @@ const formatDate = (date) => {
                                 <DoorOpen
                                     class="mx-auto h-8 w-8 text-gray-300"
                                 />
-
                                 <p
                                     class="mt-2 text-sm font-medium text-gray-600"
                                 >
@@ -1101,26 +1196,35 @@ const formatDate = (date) => {
             </div>
         </div>
 
-        <!-- Room allotment modal -->
         <Modal :show="allotmentOpen" @close="closeRoomAllotment" maxWidth="2xl">
             <form
                 v-if="allottingResident"
-                @submit.prevent="submitRoomAllotment"
                 class="flex max-h-[90vh] flex-col overflow-hidden"
+                @submit.prevent="submitRoomAllotment"
             >
                 <div class="shrink-0 border-b border-gray-100 px-6 py-4">
-                    <h2 class="text-lg font-semibold text-gray-900">
-                        Allot Room
-                    </h2>
+                    <div class="flex items-start justify-between gap-4">
+                        <div>
+                            <h2 class="text-lg font-semibold text-gray-900">
+                                Allot Room
+                            </h2>
+                            <p class="mt-1 text-sm text-gray-700">
+                                Reserve a room and bed for
+                                <strong>
+                                    {{ allottingResident.first_name }}
+                                    {{ allottingResident.last_name }} </strong
+                                >. This does not confirm physical check-in.
+                            </p>
+                        </div>
 
-                    <p class="mt-1 text-sm text-gray-700">
-                        Reserve a room and bed for
-                        <strong class="text-gray-700">
-                            {{ allottingResident.first_name }}
-                            {{ allottingResident.last_name }}
-                        </strong>
-                        . This does not confirm physical check-in.
-                    </p>
+                        <button
+                            type="button"
+                            class="rounded-lg p-2 text-gray-400 hover:bg-gray-100"
+                            @click="closeRoomAllotment"
+                        >
+                            <X class="h-5 w-5" />
+                        </button>
+                    </div>
                 </div>
 
                 <div class="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-5">
@@ -1130,23 +1234,16 @@ const formatDate = (date) => {
                         <p class="text-sm font-semibold text-blue-900">
                             Room reservation only
                         </p>
-
                         <p class="mt-1 text-xs text-blue-700">
-                            The resident will remain in check-in pending status
-                            until actual arrival is confirmed and inventory is
-                            issued.
+                            Actual arrival and inventory issue will be confirmed
+                            separately.
                         </p>
                     </div>
 
                     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div>
-                            <InputLabel
-                                for="allot_building_id"
-                                value="Building *"
-                            />
-
+                            <InputLabel value="Building *" />
                             <select
-                                id="allot_building_id"
                                 v-model="allotmentForm.building_id"
                                 required
                                 class="w-full rounded-lg border-gray-300 text-sm"
@@ -1154,7 +1251,6 @@ const formatDate = (date) => {
                                 <option value="" disabled>
                                     Select building
                                 </option>
-
                                 <option
                                     v-for="building in buildings"
                                     :key="building.id"
@@ -1163,24 +1259,20 @@ const formatDate = (date) => {
                                     {{ building.name }}
                                 </option>
                             </select>
-
                             <InputError
                                 :message="allotmentForm.errors.building_id"
                             />
                         </div>
 
                         <div>
-                            <InputLabel for="allot_floor_id" value="Floor *" />
-
+                            <InputLabel value="Floor *" />
                             <select
-                                id="allot_floor_id"
                                 v-model="allotmentForm.floor_id"
                                 required
                                 :disabled="!allotmentForm.building_id"
                                 class="w-full rounded-lg border-gray-300 text-sm disabled:bg-gray-100"
                             >
                                 <option value="" disabled>Select floor</option>
-
                                 <option
                                     v-for="floor in floorsForBuilding"
                                     :key="floor.id"
@@ -1189,57 +1281,50 @@ const formatDate = (date) => {
                                     {{ floor.name }}
                                 </option>
                             </select>
-
                             <InputError
                                 :message="allotmentForm.errors.floor_id"
                             />
                         </div>
-                    </div>
 
-                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div>
-                            <InputLabel for="allot_room_id" value="Room *" />
-
+                            <InputLabel value="Room *" />
                             <select
-                                id="allot_room_id"
                                 v-model="allotmentForm.room_id"
                                 required
                                 :disabled="!allotmentForm.floor_id"
                                 class="w-full rounded-lg border-gray-300 text-sm disabled:bg-gray-100"
                             >
                                 <option value="" disabled>Select room</option>
-
                                 <option
                                     v-for="room in roomsForFloor"
                                     :key="room.id"
                                     :value="room.id"
                                     :disabled="
-                                        room.occupied_beds >= room.capacity
+                                        Number(room.occupied_beds) >=
+                                        Number(room.capacity)
                                     "
                                 >
                                     {{ room.room_number }} ·
-                                    {{ room.occupied_beds }}/{{ room.capacity }}
+                                    {{ room.occupied_beds }}/{{
+                                        room.capacity
+                                    }}
                                     occupied
                                 </option>
                             </select>
-
                             <InputError
                                 :message="allotmentForm.errors.room_id"
                             />
                         </div>
 
                         <div>
-                            <InputLabel for="allot_bed_id" value="Bed *" />
-
+                            <InputLabel value="Bed *" />
                             <select
-                                id="allot_bed_id"
                                 v-model="allotmentForm.bed_id"
                                 required
                                 :disabled="!allotmentForm.room_id"
                                 class="w-full rounded-lg border-gray-300 text-sm disabled:bg-gray-100"
                             >
                                 <option value="" disabled>Select bed</option>
-
                                 <option
                                     v-for="bed in vacantBeds"
                                     :key="bed.id"
@@ -1248,9 +1333,38 @@ const formatDate = (date) => {
                                     {{ bed.bed_number }}
                                 </option>
                             </select>
-
                             <InputError
                                 :message="allotmentForm.errors.bed_id"
+                            />
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div>
+                            <InputLabel value="Planned Check-In Date *" />
+                            <TextInput
+                                v-model="allotmentForm.check_in_date"
+                                type="date"
+                                required
+                                class="w-full"
+                            />
+                            <InputError
+                                :message="allotmentForm.errors.check_in_date"
+                            />
+                        </div>
+
+                        <div>
+                            <InputLabel value="Expected Checkout Date" />
+                            <TextInput
+                                v-model="allotmentForm.expected_check_out_date"
+                                type="date"
+                                :min="allotmentForm.check_in_date"
+                                class="w-full"
+                            />
+                            <InputError
+                                :message="
+                                    allotmentForm.errors.expected_check_out_date
+                                "
                             />
                         </div>
                     </div>
@@ -1259,29 +1373,18 @@ const formatDate = (date) => {
                         class="space-y-4 rounded-xl border border-gray-200 bg-gray-50 p-4"
                     >
                         <div>
-                            <h3 class="text-sm font-semibold text-gray-900">
-                                Stay & Billing Details
-                            </h3>
-
-                            <p class="mt-1 text-xs text-gray-700">
-                                Select the applicable billing method for this
-                                stay.
-                            </p>
-                        </div>
-
-                        <div>
                             <InputLabel value="Billing Basis *" />
 
                             <div
                                 class="mt-2 grid grid-cols-1 gap-3 md:grid-cols-2"
                             >
                                 <label
-                                    class="flex min-h-[92px] cursor-pointer flex-col justify-center rounded-xl border p-4 transition"
+                                    class="cursor-pointer rounded-xl border p-4"
                                     :class="
                                         allotmentForm.billing_basis ===
                                         'monthly'
-                                            ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500'
-                                            : 'border-gray-200 bg-white hover:border-gray-300'
+                                            ? 'border-blue-500 bg-blue-50'
+                                            : 'border-gray-200 bg-white'
                                     "
                                 >
                                     <input
@@ -1290,35 +1393,20 @@ const formatDate = (date) => {
                                         value="monthly"
                                         class="sr-only"
                                     />
-
-                                    <div class="flex items-start gap-3">
-                                        <CalendarDays
-                                            class="mt-0.5 h-5 w-5 text-blue-600"
-                                        />
-
-                                        <div>
-                                            <p
-                                                class="text-sm font-semibold text-gray-900"
-                                            >
-                                                Monthly Billing
-                                            </p>
-
-                                            <p
-                                                class="mt-1 text-xs text-gray-700"
-                                            >
-                                                Regular resident billed every
-                                                month.
-                                            </p>
-                                        </div>
-                                    </div>
+                                    <p class="text-sm font-semibold">
+                                        Monthly Billing
+                                    </p>
+                                    <p class="mt-1 text-xs text-gray-600">
+                                        Use the room monthly rent per bed.
+                                    </p>
                                 </label>
 
                                 <label
-                                    class="flex min-h-[92px] cursor-pointer flex-col justify-center rounded-xl border p-4 transition"
+                                    class="cursor-pointer rounded-xl border p-4"
                                     :class="
                                         allotmentForm.billing_basis === 'daily'
-                                            ? 'border-emerald-500 bg-emerald-50 ring-1 ring-emerald-500'
-                                            : 'border-gray-200 bg-white hover:border-gray-300'
+                                            ? 'border-emerald-500 bg-emerald-50'
+                                            : 'border-gray-200 bg-white'
                                     "
                                 >
                                     <input
@@ -1327,147 +1415,61 @@ const formatDate = (date) => {
                                         value="daily"
                                         class="sr-only"
                                     />
-
-                                    <div class="flex items-start gap-3">
-                                        <Clock3
-                                            class="mt-0.5 h-5 w-5 text-emerald-600"
-                                        />
-
-                                        <div>
-                                            <p
-                                                class="text-sm font-semibold text-gray-900"
-                                            >
-                                                Daily Short Stay
-                                            </p>
-
-                                            <p
-                                                class="mt-1 text-xs text-gray-700"
-                                            >
-                                                Resident charged for occupied
-                                                days.
-                                            </p>
-                                        </div>
-                                    </div>
+                                    <p class="text-sm font-semibold">
+                                        Daily Billing
+                                    </p>
+                                    <p class="mt-1 text-xs text-gray-600">
+                                        Charge by daily rate and stay duration.
+                                    </p>
                                 </label>
                             </div>
+                        </div>
 
+                        <div v-if="allotmentForm.billing_basis === 'monthly'">
+                            <InputLabel value="Monthly Rent (₹) *" />
+                            <TextInput
+                                v-model="allotmentForm.rent_amount"
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                required
+                                class="w-full"
+                            />
                             <InputError
-                                :message="allotmentForm.errors.billing_basis"
+                                :message="allotmentForm.errors.rent_amount"
                             />
                         </div>
 
                         <div
-                            class="grid grid-cols-1 items-start gap-4 md:grid-cols-2"
+                            v-else
+                            class="grid grid-cols-1 gap-4 sm:grid-cols-2"
                         >
-                            <div class="min-w-0">
-                                <InputLabel
-                                    for="allot_check_in_date"
-                                    value="Planned Check-in Date *"
-                                />
-
+                            <div>
+                                <InputLabel value="Daily Rate (₹) *" />
                                 <TextInput
-                                    id="allot_check_in_date"
-                                    v-model="allotmentForm.check_in_date"
-                                    type="date"
-                                    required
-                                    class="w-full"
-                                />
-
-                                <InputError
-                                    :message="
-                                        allotmentForm.errors.check_in_date
-                                    "
-                                />
-                            </div>
-
-                            <div
-                                v-if="allotmentForm.billing_basis === 'monthly'"
-                                class="min-w-0"
-                            >
-                                <InputLabel
-                                    for="allot_rent_amount"
-                                    value="Monthly Rent (₹) *"
-                                />
-
-                                <TextInput
-                                    id="allot_rent_amount"
-                                    v-model="allotmentForm.rent_amount"
-                                    type="number"
-                                    min="0"
-                                    step="0.01"
-                                    required
-                                    class="w-full"
-                                />
-
-                                <InputError
-                                    :message="allotmentForm.errors.rent_amount"
-                                />
-                            </div>
-
-                            <div v-else class="min-w-0">
-                                <InputLabel
-                                    for="allot_daily_rate"
-                                    value="Daily Rate (₹) *"
-                                />
-
-                                <TextInput
-                                    id="allot_daily_rate"
                                     v-model="allotmentForm.daily_rate"
                                     type="number"
-                                    min="0"
+                                    min="0.01"
                                     step="0.01"
                                     required
                                     class="w-full"
                                 />
-
                                 <InputError
                                     :message="allotmentForm.errors.daily_rate"
                                 />
                             </div>
-                        </div>
-
-                        <div
-                            v-if="allotmentForm.billing_basis === 'daily'"
-                            class="grid grid-cols-1 items-stretch gap-4 md:grid-cols-2"
-                        >
-                            <div class="min-w-0">
-                                <InputLabel
-                                    for="allot_expected_checkout"
-                                    value="Expected Check-out Date *"
-                                />
-
-                                <TextInput
-                                    id="allot_expected_checkout"
-                                    v-model="
-                                        allotmentForm.expected_check_out_date
-                                    "
-                                    type="date"
-                                    :min="allotmentForm.check_in_date"
-                                    required
-                                    class="w-full"
-                                />
-
-                                <InputError
-                                    :message="
-                                        allotmentForm.errors
-                                            .expected_check_out_date
-                                    "
-                                />
-                            </div>
 
                             <div
-                                class="flex min-h-[82px] min-w-0 flex-col justify-center rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3"
+                                class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3"
                             >
                                 <p class="text-xs font-medium text-emerald-700">
                                     Estimated accommodation charge
                                 </p>
-
                                 <p
                                     class="mt-1 text-xl font-bold text-emerald-900"
                                 >
                                     {{ formatCurrency(estimatedDailyAmount) }}
                                 </p>
-
                                 <p class="mt-1 text-xs text-emerald-700">
                                     {{ estimatedStayDays }} day(s) ×
                                     {{
@@ -1479,51 +1481,42 @@ const formatDate = (date) => {
 
                         <div>
                             <InputLabel
-                                for="allot_deposit_amount"
                                 value="Refundable Security Deposit (₹)"
                             />
-
                             <TextInput
-                                id="allot_deposit_amount"
                                 v-model="allotmentForm.deposit_amount"
                                 type="number"
                                 min="0"
                                 step="0.01"
                                 class="w-full"
                             />
-
-                            <p class="mt-1 text-xs text-gray-700">
-                                A one-time deposit invoice will be generated
-                                only after actual check-in.
+                            <p class="mt-1 text-xs text-gray-600">
+                                Deposit invoice will be generated after actual
+                                check-in.
                             </p>
-
                             <InputError
                                 :message="allotmentForm.errors.deposit_amount"
                             />
                         </div>
+                    </div>
 
-                        <div>
-                            <InputLabel for="allot_notes" value="Notes" />
-
-                            <textarea
-                                id="allot_notes"
-                                v-model="allotmentForm.notes"
-                                rows="3"
-                                class="w-full rounded-lg border-gray-300 text-sm"
-                                placeholder="Optional room allotment notes"
-                            ></textarea>
-
-                            <InputError :message="allotmentForm.errors.notes" />
-                        </div>
+                    <div>
+                        <InputLabel value="Notes" />
+                        <textarea
+                            v-model="allotmentForm.notes"
+                            rows="3"
+                            class="w-full rounded-lg border-gray-300 text-sm"
+                        ></textarea>
+                        <InputError :message="allotmentForm.errors.notes" />
                     </div>
                 </div>
 
                 <div
-                    class="flex shrink-0 items-center justify-end gap-2 border-t border-gray-100 bg-white px-6 py-4"
+                    class="flex shrink-0 justify-end gap-3 border-t border-gray-100 bg-white px-6 py-4"
                 >
                     <button
                         type="button"
-                        class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-50"
+                        class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700"
                         :disabled="allotmentForm.processing"
                         @click="closeRoomAllotment"
                     >
@@ -1544,122 +1537,83 @@ const formatDate = (date) => {
             </form>
         </Modal>
 
-        <!-- Actual check-in modal -->
         <Modal
             :show="actualCheckinOpen"
             @close="closeActualCheckin"
-            maxWidth="2xl"
+            maxWidth="4xl"
         >
             <form
                 v-if="checkingInStay"
+                class="flex max-h-[92vh] flex-col overflow-hidden"
                 @submit.prevent="submitActualCheckin"
-                class="flex max-h-[90vh] flex-col overflow-hidden"
             >
                 <div class="shrink-0 border-b border-gray-100 px-6 py-4">
-                    <h2 class="text-lg font-semibold text-gray-900">
-                        Confirm Actual Check-In
-                    </h2>
+                    <div class="flex items-start justify-between gap-4">
+                        <div>
+                            <h2 class="text-lg font-semibold text-gray-900">
+                                Confirm Actual Check-In
+                            </h2>
+                            <p class="mt-1 text-sm text-gray-700">
+                                {{ checkingInStay.resident?.first_name }}
+                                {{ checkingInStay.resident?.last_name }}
+                                · Room {{ checkingInStay.room?.room_number }} ·
+                                Bed {{ checkingInStay.bed?.bed_number }}
+                            </p>
+                        </div>
 
-                    <p class="mt-1 text-sm text-gray-700">
-                        {{ checkingInStay.resident?.first_name }}
-                        {{ checkingInStay.resident?.last_name }}
-                        · Room
-                        {{ checkingInStay.room?.room_number }}
-                        · Bed
-                        {{ checkingInStay.bed?.bed_number }}
-                    </p>
+                        <button
+                            type="button"
+                            class="rounded-lg p-2 text-gray-400 hover:bg-gray-100"
+                            @click="closeActualCheckin"
+                        >
+                            <X class="h-5 w-5" />
+                        </button>
+                    </div>
                 </div>
 
                 <div class="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-5">
-                    <div
-                        class="rounded-xl border border-emerald-100 bg-emerald-50 p-4"
-                    >
-                        <p class="text-sm font-semibold text-emerald-900">
-                            Final check-in confirmation
-                        </p>
-
-                        <p class="mt-1 text-xs text-emerald-700">
-                            You may update the actual arrival date and select
-                            any student assets being handed over.
-                        </p>
-                    </div>
-
                     <div>
-                        <InputLabel
-                            for="actual_check_in_date"
-                            value="Actual Check-in Date *"
-                        />
-
+                        <InputLabel value="Actual Check-In Date *" />
                         <TextInput
-                            id="actual_check_in_date"
                             v-model="actualCheckinForm.check_in_date"
                             type="date"
                             required
                             class="w-full"
                         />
-
                         <InputError
                             :message="actualCheckinForm.errors.check_in_date"
                         />
                     </div>
 
                     <div>
-                        <div class="flex items-center justify-between gap-3">
-                            <div>
-                                <h3
-                                    class="flex items-center gap-2 text-sm font-semibold text-gray-900"
-                                >
-                                    <Boxes class="h-4 w-4 text-blue-600" />
-                                    Assign Student Inventory
-                                </h3>
-
-                                <p class="mt-1 text-xs text-gray-700">
-                                    Inventory assignment is optional. Select
-                                    only items physically issued to the
-                                    resident.
-                                </p>
-                            </div>
-
-                            <span
-                                class="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600"
-                            >
-                                {{ studentInventory.length }} available item
-                                type(s)
-                            </span>
-                        </div>
-
-                        <InputError
-                            :message="actualCheckinForm.errors.inventory"
-                            class="mt-2"
-                        />
+                        <h3 class="text-sm font-semibold text-gray-900">
+                            Student Inventory
+                        </h3>
+                        <p class="mt-1 text-xs text-gray-600">
+                            Select items being issued during check-in.
+                        </p>
                     </div>
 
                     <div
+                        v-if="actualCheckinForm.inventory.length"
                         class="overflow-x-auto rounded-xl border border-gray-200"
                     >
-                        <table class="min-w-[760px] w-full text-sm">
+                        <table class="w-full min-w-[850px] text-sm">
                             <thead
-                                class="bg-gray-50 text-xs uppercase text-gray-700"
+                                class="bg-gray-50 text-xs uppercase text-gray-600"
                             >
                                 <tr>
-                                    <th class="w-14 px-3 py-3 text-center">
-                                        Issue
-                                    </th>
-
+                                    <th class="px-3 py-3 text-left">Issue</th>
                                     <th class="px-3 py-3 text-left">Item</th>
-
-                                    <th class="px-3 py-3 text-left">
+                                    <th class="px-3 py-3 text-center">
                                         Available
                                     </th>
-
-                                    <th class="px-3 py-3 text-left">
+                                    <th class="px-3 py-3 text-center">
                                         Quantity
                                     </th>
-
                                     <th class="px-3 py-3 text-left">
                                         Condition
                                     </th>
-
                                     <th class="px-3 py-3 text-left">Notes</th>
                                 </tr>
                             </thead>
@@ -1670,20 +1624,14 @@ const formatDate = (date) => {
                                         assignment, index
                                     ) in actualCheckinForm.inventory"
                                     :key="assignment.inventory_id"
-                                    :class="
-                                        assignment.selected
-                                            ? 'bg-blue-50/40'
-                                            : 'bg-white'
-                                    "
                                 >
-                                    <td class="px-3 py-3 text-center">
+                                    <td class="px-3 py-3">
                                         <input
                                             v-model="assignment.selected"
                                             type="checkbox"
-                                            class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                            class="rounded border-gray-300 text-blue-600"
                                         />
                                     </td>
-
                                     <td
                                         class="px-3 py-3 font-medium text-gray-900"
                                     >
@@ -1693,12 +1641,11 @@ const formatDate = (date) => {
                                             )?.item_name
                                         }}
                                     </td>
-
-                                    <td class="px-3 py-3 text-gray-700">
+                                    <td class="px-3 py-3 text-center">
                                         {{
                                             getInventoryItem(
                                                 assignment.inventory_id,
-                                            )?.available
+                                            )?.available ?? 0
                                         }}
                                         {{
                                             getInventoryItem(
@@ -1706,7 +1653,6 @@ const formatDate = (date) => {
                                             )?.unit
                                         }}
                                     </td>
-
                                     <td class="px-3 py-3">
                                         <TextInput
                                             v-model="assignment.quantity"
@@ -1715,12 +1661,11 @@ const formatDate = (date) => {
                                             :max="
                                                 getInventoryItem(
                                                     assignment.inventory_id,
-                                                )?.available
+                                                )?.available || 1
                                             "
                                             :disabled="!assignment.selected"
-                                            class="w-24"
+                                            class="mx-auto w-24"
                                         />
-
                                         <InputError
                                             :message="
                                                 actualCheckinForm.errors[
@@ -1729,46 +1674,41 @@ const formatDate = (date) => {
                                             "
                                         />
                                     </td>
-
                                     <td class="px-3 py-3">
                                         <select
                                             v-model="
                                                 assignment.condition_at_issue
                                             "
                                             :disabled="!assignment.selected"
-                                            class="w-28 rounded-lg border-gray-300 text-sm disabled:bg-gray-100"
+                                            class="w-full rounded-lg border-gray-300 text-sm disabled:bg-gray-100"
                                         >
                                             <option value="new">New</option>
-
                                             <option value="good">Good</option>
-
                                             <option value="fair">Fair</option>
+                                            <option value="damaged">
+                                                Damaged
+                                            </option>
                                         </select>
                                     </td>
-
                                     <td class="px-3 py-3">
                                         <TextInput
                                             v-model="assignment.notes"
-                                            type="text"
                                             :disabled="!assignment.selected"
-                                            class="w-44"
-                                            placeholder="Optional note"
+                                            class="w-56"
+                                            placeholder="Optional issue notes"
                                         />
-                                    </td>
-                                </tr>
-
-                                <tr v-if="!actualCheckinForm.inventory.length">
-                                    <td
-                                        colspan="6"
-                                        class="px-4 py-10 text-center text-gray-600"
-                                    >
-                                        No student-category inventory is
-                                        currently available. Check-in can still
-                                        be completed without assigning assets.
                                     </td>
                                 </tr>
                             </tbody>
                         </table>
+                    </div>
+
+                    <div
+                        v-else
+                        class="rounded-xl border border-dashed border-gray-200 p-8 text-center text-sm text-gray-600"
+                    >
+                        No student inventory is currently available. Check-in
+                        can still be completed without assigning assets.
                     </div>
                 </div>
 
@@ -1777,7 +1717,7 @@ const formatDate = (date) => {
                 >
                     <button
                         type="button"
-                        class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-50"
+                        class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700"
                         :disabled="actualCheckinForm.processing"
                         @click="closeActualCheckin"
                     >
@@ -1798,293 +1738,226 @@ const formatDate = (date) => {
             </form>
         </Modal>
 
-        <!-- Checkout modal -->
-        <Modal :show="checkoutOpen" @close="closeCheckout" maxWidth="2xl">
+        <Modal
+            :show="checkoutRequestOpen"
+            maxWidth="lg"
+            @close="closeCheckoutRequest"
+        >
             <form
-                v-if="checkingOutStay"
+                v-if="selectedStay"
                 class="flex max-h-[92vh] flex-col overflow-hidden"
-                @submit.prevent
+                @submit.prevent="submitCheckoutRequest"
             >
-                <!-- Header -->
-                <div class="shrink-0 border-b border-gray-100 px-6 py-4">
-                    <h2 class="text-lg font-semibold text-gray-900">
-                        Checkout Review
-                    </h2>
+                <div class="shrink-0 border-b border-slate-100 px-6 py-5">
+                    <div class="flex items-start justify-between gap-4">
+                        <div>
+                            <h2 class="text-lg font-bold text-slate-900">
+                                Create Checkout Request
+                            </h2>
 
-                    <p class="mt-1 text-sm text-gray-700">
-                        {{ checkingOutStay.resident?.first_name }}
-                        {{ checkingOutStay.resident?.last_name }}
-                        · Room {{ checkingOutStay.room?.room_number }} · Bed
-                        {{ checkingOutStay.bed?.bed_number }}
-                    </p>
+                            <p class="mt-1 text-sm text-slate-500">
+                                Create a request on behalf of
+                                <strong>
+                                    {{ selectedStay.resident?.first_name }}
+                                    {{
+                                        selectedStay.resident?.last_name
+                                    }} </strong
+                                >.
+                            </p>
+                        </div>
+
+                        <button
+                            type="button"
+                            class="rounded-lg p-2 text-slate-400 hover:bg-slate-100"
+                            :disabled="checkoutRequestForm.processing"
+                            @click="closeCheckoutRequest"
+                        >
+                            <X class="h-5 w-5" />
+                        </button>
+                    </div>
                 </div>
 
-                <!-- Body -->
                 <div class="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-5">
-                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                        <div>
-                            <InputLabel value="Actual Check-out Date *" />
-
-                            <TextInput
-                                v-model="checkoutForm.actual_check_out_date"
-                                type="date"
-                                :min="checkingOutStay.check_in_date"
-                                required
-                                class="w-full"
-                            />
-
-                            <InputError
-                                :message="
-                                    checkoutForm.errors.actual_check_out_date
-                                "
-                            />
-                        </div>
-
-                        <div
-                            class="rounded-xl border p-4"
-                            :class="
-                                allAssetsReviewed
-                                    ? 'border-green-200 bg-green-50'
-                                    : 'border-amber-200 bg-amber-50'
-                            "
-                        >
-                            <p
-                                class="text-sm font-semibold"
-                                :class="
-                                    allAssetsReviewed
-                                        ? 'text-green-900'
-                                        : 'text-amber-900'
-                                "
-                            >
-                                {{
-                                    allAssetsReviewed
-                                        ? "All assets reviewed"
-                                        : "Asset review incomplete"
-                                }}
-                            </p>
-
-                            <p
-                                class="mt-1 text-xs"
-                                :class="
-                                    allAssetsReviewed
-                                        ? 'text-green-700'
-                                        : 'text-amber-700'
-                                "
-                            >
-                                Every issued quantity must be marked as
-                                returned, damaged, or missing before checkout
-                                approval.
-                            </p>
-                        </div>
-                    </div>
-
-                    <div>
-                        <h3 class="text-sm font-semibold text-gray-900">
-                            Assigned Inventory
-                        </h3>
-
-                        <p class="mt-1 text-xs text-gray-700">
-                            Review every item before approving checkout.
+                    <div
+                        class="rounded-2xl border border-rose-200 bg-rose-50 p-4"
+                    >
+                        <p class="text-sm font-bold text-rose-900">
+                            {{ selectedStay.resident?.name }}
+                        </p>
+                        <p class="mt-1 text-xs text-rose-700">
+                            {{ selectedStay.building?.name || "—" }} · Room
+                            {{ selectedStay.room?.room_number || "—" }} · Bed
+                            {{ selectedStay.bed?.bed_number || "—" }}
                         </p>
                     </div>
 
-                    <div
-                        v-if="checkoutForm.inventory_returns.length"
-                        class="overflow-x-auto rounded-xl border border-gray-200"
-                    >
-                        <table class="w-full min-w-[900px] text-sm">
-                            <thead
-                                class="bg-gray-50 text-xs uppercase text-gray-700"
+                    <div>
+                        <InputLabel value="Requested Checkout Date *" />
+                        <TextInput
+                            v-model="
+                                checkoutRequestForm.requested_checkout_date
+                            "
+                            type="date"
+                            :min="checkoutPolicy.today"
+                            required
+                            class="w-full"
+                        />
+                        <InputError
+                            :message="
+                                checkoutRequestForm.errors
+                                    .requested_checkout_date
+                            "
+                        />
+
+                        <div class="mt-3 grid grid-cols-2 gap-3">
+                            <div
+                                class="rounded-xl border border-slate-200 bg-slate-50 p-3"
                             >
-                                <tr>
-                                    <th class="px-3 py-3 text-left">Item</th>
-                                    <th class="px-3 py-3 text-center">
-                                        Assigned
-                                    </th>
-                                    <th class="px-3 py-3 text-center">
-                                        Returned Good
-                                    </th>
-                                    <th class="px-3 py-3 text-center">
-                                        Damaged
-                                    </th>
-                                    <th class="px-3 py-3 text-center">
-                                        Missing
-                                    </th>
-                                    <th class="px-3 py-3 text-center">
-                                        Reviewed
-                                    </th>
-                                    <th class="px-3 py-3 text-left">Notes</th>
-                                </tr>
-                            </thead>
-
-                            <tbody class="divide-y divide-gray-100">
-                                <tr
-                                    v-for="(
-                                        item, index
-                                    ) in checkoutForm.inventory_returns"
-                                    :key="item.assignment_id"
+                                <p
+                                    class="text-[10px] font-semibold uppercase tracking-wide text-slate-400"
                                 >
-                                    <td
-                                        class="px-3 py-3 font-medium text-gray-900"
-                                    >
-                                        {{ item.item_name }}
-                                    </td>
+                                    Notice Provided
+                                </p>
+                                <p
+                                    class="mt-1 text-sm font-bold text-slate-900"
+                                >
+                                    {{ checkoutNoticeDays }} days
+                                </p>
+                            </div>
 
-                                    <td
-                                        class="px-3 py-3 text-center font-semibold"
-                                    >
-                                        {{ item.assigned_quantity }}
-                                    </td>
-
-                                    <td class="px-3 py-3">
-                                        <TextInput
-                                            v-model="
-                                                item.returned_good_quantity
-                                            "
-                                            type="number"
-                                            min="0"
-                                            :max="item.assigned_quantity"
-                                            class="mx-auto w-20"
-                                        />
-                                    </td>
-
-                                    <td class="px-3 py-3">
-                                        <TextInput
-                                            v-model="
-                                                item.returned_damaged_quantity
-                                            "
-                                            type="number"
-                                            min="0"
-                                            :max="item.assigned_quantity"
-                                            class="mx-auto w-20"
-                                        />
-                                    </td>
-
-                                    <td class="px-3 py-3">
-                                        <TextInput
-                                            v-model="item.missing_quantity"
-                                            type="number"
-                                            min="0"
-                                            :max="item.assigned_quantity"
-                                            class="mx-auto w-20"
-                                        />
-                                    </td>
-
-                                    <td class="px-3 py-3 text-center">
-                                        <span
-                                            class="inline-flex rounded-full px-2 py-1 text-xs font-semibold"
-                                            :class="
-                                                reviewedQuantity(item) ===
-                                                item.assigned_quantity
-                                                    ? 'bg-green-100 text-green-700'
-                                                    : reviewedQuantity(item) >
-                                                        item.assigned_quantity
-                                                      ? 'bg-red-100 text-red-700'
-                                                      : 'bg-amber-100 text-amber-700'
-                                            "
-                                        >
-                                            {{ reviewedQuantity(item) }}/{{
-                                                item.assigned_quantity
-                                            }}
-                                        </span>
-
-                                        <InputError
-                                            :message="
-                                                checkoutForm.errors[
-                                                    `inventory_returns.${index}`
-                                                ]
-                                            "
-                                        />
-                                    </td>
-
-                                    <td class="px-3 py-3">
-                                        <TextInput
-                                            v-model="item.return_notes"
-                                            class="w-52"
-                                            placeholder="Condition or damage notes"
-                                        />
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
+                            <div
+                                class="rounded-xl border border-blue-200 bg-blue-50 p-3"
+                            >
+                                <p
+                                    class="text-[10px] font-semibold uppercase tracking-wide text-blue-500"
+                                >
+                                    Required Notice
+                                </p>
+                                <p class="mt-1 text-sm font-bold text-blue-900">
+                                    {{
+                                        checkoutPolicy.required_notice_days
+                                    }}
+                                    days
+                                </p>
+                            </div>
+                        </div>
                     </div>
 
                     <div
-                        v-else
-                        class="rounded-xl border border-dashed border-gray-200 p-8 text-center text-sm text-gray-700"
+                        v-if="checkoutIsShortNotice"
+                        class="rounded-2xl border border-red-300 bg-red-50 p-5"
                     >
-                        No inventory was assigned to this resident.
+                        <div class="flex items-start gap-3">
+                            <AlertTriangle
+                                class="mt-0.5 h-6 w-6 shrink-0 text-red-700"
+                            />
+                            <div>
+                                <p class="text-sm font-bold text-red-900">
+                                    Short-notice checkout
+                                </p>
+                                <p class="mt-1 text-xs leading-5 text-red-700">
+                                    {{ checkoutPolicy.short_notice_message }}
+                                </p>
+                            </div>
+                        </div>
+
+                        <label
+                            class="mt-4 flex cursor-pointer items-start gap-3 rounded-xl border border-red-200 bg-white p-4"
+                        >
+                            <input
+                                v-model="
+                                    checkoutRequestForm.short_notice_warning_accepted
+                                "
+                                type="checkbox"
+                                class="mt-0.5 rounded border-slate-300 text-red-600"
+                            />
+                            <span
+                                class="text-xs font-semibold leading-5 text-red-800"
+                            >
+                                I confirm that the short-notice policy and
+                                possible charges have been explained and
+                                accepted.
+                            </span>
+                        </label>
+
+                        <InputError
+                            class="mt-2"
+                            :message="
+                                checkoutRequestForm.errors
+                                    .short_notice_warning_accepted
+                            "
+                        />
                     </div>
 
                     <div>
-                        <InputLabel value="Checkout Review Notes" />
-
+                        <InputLabel value="Reason for Checkout *" />
                         <textarea
-                            v-model="checkoutForm.checkout_notes"
-                            rows="3"
-                            class="w-full rounded-lg border-gray-300 text-sm"
-                            placeholder="Add checkout, damage, missing-item, or approval notes"
+                            v-model="checkoutRequestForm.reason"
+                            rows="4"
+                            required
+                            maxlength="3000"
+                            class="w-full rounded-xl border-slate-300 text-sm"
+                            placeholder="Enter the reason for leaving the hostel"
                         ></textarea>
-
                         <InputError
-                            :message="checkoutForm.errors.checkout_notes"
+                            :message="checkoutRequestForm.errors.reason"
+                        />
+                    </div>
+
+                    <div>
+                        <InputLabel value="Additional Notes" />
+                        <textarea
+                            v-model="checkoutRequestForm.resident_notes"
+                            rows="3"
+                            maxlength="3000"
+                            class="w-full rounded-xl border-slate-300 text-sm"
+                            placeholder="Optional notes"
+                        ></textarea>
+                        <InputError
+                            :message="checkoutRequestForm.errors.resident_notes"
                         />
                     </div>
 
                     <div
-                        v-if="checkoutForm.errors.decision"
-                        class="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700"
+                        class="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4"
                     >
-                        {{ checkoutForm.errors.decision }}
+                        <Clock3
+                            class="mt-0.5 h-5 w-5 shrink-0 text-amber-700"
+                        />
+                        <p class="text-xs leading-5 text-amber-700">
+                            Creating this request does not release the room, bed
+                            or assigned inventory. Checkout completes only after
+                            all reviews and approvals.
+                        </p>
                     </div>
                 </div>
 
-                <!-- Footer -->
                 <div
-                    class="flex shrink-0 flex-col gap-3 border-t border-gray-100 bg-white px-6 py-4 sm:flex-row sm:items-center sm:justify-between"
+                    class="flex shrink-0 items-center justify-end gap-3 border-t border-slate-100 bg-white px-6 py-4"
                 >
                     <button
                         type="button"
-                        class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                        :disabled="checkoutForm.processing"
-                        @click="closeCheckout"
+                        class="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700"
+                        :disabled="checkoutRequestForm.processing"
+                        @click="closeCheckoutRequest"
                     >
                         Cancel
                     </button>
 
-                    <div class="flex flex-wrap justify-end gap-2">
-                        <button
-                            type="button"
-                            class="rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-700 hover:bg-amber-100"
-                            :disabled="checkoutForm.processing"
-                            @click="submitCheckoutDecision('hold')"
-                        >
-                            Hold Checkout
-                        </button>
-
-                        <button
-                            type="button"
-                            class="rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-100"
-                            :disabled="checkoutForm.processing"
-                            @click="submitCheckoutDecision('rejected')"
-                        >
-                            Reject Checkout
-                        </button>
-
-                        <PrimaryButton
-                            type="button"
-                            :disabled="
-                                checkoutForm.processing || !allAssetsReviewed
-                            "
-                            @click="submitCheckoutDecision('approved')"
-                        >
-                            {{
-                                checkoutForm.processing
-                                    ? "Processing..."
-                                    : "Approve Checkout"
-                            }}
-                        </PrimaryButton>
-                    </div>
+                    <PrimaryButton
+                        type="submit"
+                        :disabled="
+                            checkoutRequestForm.processing ||
+                            (checkoutIsShortNotice &&
+                                !checkoutRequestForm.short_notice_warning_accepted)
+                        "
+                    >
+                        {{
+                            checkoutRequestForm.processing
+                                ? "Creating..."
+                                : "Create Checkout Request"
+                        }}
+                    </PrimaryButton>
                 </div>
             </form>
         </Modal>

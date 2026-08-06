@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 
 class ResidentStay extends Model
@@ -92,7 +94,7 @@ class ResidentStay extends Model
         return $this->belongsTo(User::class, 'checked_in_by');
     }
 
-    public function inventoryAssignments()
+    public function inventoryAssignments(): HasMany
     {
         return $this->hasMany(
             ResidentInventoryAssignment::class,
@@ -103,5 +105,29 @@ class ResidentStay extends Model
     public function checkoutReviewedBy()
     {
         return $this->belongsTo(User::class, 'checkout_reviewed_by');
+    }
+
+    public function checkoutRequests(): HasMany
+    {
+        return $this->hasMany(
+            CheckoutRequest::class,
+            'resident_stay_id'
+        );
+    }
+
+    public function activeCheckoutRequest(): HasOne
+    {
+        return $this->hasOne(
+            CheckoutRequest::class,
+            'resident_stay_id'
+        )
+            ->whereNotIn('status', [
+                CheckoutRequest::STATUS_COMPLETED,
+                CheckoutRequest::STATUS_CANCELLED,
+                CheckoutRequest::STATUS_ADMIN_REJECTED,
+                CheckoutRequest::STATUS_WARDEN_REJECTED,
+                CheckoutRequest::STATUS_EXPIRED,
+            ])
+            ->latestOfMany();
     }
 }

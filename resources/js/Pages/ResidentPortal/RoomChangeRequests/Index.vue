@@ -378,37 +378,53 @@ const requestedRoomLabel = (requestItem) => {
         <div class="space-y-6">
             <!-- Header -->
             <section
-                class="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:flex-row md:items-center md:justify-between"
+                class="overflow-hidden rounded-3xl border border-violet-200 bg-[linear-gradient(135deg,#4c1d95_0%,#7c3aed_55%,#a855f7_100%)] p-6 text-white shadow-xl"
             >
-                <div>
-                    <h2
-                        class="flex items-center gap-2 text-xl font-bold text-slate-900"
+                <div class="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+
+                    <div>
+
+                        <div class="flex items-center gap-3">
+
+                            <div class="rounded-2xl bg-white/15 p-3">
+                                <ArrowRightLeft class="h-7 w-7" />
+                            </div>
+
+                            <div>
+                                <p class="text-xs font-bold uppercase tracking-[0.2em] text-violet-100">
+                                    Room Transfer
+                                </p>
+
+                                <h2 class="text-2xl font-bold">
+                                    Room Change Requests
+                                </h2>
+                            </div>
+
+                        </div>
+
+                        <p class="mt-4 max-w-2xl text-sm leading-6 text-violet-50">
+                            Request a different room, bed or building and
+                            monitor approval from hostel administration.
+                        </p>
+
+                    </div>
+
+                    <button
+                        type="button"
+                        :disabled="!currentStay || hasPendingRequest"
+                        class="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-bold text-violet-700 shadow-lg transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-60"
+                        @click="openCreateModal"
                     >
-                        <ArrowRightLeft class="h-6 w-6 text-indigo-600" />
+                        <Plus class="h-4 w-4" />
 
-                        Room Change Requests
-                    </h2>
+                        {{
+                            hasPendingRequest
+                                ? "Request Pending"
+                                : "Request Room Change"
+                        }}
+                    </button>
 
-                    <p class="mt-1 text-sm text-slate-500">
-                        Request a different room and track the approval and
-                        transfer details.
-                    </p>
                 </div>
-
-                <button
-                    type="button"
-                    :disabled="!currentStay || hasPendingRequest"
-                    class="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
-                    @click="openCreateModal"
-                >
-                    <Plus class="h-4 w-4" />
-
-                    {{
-                        hasPendingRequest
-                            ? "Request Pending"
-                            : "Request Room Change"
-                    }}
-                </button>
             </section>
 
             <!-- Current stay -->

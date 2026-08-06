@@ -201,4 +201,36 @@ class Resident extends Authenticatable
             'resident_id'
         );
     }
+
+    public function inventoryAssignments(): HasMany
+    {
+        return $this->hasMany(
+            ResidentInventoryAssignment::class,
+            'resident_id'
+        );
+    }
+
+    public function checkoutRequests(): HasMany
+    {
+        return $this->hasMany(
+            CheckoutRequest::class,
+            'resident_id'
+        );
+    }
+
+    public function activeCheckoutRequest(): HasOne
+    {
+        return $this->hasOne(
+            CheckoutRequest::class,
+            'resident_id'
+        )
+            ->whereNotIn('status', [
+                CheckoutRequest::STATUS_COMPLETED,
+                CheckoutRequest::STATUS_CANCELLED,
+                CheckoutRequest::STATUS_ADMIN_REJECTED,
+                CheckoutRequest::STATUS_WARDEN_REJECTED,
+                CheckoutRequest::STATUS_EXPIRED,
+            ])
+            ->latestOfMany();
+    }
 }
