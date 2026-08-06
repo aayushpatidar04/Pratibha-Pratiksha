@@ -23,7 +23,7 @@ return new class extends Migration
                     ->constrained(
                         'resident_inventory_assignments'
                     )
-                    ->cascadeOnDelete();
+                    ->cascadeOnDelete()->name('fk_checkout_reviews_resident_assignment');
 
                 $table->foreignId('inventory_id')
                     ->constrained('inventory')

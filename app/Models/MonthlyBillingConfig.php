@@ -44,6 +44,19 @@ class MonthlyBillingConfig extends Model
         'default_cooler_amount' => 'decimal:2',
     ];
 
+    public static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($model) {
+            $model->full_label = "{$model->month_name} {$model->year}";
+        });
+
+        static::updating(function ($model) {
+            $model->full_label = "{$model->month_name} {$model->year}";
+        });
+    }
+
     public function invoices()
     {
         return $this->hasMany(FeeInvoice::class, 'monthly_config_id');
