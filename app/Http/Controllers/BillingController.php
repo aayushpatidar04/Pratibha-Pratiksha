@@ -1154,8 +1154,26 @@ class BillingController extends Controller
     // ==================== HELPERS ====================
     private function generateInvoiceNumber(): string
     {
-        return 'INV-' . now()->format('Ym') . '-' . str_pad((string) (FeeInvoice::count() + 1), 5, '0', STR_PAD_LEFT);
+        // Get the latest invoice including trashed ones
+        $lastInvoice = FeeInvoice::withTrashed()
+            ->orderBy('id', 'desc')
+            ->first();
+
+        // Default start number
+        $nextNumber = 1;
+
+        if ($lastInvoice) {
+            // Extract the numeric part from invoice_number
+            // Assuming format: INV-YYYYMM-00001
+            $parts = explode('-', $lastInvoice->invoice_number);
+            $lastNumeric = isset($parts[2]) ? (int)$parts[2] : 0;
+
+            $nextNumber = $lastNumeric + 1;
+        }
+
+        return 'INV-' . now()->format('Ym') . '-' . str_pad((string) $nextNumber, 5, '0', STR_PAD_LEFT);
     }
+
 
     public function paymentReceipt(Payment $payment)
     {
