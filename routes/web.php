@@ -45,11 +45,9 @@ Route::middleware(['auth', 'user.active'])->group(function () {
     // Dashboard has no module gate — every logged-in user can see the overview.
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics.index')
-        ->middleware('permission:analytics,view');
-    Route::get('/analytics/occupancy/heatmap', [AnalyticsController::class, 'occupancyHeatmap'])->name('analytics.occupancy.heatmap')
-        ->middleware('permission:analytics,view');
-    Route::get('/analytics/occupancy-forecast', [AnalyticsController::class, 'occupancyForecast'])->name('analytics.occupancy-forecast');
+    Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics.index')->middleware('permission:analytics,view');
+    Route::get('/analytics/occupancy/heatmap', [AnalyticsController::class, 'occupancyHeatmap'])->name('analytics.occupancy.heatmap')->middleware('permission:analytics,view');
+    Route::get('/analytics/occupancy-forecast', [AnalyticsController::class, 'occupancyForecast'])->name('analytics.occupancy-forecast')->middleware('permission:analytics,view');
 
     // Infrastructure
     Route::get('/infrastructure/buildings', [BuildingController::class, 'index'])->name('buildings.index')->middleware('permission:buildings,view');
@@ -77,7 +75,7 @@ Route::middleware(['auth', 'user.active'])->group(function () {
     Route::get('/residents/past', [ResidentController::class, 'past'])->name('residents.past')->middleware('permission:residents,view');
     Route::post('/residents/bulk-upload', [ResidentController::class, 'bulkUpload'])->name('residents.bulk-upload')->middleware('permission:residents,create');
     Route::post('/residents', [ResidentController::class, 'store'])->name('residents.store')->middleware('permission:residents,create');
-    Route::get('/residents/export', [ResidentController::class, 'export'])->name('residents.export');
+    Route::get('/residents/export', [ResidentController::class, 'export'])->name('residents.export')->middleware('permission:residents,view');
 
     Route::put('/residents/{resident}', [ResidentController::class, 'update'])->name('residents.update')->middleware('permission:residents,edit');
     Route::delete('/residents/{resident}', [ResidentController::class, 'destroy'])->name('residents.destroy')->middleware('permission:residents,delete');
@@ -86,15 +84,15 @@ Route::middleware(['auth', 'user.active'])->group(function () {
     Route::get('/residents/kyc', [KycController::class, 'index'])->name('kyc.index')->middleware('permission:kyc,view');
     Route::get('/residents/kyc/settings', [KycController::class, 'settings'])->name('kyc.settings')->middleware('permission:kyc_settings,view');
     Route::put('/residents/kyc/settings', [KycController::class, 'updateSettings'])->name('kyc.settings.update')->middleware('permission:kyc_settings,edit');
-    Route::post('/requirements', [KycController::class, 'storeRequirement'])->name('residents.kyc.requirements.store');
-    Route::delete('/requirements/{requirement}', [KycController::class, 'destroyRequirement'])->name('residents.kyc.requirements.destroy');
+    Route::post('/requirements', [KycController::class, 'storeRequirement'])->name('residents.kyc.requirements.store')->middleware('permission:kyc,create');;
+    Route::delete('/requirements/{requirement}', [KycController::class, 'destroyRequirement'])->name('residents.kyc.requirements.destroy')->middleware('permission:kyc,edit');;
 
     Route::post('/residents/{resident}/documents', [DocumentController::class, 'store'])->name('documents.store')->middleware('permission:kyc,create');
     Route::put('/documents/{document}', [DocumentController::class, 'updateStatus'])->name('documents.update')->middleware('permission:kyc,edit');
     Route::delete('/documents/{document}', [DocumentController::class, 'destroy'])->name('documents.destroy')->middleware('permission:kyc,edit');
-    Route::get('/documents/{document}/download', [DocumentController::class, 'download'])->name('documents.download');
+    Route::get('/documents/{document}/download', [DocumentController::class, 'download'])->name('documents.download')->middleware('permission:kyc,view');
 
-    Route::get('/residents/{resident}/profile-print', [ResidentController::class, 'profilePrint'])->name('residents.profile.print');
+    Route::get('/residents/{resident}/profile-print', [ResidentController::class, 'profilePrint'])->name('residents.profile.print')->middleware('permission:residents,view');
 
     // Residents > Academic Details
     Route::get('/residents/academic-details', [AcademicDetailsController::class, 'index'])->name('academics.index')->middleware('permission:academics,view');
@@ -132,8 +130,8 @@ Route::middleware(['auth', 'user.active'])->group(function () {
             Route::put('/{checkoutRequest}/final-reject', [CheckoutRequestController::class, 'finalReject'])->name('final-reject')->middleware('permission:checkout_requests,reject');
             Route::put('/{checkoutRequest}/regenerate-exit-token', [CheckoutRequestController::class, 'regenerateExitToken'])->name('regenerate-exit-token')->middleware('permission:checkout_requests,regenerate_exit_token');
 
-            Route::get('/{checkoutRequest}/security-deposit/refund-details', [SecurityDepositRefundController::class, 'show'])->name('security-deposit.refund-details');
-            Route::post('/{checkoutRequest}/security-deposit/refund', [SecurityDepositRefundController::class, 'store'])->name('security-deposit.refund');
+            Route::get('/{checkoutRequest}/security-deposit/refund-details', [SecurityDepositRefundController::class, 'show'])->name('security-deposit.refund-details')->middleware('permission:billing,refund_security_deposit');
+            Route::post('/{checkoutRequest}/security-deposit/refund', [SecurityDepositRefundController::class, 'store'])->name('security-deposit.refund')->middleware('permission:billing,refund_security_deposit');
         });
 
     Route::prefix('warden-checkout-inspections')
@@ -157,8 +155,8 @@ Route::middleware(['auth', 'user.active'])->group(function () {
         });
         
     Route::put('/residents/{resident}/stay-dates', [ResidentController::class, 'updateStayDates'])->name('residents.stay-dates.update')->middleware('permission:residents,edit');
-    Route::get('/residents/bulk-upload/template/csv', [ResidentController::class, 'downloadBulkCsvTemplate'])->name('residents.bulk.template.csv');
-    Route::get('/residents/bulk-upload/template/excel', [ResidentController::class, 'downloadBulkExcelTemplate'])->name('residents.bulk.template.xlsx');
+    Route::get('/residents/bulk-upload/template/csv', [ResidentController::class, 'downloadBulkCsvTemplate'])->name('residents.bulk.template.csv')->middleware('permission:residents,edit');
+    Route::get('/residents/bulk-upload/template/excel', [ResidentController::class, 'downloadBulkExcelTemplate'])->name('residents.bulk.template.xlsx')->middleware('permission:residents,edit');
 
     Route::prefix('notices')
         ->name('notices.')
@@ -166,22 +164,22 @@ Route::middleware(['auth', 'user.active'])->group(function () {
             Route::get(
                 '/',
                 [NoticeController::class, 'index']
-            )->name('index');
+            )->name('index')->middleware('permission:notices,view');
 
             Route::post(
                 '/',
                 [NoticeController::class, 'store']
-            )->name('store');
+            )->name('store')->middleware('permission:notices,create');
 
             Route::post(
                 '/{notice}',
                 [NoticeController::class, 'update']
-            )->name('update');
+            )->name('update')->middleware('permission:notices,edit');
 
             Route::delete(
                 '/{notice}',
                 [NoticeController::class, 'destroy']
-            )->name('destroy');
+            )->name('destroy')->middleware('permission:notices,delete');
 
             Route::delete(
                 '/{notice}/attachments/{attachment}',
@@ -189,7 +187,7 @@ Route::middleware(['auth', 'user.active'])->group(function () {
                     NoticeController::class,
                     'deleteAttachment',
                 ]
-            )->name('attachments.destroy');
+            )->name('attachments.destroy')->middleware('permission:notices,edit');
         });
         
     // Billing
@@ -197,15 +195,15 @@ Route::middleware(['auth', 'user.active'])->group(function () {
         // Main billing
         Route::get('/', [BillingController::class, 'index'])->name('billing.index')->middleware('permission:billing,view');
         Route::post('/', [BillingController::class, 'store'])->name('billing.store')->middleware('permission:billing,create');
-        Route::post('/check-transaction-id', [BillingController::class, 'checkTransactionId'])->name('billing.check-transaction');
+        Route::post('/check-transaction-id', [BillingController::class, 'checkTransactionId'])->name('billing.check-transaction')->middleware('permission:billing,view');
         Route::post('/{invoice}/payments', [BillingController::class, 'recordPayment'])->name('billing.payments.store')->middleware('permission:billing,edit');
         Route::post('/{invoice}/waive-late-fee', [BillingController::class, 'waiveLateFee'])->name('billing.waive-late-fee')->middleware('permission:billing,edit');
         Route::delete('/{invoice}', [BillingController::class, 'destroy'])->name('billing.destroy')->middleware('permission:billing,delete');
         Route::patch('/{invoice}/restore', [BillingController::class, 'restore'])->name('billing.restore')->middleware('permission:billing,delete');
-        Route::get('/{invoice}/pdf/en', [BillingController::class, 'exportPdfEnglish'])->name('billing.pdf.en');
-        Route::get('/{invoice}/print/en', [BillingController::class, 'previewEnglish'])->name('billing.print.en');
-        Route::get('/{invoice}/pdf/hi', [BillingController::class, 'exportPdfHindi'])->name('billing.pdf.hi');
-        Route::get('/{invoice}/print/hi', [BillingController::class, 'previewHindi'])->name('billing.print.hi');
+        Route::get('/{invoice}/pdf/en', [BillingController::class, 'exportPdfEnglish'])->name('billing.pdf.en')->middleware('permission:billing,view');
+        Route::get('/{invoice}/print/en', [BillingController::class, 'previewEnglish'])->name('billing.print.en')->middleware('permission:billing,view');
+        Route::get('/{invoice}/pdf/hi', [BillingController::class, 'exportPdfHindi'])->name('billing.pdf.hi')->middleware('permission:billing,view');
+        Route::get('/{invoice}/print/hi', [BillingController::class, 'previewHindi'])->name('billing.print.hi')->middleware('permission:billing,view');
         Route::get('/payments/{payment}/receipt', [BillingController::class, 'paymentReceipt'])->name('billing.payments.receipt')->middleware('permission:billing,view');
 
         // Resident payment history
@@ -276,11 +274,11 @@ Route::middleware(['auth', 'user.active'])->group(function () {
     Route::delete('/admin/users/{user}', [UserController::class, 'destroy'])->name('admin.users.destroy')->middleware('permission:admin_users,delete');
     Route::redirect('/admin', '/admin/users');
 
-    Route::get('/registrations', [RegistrationController::class, 'index'])->name('admin.registrations.index');
-    Route::get('/registrations/{application}', [RegistrationController::class, 'show'])->name('admin.registrations.show');
-    Route::post('/registrations/{application}/approve', [RegistrationController::class, 'approve'])->name('admin.registrations.approve');
-    Route::post('/registrations/{application}/reject', [RegistrationController::class, 'reject'])->name('admin.registrations.reject');
-    Route::post('/registrations/{application}/mark-cash-paid', [RegistrationController::class, 'markCashPaid'])->name('admin.registrations.cash-paid');
+    Route::get('/registrations', [RegistrationController::class, 'index'])->name('admin.registrations.index')->middleware('permission:registrations,view');
+    Route::get('/registrations/{application}', [RegistrationController::class, 'show'])->name('admin.registrations.show')->middleware('permission:registrations,view');
+    Route::post('/registrations/{application}/approve', [RegistrationController::class, 'approve'])->name('admin.registrations.approve')->middleware('permission:registrations,edit');
+    Route::post('/registrations/{application}/reject', [RegistrationController::class, 'reject'])->name('admin.registrations.reject')->middleware('permission:registrations,edit');
+    Route::post('/registrations/{application}/mark-cash-paid', [RegistrationController::class, 'markCashPaid'])->name('admin.registrations.cash-paid')->middleware('permission:registrations,edit');
 
     // Profile — every authenticated user manages their own, regardless of module permissions.
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
