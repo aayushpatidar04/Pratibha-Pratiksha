@@ -39,7 +39,10 @@ const props = defineProps({
     filters: Object,
     residents: Array,
     monthlyConfigs: Array,
+    feeTypes: Array,
 });
+
+
 
 const statusColor = {
     pending: "amber",
@@ -62,8 +65,11 @@ const statusLabel = {
 };
 
 const filters = reactive({
+    tab: props.filters?.tab || "current",
     search: props.filters?.search || "",
     status: props.filters?.status || "all",
+    fee_type: props.filters?.fee_type || "all",
+    resident_id: props.filters?.resident_id || "",
     month: props.filters?.month || "",
     year: props.filters?.year || "",
     deleted: props.filters?.deleted || "active",
@@ -73,8 +79,11 @@ const applyFilters = () =>
     router.get(
         "/billing",
         {
+            tab: filters.tab,
             search: filters.search || undefined,
             status: filters.status !== "all" ? filters.status : undefined,
+            fee_type: filters.fee_type !== "all" ? filters.fee_type : undefined,
+            resident_id: filters.resident_id || undefined,
             month: filters.month || undefined,
             year: filters.year || undefined,
             deleted: filters.deleted !== "active" ? filters.deleted : undefined,
@@ -344,6 +353,51 @@ const paymentBalanceDue = computed(() => {
         </div>
 
         <div class="space-y-5">
+            <!-- Billing Tabs -->
+            <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-1 flex">
+                <button
+                    type="button"
+                    @click="
+                        filters.tab = 'current';
+                        applyFilters();
+                    "
+                    class="flex-1 px-4 py-2.5 text-sm font-medium rounded-lg transition"
+                    :class="
+                        filters.tab === 'current'
+                            ? 'bg-blue-600 text-white shadow-sm'
+                            : 'text-gray-600 hover:bg-gray-50'
+                    "
+                >
+                    Current Bills
+                </button>
+
+                <button
+                    type="button"
+                    @click="
+                        filters.tab = 'refunded';
+                        applyFilters();
+                    "
+                    class="flex-1 px-4 py-2.5 text-sm font-medium rounded-lg transition"
+                    :class="
+                        filters.tab === 'refunded'
+                            ? 'bg-purple-600 text-white shadow-sm'
+                            : 'text-gray-600 hover:bg-gray-50'
+                    "
+                >
+                    Refunded Bills
+                    <span
+                        v-if="stats.refundedCount"
+                        class="ml-1.5 px-1.5 py-0.5 rounded-full text-[10px]"
+                        :class="
+                            filters.tab === 'refunded'
+                                ? 'bg-white/20 text-white'
+                                : 'bg-purple-50 text-purple-700'
+                        "
+                    >
+                        {{ stats.refundedCount }}
+                    </span>
+                </button>
+            </div>
             <!-- Enhanced Stats -->
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                 <div
@@ -479,6 +533,25 @@ const paymentBalanceDue = computed(() => {
                         </option>
                         <option value="with">All Including Deleted</option>
                     </select>
+                    <select
+                        v-model="filters.fee_type"
+                        @change="applyFilters"
+                        class="rounded-lg border-gray-300 text-sm"
+                    >
+                        <option value="all">All Fee Types</option>
+
+                        <option
+                            v-for="type in feeTypes"
+                            :key="type"
+                            :value="type"
+                        >
+                            {{
+                                type
+                                    .replace(/_/g, " ")
+                                    .replace(/\b\w/g, (char) => char.toUpperCase())
+                            }}
+                        </option>
+                    </select>
                 </div>
             </div>
 
@@ -486,6 +559,38 @@ const paymentBalanceDue = computed(() => {
             <div
                 class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden"
             >
+                <div class="flex items-center justify-between mb-3">
+                    <div>
+                        <h2 class="text-base font-semibold text-gray-900">
+                            {{
+                                filters.tab === "refunded"
+                                    ? "Refunded Bills"
+                                    : "Current Bills"
+                            }}
+                        </h2>
+
+                        <p class="text-xs text-gray-500 mt-0.5">
+                            {{
+                                filters.tab === "refunded"
+                                    ? "Security deposits and other refunded invoices"
+                                    : "Active and outstanding billing invoices"
+                            }}
+                        </p>
+                    </div>
+
+                    <div
+                        v-if="filters.tab === 'refunded'"
+                        class="text-right"
+                    >
+                        <p class="text-xs text-gray-500">
+                            Total Refunded
+                        </p>
+                        <p class="text-sm font-bold text-purple-600">
+                            {{ formatCurrency(stats.refundedAmount || 0) }}
+                        </p>
+                    </div>
+                </div>
+                
                 <table class="w-full text-sm">
                     <thead class="bg-gray-50 text-gray-700 text-xs uppercase">
                         <tr>
@@ -511,7 +616,7 @@ const paymentBalanceDue = computed(() => {
                                     {{ inv.invoice_number }}
                                 </p>
                                 <Badge v-if="inv.fee_type === 'security_deposit' && inv.refund_status === 'refunded'" :color="statusColor[inv.refund_status]">
-                                    {{ statusLabel[inv.refund_status] || inv._refund_status }}
+                                    {{ statusLabel[inv.refund_status] || inv.refund_status }}
                                 </Badge>
 
                                 <span
@@ -530,9 +635,14 @@ const paymentBalanceDue = computed(() => {
                             <td class="px-4 py-3">
                                 <div class="flex items-center gap-2">
                                     <div class="text-gray-600">
-                                        {{ inv.resident?.first_name }}
-                                        {{ inv.resident?.last_name }}
+                                        <template v-if="inv.resident">
+                                            {{ inv.resident.first_name }} {{ inv.resident.last_name }}
+                                        </template>
+                                        <template v-else>
+                                            {{ inv.application?.student_name }}
+                                        </template>
                                     </div>
+
                                     <Link
                                         v-if="inv.resident_id"
                                         :href="
@@ -546,6 +656,11 @@ const paymentBalanceDue = computed(() => {
                                     >
                                         <History class="h-3.5 w-3.5" />
                                     </Link>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-gray-900" v-if="inv.resident?.current_stay">
+                                        Room no. - {{ inv.resident?.current_stay?.room?.room_number }}
+                                    </p>
                                 </div>
                             </td>
                             <td class="px-4 py-3 text-gray-600">
@@ -631,29 +746,46 @@ const paymentBalanceDue = computed(() => {
                                         class="flex justify-end items-center gap-2 flex-wrap"
                                         v-if="!inv.deleted_at"
                                     >
-                                        <!-- Record Payment -->
-                                        <button
-                                            v-if="inv.status !== 'paid'"
-                                            @click="openPay(inv)"
-                                            class="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
-                                        >
-                                            <CreditCard class="h-3.5 w-3.5" />
-                                            Pay
-                                        </button>
+                                        <!-- Current Bills Actions -->
+                                        <template v-if="filters.tab === 'current'">
 
-                                        <!-- Waive Late Fee -->
-                                        <button
-                                            v-if="
-                                                inv.late_fee_amount > 0 &&
-                                                !inv.late_fee_waived &&
-                                                inv.status ===
-                                                    'late_fee_pending'
-                                            "
-                                            @click="openWaive(inv)"
-                                            class="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-700"
-                                        >
-                                            <Ban class="h-3.5 w-3.5" /> Waive
-                                        </button>
+                                            <!-- Record Payment -->
+                                            <button
+                                                v-if="inv.status !== 'paid'"
+                                                @click="openPay(inv)"
+                                                class="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
+                                            >
+                                                <CreditCard class="h-3.5 w-3.5" />
+                                                Pay
+                                            </button>
+
+                                            <!-- Waive Late Fee -->
+                                            <button
+                                                v-if="
+                                                    inv.late_fee_amount > 0 &&
+                                                    !inv.late_fee_waived &&
+                                                    inv.status === 'late_fee_pending'
+                                                "
+                                                @click="openWaive(inv)"
+                                                class="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-700"
+                                            >
+                                                <Ban class="h-3.5 w-3.5" />
+                                                Waive
+                                            </button>
+
+                                        </template>
+
+                                        <!-- Refunded Bills Actions -->
+                                        <template v-else>
+
+                                            <span
+                                                class="inline-flex items-center gap-1.5 rounded-lg bg-purple-50 border border-purple-200 px-3 py-1.5 text-xs font-medium text-purple-700"
+                                            >
+                                                <CheckCircle class="h-3.5 w-3.5" />
+                                                Refund Completed
+                                            </span>
+
+                                        </template>
 
                                         <!-- View Payments -->
                                         <button
@@ -665,6 +797,7 @@ const paymentBalanceDue = computed(() => {
                                             class="inline-flex items-center gap-1.5 rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-200"
                                         >
                                             <Eye class="h-3.5 w-3.5" />
+
                                             {{ inv.payments.length }} Payments
                                         </button>
 
@@ -674,22 +807,12 @@ const paymentBalanceDue = computed(() => {
                                             target="_blank"
                                             class="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700"
                                         >
-                                            <FileText class="h-3.5 w-3.5" /> EN
+                                            <FileText class="h-3.5 w-3.5" />
+                                            EN
                                         </a>
-                                        <!-- <a
-                                            :href="`/billing/${inv.id}/pdf/hi`"
-                                            target="_blank"
-                                            class="inline-flex items-center gap-1.5 rounded-lg bg-purple-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-purple-700"
-                                        >
-                                            <Languages class="h-3.5 w-3.5" /> HI
-                                        </a> -->
+
                                         <a
-                                            :href="
-                                                route(
-                                                    'billing.print.hi',
-                                                    inv.id,
-                                                )
-                                            "
+                                            :href="route('billing.print.hi', inv.id)"
                                             target="_blank"
                                             class="inline-flex items-center gap-1.5 rounded-lg bg-purple-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-purple-700"
                                         >
@@ -698,6 +821,7 @@ const paymentBalanceDue = computed(() => {
                                         </a>
 
                                         <button
+                                            v-if="filters.tab === 'current'"
                                             @click="destroy(inv)"
                                             class="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700"
                                         >

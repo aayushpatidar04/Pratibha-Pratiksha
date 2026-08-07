@@ -12,6 +12,7 @@ use App\Models\Room;
 use App\Services\RoomAllotmentService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -523,6 +524,33 @@ class CheckInOutController extends Controller
                 $stay,
                 $validated
             );
+
+            /*
+            * Enable resident portal access after successful check-in.
+            */
+            $resident = Resident::find($stay->resident_id);
+
+            if ($resident) {
+                $updates = [
+                    'portal_enabled' => true,
+                    'must_change_password' => true,
+                ];
+
+                /*
+                * Only create/reset the initial password if the resident
+                * does not already have portal credentials.
+                */
+                if (
+                    empty($resident->password)
+                    && !empty($resident->date_of_birth)
+                ) {
+                    $updates['password'] = Hash::make(
+                        $resident->date_of_birth
+                    );
+                }
+
+                $resident->update($updates);
+            }
         } catch (
             \RuntimeException |
             ValidationException $exception

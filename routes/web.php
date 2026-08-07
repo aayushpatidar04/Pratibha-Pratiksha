@@ -76,6 +76,8 @@ Route::middleware(['auth', 'user.active'])->group(function () {
     Route::get('/residents/past', [ResidentController::class, 'past'])->name('residents.past')->middleware('permission:residents,view');
     Route::post('/residents/bulk-upload', [ResidentController::class, 'bulkUpload'])->name('residents.bulk-upload')->middleware('permission:residents,create');
     Route::post('/residents', [ResidentController::class, 'store'])->name('residents.store')->middleware('permission:residents,create');
+    Route::get('/residents/export', [ResidentController::class, 'export'])->name('residents.export');
+
     Route::put('/residents/{resident}', [ResidentController::class, 'update'])->name('residents.update')->middleware('permission:residents,edit');
     Route::delete('/residents/{resident}', [ResidentController::class, 'destroy'])->name('residents.destroy')->middleware('permission:residents,delete');
 

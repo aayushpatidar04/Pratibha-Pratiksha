@@ -132,6 +132,15 @@ const submit = () => {
                         Register
                     </Link>
                 </p>
+                <p class="text-center text-sm text-gray-700">
+                    <Link
+                        href="/resident/login"
+                        class="text-blue-600 hover:underline"
+                    >
+                        Login as a Resident
+                    </Link>
+                </p>
+
             </form>
         </template>
     </GuestLayout>

@@ -1,6 +1,10 @@
 <script setup>
 import ResidentLayout from "@/Layouts/ResidentLayout.vue";
-import { Head, Link } from "@inertiajs/vue3";
+import PrimaryButton from "@/Components/PrimaryButton.vue"
+import Modal from "@/Components/Modal.vue";
+import { Head, Link, useForm } from "@inertiajs/vue3";
+import { ref } from "vue";
+
 import {
     ArrowLeft,
     BedDouble,
@@ -143,8 +147,35 @@ const proofIsImage = (proof) => {
     ].some((extension) => value.endsWith(extension));
 };
 
-const printPage = () => {
-    window.print();
+
+
+const payInvoiceOpen = ref(false);
+
+const paymentUpiId = ref(props.paymentUpiId ?? null);
+
+const paymentForm = useForm({
+    transaction_id: "",
+    proof: null,
+});
+
+const handlePaymentProof = (event) => {
+    paymentForm.proof = event.target.files?.[0] ?? null;
+};
+
+const submitPaymentProof = () => {
+    paymentForm.post(
+        route("resident.billing.payment.submit", {
+            invoice: props.invoice.id,
+        }),
+        {
+            forceFormData: true,
+            preserveScroll: true,
+            onSuccess: () => {
+                payInvoiceOpen.value = false;
+                paymentForm.reset();
+            },
+        },
+    );
 };
 </script>
 
@@ -667,6 +698,7 @@ const printPage = () => {
 
                 <button
                     type="button"
+                    @click="payInvoiceOpen = true"
                     class="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-amber-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-amber-700"
                 >
                     <CreditCard class="h-4 w-4" />
@@ -1018,6 +1050,138 @@ const printPage = () => {
                 </div>
             </section>
         </div>
+
+        <Modal :show="payInvoiceOpen" @close="payInvoiceOpen = false">
+            <div class="p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-900">
+                            Pay Invoice
+                        </h2>
+
+                        <p class="mt-1 text-xs text-slate-500">
+                            {{ invoice.invoice_number }}
+                        </p>
+                    </div>
+
+                    <button
+                        type="button"
+                        @click="payInvoiceOpen = false"
+                        class="rounded-lg p-2 text-slate-400 hover:bg-slate-100"
+                    >
+                        ✕
+                    </button>
+                </div>
+
+                <div
+                    class="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4"
+                >
+                    <p class="text-xs text-amber-700">
+                        Amount Payable
+                    </p>
+
+                    <p class="mt-1 text-2xl font-bold text-amber-900">
+                        {{ money(invoice.balance_amount) }}
+                    </p>
+                </div>
+
+                <!-- QR -->
+                <div class="mt-5 rounded-2xl border border-slate-200 p-5 text-center">
+                    <p class="text-sm font-bold text-slate-900">
+                        Scan & Pay using UPI
+                    </p>
+
+                    <p class="mt-1 text-xs text-slate-500">
+                        Scan the QR code using any UPI app.
+                    </p>
+
+                    <div class="mt-4 flex justify-center">
+                        <img src="/assets/images/Pratibha QR.jpeg"
+                            alt="UPI Payment QR Code"
+                            class="h-56 w-56 rounded-xl border border-slate-200 p-2"
+                        />
+                    </div>
+
+                    <p
+                        v-if="paymentUpiId"
+                        class="mt-3 text-sm font-semibold text-slate-800"
+                    >
+                        UPI ID: {{ paymentUpiId }}
+                    </p>
+
+                    <p class="mt-2 text-xs text-slate-500">
+                        Please pay exactly
+                        <strong>{{ money(invoice.balance_amount) }}</strong>
+                        and keep your payment screenshot.
+                    </p>
+                </div>
+
+                <!-- Transaction information -->
+                <!-- <form
+                    class="mt-5 space-y-4"
+                    @submit.prevent="submitPaymentProof"
+                >
+                    <div>
+                        <InputLabel value="Transaction ID / UTR" />
+
+                        <TextInput
+                            v-model="paymentForm.transaction_id"
+                            class="w-full"
+                            placeholder="Enter UTR / transaction ID"
+                        />
+
+                        <InputError
+                            :message="paymentForm.errors.transaction_id"
+                        />
+                    </div>
+
+                    <div>
+                        <InputLabel value="Payment Proof" />
+
+                        <input
+                            type="file"
+                            accept=".jpg,.jpeg,.png,.webp,.pdf"
+                            @change="handlePaymentProof"
+                            class="mt-1 block w-full text-sm"
+                        />
+
+                        <p class="mt-1 text-xs text-slate-500">
+                            Upload your UPI payment screenshot or receipt.
+                        </p>
+
+                        <InputError
+                            :message="paymentForm.errors.proof"
+                        />
+                    </div>
+
+                    <div
+                        class="rounded-lg border border-blue-200 bg-blue-50 p-3"
+                    >
+                        <p class="text-xs text-blue-700">
+                            Your payment will be verified by the hostel
+                            administration. The invoice will be marked paid after
+                            verification.
+                        </p>
+                    </div>
+
+                    <div class="flex justify-end gap-2 pt-2">
+                        <button
+                            type="button"
+                            @click="payInvoiceOpen = false"
+                            class="rounded-lg border border-slate-300 px-4 py-2 text-sm"
+                        >
+                            Cancel
+                        </button>
+
+                        <PrimaryButton
+                            :disabled="paymentForm.processing"
+                        >
+                            Submit Payment
+                        </PrimaryButton>
+                    </div>
+                </form> -->
+            </div>
+        </Modal>
     </ResidentLayout>
 </template>
 

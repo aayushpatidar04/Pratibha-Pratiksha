@@ -53,6 +53,17 @@ Route::prefix('resident')
                 [AuthenticatedSessionController::class, 'destroy']
             )->name('logout');
 
+            Route::get(
+                '/password/first-change',
+                [AuthenticatedSessionController::class, 'firstChange']
+            )->name('password.first-change');
+
+            Route::post(
+                '/password/first-change',
+                [AuthenticatedSessionController::class, 'updateFirstChange']
+            )->name('password.first-change.update');
+
+
             Route::prefix('billing')
                 ->name('billing.')
                 ->group(function () {
@@ -71,6 +82,7 @@ Route::prefix('resident')
                     Route::get('/{invoice}/pdf/hi', [BillingController::class, 'exportPdfHindi'])->name('pdf.hi');
                     Route::get('/{invoice}/print/hi', [BillingController::class, 'previewHindi'])->name('print.hi');
                     Route::get('/payments/{payment}/receipt', [BillingController::class, 'paymentReceipt'])->name('payments.receipt');
+                    Route::post('/{invoice}/payment', [BillingController::class, 'submitPayment'])->name('payment.submit');
                 });
     
             Route::get(
@@ -284,7 +296,7 @@ Route::prefix('resident')
                         ]
                     )->name('password.update');
 
-                    Route::put(
+                    Route::patch(
                         '/{stay}/expected-checkout-date',
                         [
                             ResidentProfileController::class,

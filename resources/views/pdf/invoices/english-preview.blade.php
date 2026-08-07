@@ -103,8 +103,8 @@
             width: 105mm;
             min-height: 148mm;
             margin: 0 auto;
-            padding: 4mm;
-            overflow: hidden;
+            padding: 5mm;
+            overflow: visible;
             background: #fff;
             box-shadow: 0 5px 22px rgba(0, 0, 0, 0.15);
             font-family: DejaVu Sans, Arial, sans-serif;
@@ -260,11 +260,12 @@
         .pdf-export-mode {
             margin: 0 !important;
             box-shadow: none !important;
+            overflow: visible !important;
         }
 
         @media (max-width: 600px) {
             .receipt-wrapper {
-                padding: 10px;
+                padding: 5px;
                 overflow-x: auto;
             }
 
@@ -291,7 +292,8 @@
             .receipt-page {
                 box-shadow: none;
                 margin: 0;
-                padding: 0;
+                padding: 4mm;
+                overflow: visible;
             }
         }
     </style>
@@ -732,6 +734,15 @@
                     {{ optional($invoice->due_date)->format('d-m-Y') }}.
                 </p>
             @endif
+
+            <table class="footer">
+                <tr style="text-align: center;">
+                    <td class="footer-note">
+                        Scan QR to Pay Bill<br>
+                        <img src="/assets/images/Pratibha QR.jpeg" style="width: 150px; height: 150px;" alt="QR Code">
+                    </td>
+                </tr>
+            </table>
         </div>
     </div>
 
@@ -789,7 +800,7 @@
                 receipt.classList.add("pdf-export-mode");
 
                 const options = {
-                    margin: 0,
+                    margin: [3, 0, 3, 0],
                     filename: pdfFileName,
 
                     image: {
@@ -816,7 +827,16 @@
                     },
 
                     pagebreak: {
-                        mode: ["avoid-all", "css", "legacy"],
+                        mode: ["css", "legacy"],
+                        before: [".page-break-before"],
+                        after: [".page-break-after"],
+                        avoid: [
+                            "table",
+                            "tr",
+                            ".payment-box",
+                            ".summary",
+                            ".footer",
+                        ],
                     },
                 };
 

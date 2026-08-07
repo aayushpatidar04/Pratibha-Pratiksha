@@ -28,6 +28,7 @@ import {
     Settings,
     History,
     DoorOpen,
+    Download,
     PlaneTakeoff,
     MoreVertical,
     Eye,
@@ -771,6 +772,296 @@ watch(
         deep: true,
     },
 );
+
+const exportOpen = ref(false);
+
+const exportColumns = [
+    {
+        key: "resident_code",
+        label: "Resident Code",
+        group: "Basic",
+    },
+    {
+        key: "first_name",
+        label: "First Name",
+        group: "Basic",
+    },
+    {
+        key: "last_name",
+        label: "Last Name",
+        group: "Basic",
+    },
+    {
+        key: "gender",
+        label: "Gender",
+        group: "Basic",
+    },
+    {
+        key: "date_of_birth",
+        label: "Date of Birth",
+        group: "Basic",
+    },
+    {
+        key: "blood_group",
+        label: "Blood Group",
+        group: "Basic",
+    },
+
+    {
+        key: "email",
+        label: "Email",
+        group: "Contact",
+    },
+    {
+        key: "phone",
+        label: "Phone",
+        group: "Contact",
+    },
+    {
+        key: "whatsapp_number",
+        label: "WhatsApp Number",
+        group: "Contact",
+    },
+    {
+        key: "address",
+        label: "Address",
+        group: "Contact",
+    },
+    {
+        key: "city",
+        label: "City",
+        group: "Contact",
+    },
+    {
+        key: "state",
+        label: "State",
+        group: "Contact",
+    },
+    {
+        key: "country",
+        label: "Country",
+        group: "Contact",
+    },
+    {
+        key: "pincode",
+        label: "Pincode",
+        group: "Contact",
+    },
+
+    {
+        key: "course",
+        label: "Course",
+        group: "Academic",
+    },
+    {
+        key: "year",
+        label: "Year",
+        group: "Academic",
+    },
+    {
+        key: "batch",
+        label: "Batch",
+        group: "Academic",
+    },
+    {
+        key: "roll_number",
+        label: "Roll Number",
+        group: "Academic",
+    },
+    {
+        key: "institute",
+        label: "Institute",
+        group: "Academic",
+    },
+
+    {
+        key: "father_name",
+        label: "Father Name",
+        group: "Guardian",
+    },
+    {
+        key: "father_phone",
+        label: "Father Phone",
+        group: "Guardian",
+    },
+    {
+        key: "father_email",
+        label: "Father Email",
+        group: "Guardian",
+    },
+    {
+        key: "mother_name",
+        label: "Mother Name",
+        group: "Guardian",
+    },
+    {
+        key: "mother_phone",
+        label: "Mother Phone",
+        group: "Guardian",
+    },
+
+    {
+        key: "status",
+        label: "Status",
+        group: "System",
+    },
+    {
+        key: "portal_enabled",
+        label: "Portal Enabled",
+        group: "System",
+    },
+    {
+        key: "must_change_password",
+        label: "Must Change Password",
+        group: "System",
+    },
+    {
+        key: "last_login_at",
+        label: "Last Login",
+        group: "System",
+    },
+    {
+        key: "password_changed_at",
+        label: "Password Changed At",
+        group: "System",
+    },
+    {
+        key: "created_at",
+        label: "Created At",
+        group: "System",
+    },
+    {
+        key: "building",
+        label: "Building",
+        group: "Hostel",
+    },
+    {
+        key: "floor",
+        label: "Floor",
+        group: "Hostel",
+    },
+    {
+        key: "room",
+        label: "Room",
+        group: "Hostel",
+    },
+    {
+        key: "bed",
+        label: "Bed",
+        group: "Hostel",
+    },
+    {
+        key: "check_in_date",
+        label: "Check In Date",
+        group: "Hostel",
+    },
+    {
+        key: "expected_check_out_date",
+        label: "Expected Check Out Date",
+        group: "Hostel",
+    },
+    {
+        key: "billing_basis",
+        label: "Billing Basis",
+        group: "Hostel",
+    },
+    {
+        key: "rent_amount",
+        label: "Rent Amount",
+        group: "Hostel",
+    },
+    {
+        key: "deposit_amount",
+        label: "Security Deposit",
+        group: "Hostel",
+    },
+];
+
+const selectedExportColumns = ref([
+    "resident_code",
+    "first_name",
+    "last_name",
+    "gender",
+    "phone",
+    "whatsapp_number",
+    "email",
+    "date_of_birth",
+    "course",
+    "year",
+    "batch",
+    "roll_number",
+    "institute",
+    "father_name",
+    "father_phone",
+    "mother_name",
+    "mother_phone",
+    "status",
+]);
+
+const exportColumnGroups = computed(() => {
+    return exportColumns.reduce((groups, column) => {
+        if (!groups[column.group]) {
+            groups[column.group] = [];
+        }
+
+        groups[column.group].push(column);
+
+        return groups;
+    }, {});
+});
+
+const allExportColumnKeys = computed(() =>
+    exportColumns.map((column) => column.key),
+);
+
+const allExportColumnsSelected = computed(() =>
+    allExportColumnKeys.value.every((key) =>
+        selectedExportColumns.value.includes(key),
+    ),
+);
+
+const toggleExportColumn = (key) => {
+    if (selectedExportColumns.value.includes(key)) {
+        selectedExportColumns.value =
+            selectedExportColumns.value.filter((item) => item !== key);
+    } else {
+        selectedExportColumns.value.push(key);
+    }
+};
+
+const selectAllExportColumns = () => {
+    selectedExportColumns.value = [...allExportColumnKeys.value];
+};
+
+const clearAllExportColumns = () => {
+    selectedExportColumns.value = [];
+};
+
+const exportResidents = () => {
+    if (!selectedExportColumns.value.length) {
+        return;
+    }
+
+    const params = new URLSearchParams();
+
+    params.set("tab", props.tab || "residents");
+    params.set("sub", props.sub || "active");
+    params.set("view", props.view || "student");
+
+    Object.entries(filters).forEach(([key, value]) => {
+        if (value !== null && value !== undefined && value !== "") {
+            params.set(key, value);
+        }
+    });
+
+    selectedExportColumns.value.forEach((column) => {
+        params.append("columns[]", column);
+    });
+
+    window.location.href = `${route("residents.export")}?${params.toString()}`;
+
+    exportOpen.value = false;
+};
 </script>
 
 <template>
@@ -822,6 +1113,14 @@ watch(
                         <ArrowRightLeft class="h-3.5 w-3.5" /> Room Change
                         Requests
                     </Link>
+                    <button
+                        type="button"
+                        class="px-3 py-2 text-xs rounded-lg bg-indigo-600 text-white flex items-center gap-1.5 hover:bg-indigo-700"
+                        @click="exportOpen = true"
+                    >
+                        <Download class="h-3.5 w-3.5" />
+                        Export
+                    </button>
                 </div>
             </div>
 
@@ -5336,6 +5635,148 @@ watch(
                         @click="closeQuickContact"
                     >
                         Close
+                    </button>
+                </div>
+            </div>
+        </Modal>
+
+        <Modal :show="exportOpen" @close="exportOpen = false">
+            <div class="p-6 space-y-5">
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900">
+                        Export Residents
+                    </h2>
+
+                    <p class="text-xs text-gray-600 mt-1">
+                        Select the columns you want to include in the CSV export.
+                        Current search and filters will also be applied.
+                    </p>
+                </div>
+
+                <!-- Selection controls -->
+                <div
+                    class="flex items-center justify-between border-b border-gray-200 pb-3"
+                >
+                    <p class="text-xs text-gray-600">
+                        {{ selectedExportColumns.length }}
+                        / {{ exportColumns.length }} columns selected
+                    </p>
+
+                    <div class="flex gap-2">
+                        <button
+                            type="button"
+                            class="text-xs text-blue-600 hover:underline"
+                            @click="selectAllExportColumns"
+                        >
+                            Select All
+                        </button>
+
+                        <button
+                            type="button"
+                            class="text-xs text-gray-600 hover:underline"
+                            @click="clearAllExportColumns"
+                        >
+                            Clear
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Column groups -->
+                <div class="space-y-4 max-h-[60vh] overflow-y-auto">
+                    <div
+                        v-for="(columns, group) in exportColumnGroups"
+                        :key="group"
+                    >
+                        <div
+                            class="flex items-center justify-between mb-2"
+                        >
+                            <h3
+                                class="text-xs font-semibold uppercase tracking-wide text-gray-700"
+                            >
+                                {{ group }}
+                            </h3>
+
+                            <button
+                                type="button"
+                                class="text-[11px] text-blue-600 hover:underline"
+                                @click="
+                                    columns.forEach((column) => {
+                                        if (
+                                            !selectedExportColumns.includes(
+                                                column.key,
+                                            )
+                                        ) {
+                                            selectedExportColumns.push(
+                                                column.key,
+                                            );
+                                        }
+                                    })
+                                "
+                            >
+                                Select group
+                            </button>
+                        </div>
+
+                        <div
+                            class="grid grid-cols-1 sm:grid-cols-2 gap-2"
+                        >
+                            <label
+                                v-for="column in columns"
+                                :key="column.key"
+                                class="flex items-center gap-2 p-2 rounded-lg border border-gray-200 hover:bg-gray-50 cursor-pointer"
+                            >
+                                <input
+                                    type="checkbox"
+                                    :checked="
+                                        selectedExportColumns.includes(
+                                            column.key,
+                                        )
+                                    "
+                                    @change="
+                                        toggleExportColumn(column.key)
+                                    "
+                                    class="rounded border-gray-300 text-blue-600"
+                                />
+
+                                <span class="text-xs text-gray-700">
+                                    {{ column.label }}
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Current filters -->
+                <div
+                    class="rounded-lg bg-blue-50 border border-blue-100 p-3"
+                >
+                    <p class="text-xs font-medium text-blue-800">
+                        Export scope
+                    </p>
+
+                    <p class="text-[11px] text-blue-700 mt-1">
+                        Current tab, search and filters will be used.
+                    </p>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex justify-end gap-2 pt-2">
+                    <button
+                        type="button"
+                        class="px-4 py-2 text-sm rounded-lg border border-gray-300"
+                        @click="exportOpen = false"
+                    >
+                        Cancel
+                    </button>
+
+                    <button
+                        type="button"
+                        :disabled="selectedExportColumns.length === 0"
+                        class="px-4 py-2 text-sm rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        @click="exportResidents"
+                    >
+                        <Download class="h-4 w-4" />
+                        Export CSV
                     </button>
                 </div>
             </div>

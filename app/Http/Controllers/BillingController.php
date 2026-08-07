@@ -26,80 +26,261 @@ class BillingController extends Controller
     // ==================== INDEX ====================
     public function index(Request $request): Response
     {
-        $query = FeeInvoice::with(['resident', 'payments.proofs', 'items', 'monthlyConfig', 'waivedByUser']);
- 
+        $query = FeeInvoice::with([
+            'resident.currentStay.room',
+            'payments.proofs',
+            'items',
+            'monthlyConfig',
+            'waivedByUser',
+            'application',
+        ]);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Billing Tab
+        |--------------------------------------------------------------------------
+        |
+        | current  = everything except refunded invoices
+        | refunded = only refunded invoices
+        |
+        */
+        $tab = $request->string('tab')->toString() ?: 'current';
+
+        if ($tab === 'refunded') {
+            $query->where('refund_status', 'refunded');
+        } else {
+            $query->where(function ($q) {
+                $q->whereNull('refund_status')
+                    ->orWhere('refund_status', '!=', 'refunded');
+            });
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Deleted Filter
+        |--------------------------------------------------------------------------
+        */
+
         $deletedFilter = $request->string('deleted')->toString();
- 
+
         if ($deletedFilter === 'only') {
             $query->onlyTrashed();
         } elseif ($deletedFilter === 'with') {
             $query->withTrashed();
         }
- 
-        // Search functionality
+
+        /*
+        |--------------------------------------------------------------------------
+        | Search
+        |--------------------------------------------------------------------------
+        */
+
         if ($search = $request->string('search')->toString()) {
             $query->where(function ($q) use ($search) {
                 $q->where('invoice_number', 'like', '%' . $search . '%')
                     ->orWhereHas('resident', function ($residentQuery) use ($search) {
-                        $residentQuery->where('first_name', 'like', '%' . $search . '%')
+                        $residentQuery
+                            ->where('first_name', 'like', '%' . $search . '%')
                             ->orWhere('last_name', 'like', '%' . $search . '%')
                             ->orWhere('resident_code', 'like', '%' . $search . '%');
                     });
             });
         }
- 
-        // Status filter with late_fee_pending
+
+        /*
+        |--------------------------------------------------------------------------
+        | Fee Type Filter
+        |--------------------------------------------------------------------------
+        */
+
+        $feeType = $request->string('fee_type')->toString();
+
+        if ($feeType && $feeType !== 'all') {
+            $query->where('fee_type', $feeType);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Status Filter
+        |--------------------------------------------------------------------------
+        */
+
         $status = $request->string('status')->toString();
+
         if ($status && $status !== 'all') {
             if ($status === 'late_fee_pending') {
-                $query->whereRaw('paid_amount >= amount')
+                $query
+                    ->whereRaw('paid_amount >= amount')
                     ->where('late_fee_amount', '>', 0)
                     ->where('late_fee_waived', false);
             } else {
                 $query->where('status', $status);
             }
         }
- 
+
+        /*
+        |--------------------------------------------------------------------------
+        | Resident Filter
+        |--------------------------------------------------------------------------
+        */
+
         if ($residentId = $request->integer('resident_id')) {
             $query->where('resident_id', $residentId);
         }
- 
+
+        /*
+        |--------------------------------------------------------------------------
+        | Month Filter
+        |--------------------------------------------------------------------------
+        */
+
         if ($month = $request->integer('month')) {
-            $query->whereHas('monthlyConfig', fn($q) => $q->where('month', $month));
+            $query->whereHas(
+                'monthlyConfig',
+                fn($q) => $q->where('month', $month)
+            );
         }
- 
+
+        /*
+        |--------------------------------------------------------------------------
+        | Year Filter
+        |--------------------------------------------------------------------------
+        */
+
         if ($year = $request->integer('year')) {
-            $query->whereHas('monthlyConfig', fn($q) => $q->where('year', $year));
+            $query->whereHas(
+                'monthlyConfig',
+                fn($q) => $q->where('year', $year)
+            );
         }
- 
-        $invoices = $query->orderByDesc('created_at')->paginate(20)->withQueryString();
- 
-        // Update computed status
+
+        /*
+        |--------------------------------------------------------------------------
+        | Pagination
+        |--------------------------------------------------------------------------
+        */
+
+        $invoices = $query
+            ->orderByDesc('created_at')
+            ->paginate(20)
+            ->withQueryString();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Computed Status
+        |--------------------------------------------------------------------------
+        */
+
         foreach ($invoices as $invoice) {
             $invoice->status = $invoice->computed_status;
             $invoice->late_fee_amount = $invoice->effective_late_fee_amount;
         }
- 
+
+        /*
+        |--------------------------------------------------------------------------
+        | Stats
+        |--------------------------------------------------------------------------
+        */
+
         $stats = [
             'totalBilled' => (float) FeeInvoice::sum('amount'),
-            'totalLateFees' => FeeInvoice::where('late_fee_waived', false)->get()->sum(fn ($invoice) => $invoice->effective_late_fee_amount),
+
+            'totalLateFees' => FeeInvoice::where(
+                'late_fee_waived',
+                false
+            )->get()->sum(
+                    fn($invoice) => $invoice->effective_late_fee_amount
+                ),
+
             'paidAmount' => (float) FeeInvoice::sum('paid_amount'),
-            'pendingCount' => FeeInvoice::where('status', 'pending')->count(),
-            'partialCount' => FeeInvoice::where('status', 'partial')->count(),
-            'lateFeePendingCount' => FeeInvoice::where('status', 'late_fee_pending')->count(),
-            'overdueCount' => FeeInvoice::where('status', 'overdue')->count(),
-            'paidCount' => FeeInvoice::where('status', 'paid')->count(),
-            'waivedLateFees' => (float) FeeInvoice::where('late_fee_waived', true)->sum('late_fee_amount'),
+
+            'pendingCount' => FeeInvoice::where(
+                'status',
+                'pending'
+            )->count(),
+
+            'partialCount' => FeeInvoice::where(
+                'status',
+                'partial'
+            )->count(),
+
+            'lateFeePendingCount' => FeeInvoice::where(
+                'status',
+                'late_fee_pending'
+            )->count(),
+
+            'overdueCount' => FeeInvoice::where(
+                'status',
+                'overdue'
+            )->count(),
+
+            'paidCount' => FeeInvoice::where(
+                'status',
+                'paid'
+            )->count(),
+
+            'waivedLateFees' => (float) FeeInvoice::where(
+                'late_fee_waived',
+                true
+            )->sum('late_fee_amount'),
+
             'deletedCount' => FeeInvoice::onlyTrashed()->count(),
+
+            'refundedCount' => FeeInvoice::where(
+                'refund_status',
+                'refunded'
+            )->count(),
+
+            'refundedAmount' => (float) FeeInvoice::where(
+                'refund_status',
+                'refunded'
+            )->sum('refund_amount'),
         ];
- 
+
+        /*
+        |--------------------------------------------------------------------------
+        | Fee Types
+        |--------------------------------------------------------------------------
+        |
+        | Better to get these from DB so adding a new fee_type later
+        | automatically makes it available in the filter.
+        |
+        */
+
+        $feeTypes = FeeInvoice::query()
+            ->select('fee_type')
+            ->whereNotNull('fee_type')
+            ->distinct()
+            ->orderBy('fee_type')
+            ->pluck('fee_type');
+
         return Inertia::render('Billing/Index', [
             'invoices' => $invoices,
+
             'stats' => $stats,
-            'filters' => $request->only('search', 'status', 'resident_id', 'month', 'year', 'deleted'),
+
+            'filters' => $request->only([
+                'tab',
+                'search',
+                'status',
+                'fee_type',
+                'resident_id',
+                'month',
+                'year',
+                'deleted',
+            ]),
+
+            'feeTypes' => $feeTypes,
+
             'residents' => Resident::where('status', 'active')
                 ->orderBy('first_name')
-                ->get(['id', 'first_name', 'last_name', 'resident_code']),
+                ->get([
+                    'id',
+                    'first_name',
+                    'last_name',
+                    'resident_code',
+                ]),
+
             'monthlyConfigs' => MonthlyBillingConfig::orderByDesc('year')
                 ->orderByDesc('month')
                 ->get(),
@@ -927,10 +1108,10 @@ class BillingController extends Controller
             'monthlyConfig',
             'waivedByUser',
         ]);
- 
+
         $invoice->status = $invoice->computed_status;
         $invoice->late_fee_amount = $invoice->effective_late_fee_amount;
- 
+
         return view('pdf.invoices.english-preview', [
             'invoice' => $invoice,
         ]);

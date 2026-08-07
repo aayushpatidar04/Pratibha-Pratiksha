@@ -25,6 +25,7 @@ class RegistrationApplication extends Model
         'father_mobile',
         'mother_mobile',
         'email',
+        'aadhar_number',
         'permanent_address',
         'current_address',
         'institution_name',

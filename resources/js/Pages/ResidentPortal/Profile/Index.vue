@@ -388,7 +388,7 @@ const stayForm = useForm({
 });
 
 watch(
-    () => props.currentStay.value?.expected_check_out_date,
+    () => props.currentStay?.expected_check_out_date,
     (value) => {
         stayForm.expected_check_out_date = value ?? "";
     },
@@ -396,14 +396,14 @@ watch(
 );
 
 const updateExpectedCheckout = () => {
-    if (!currentStay.value?.id) {
+    if (!props.currentStay?.id) {
         return;
     }
 
     stayForm.patch(
         route(
-            "resident.hostel.stay.expected-checkout.update",
-            currentStay.value.id,
+            "resident.profile.update-expected-checkout",
+            props.currentStay.id,
         ),
         {
             preserveScroll: true,
@@ -745,13 +745,21 @@ const updateExpectedCheckout = () => {
 
                         <div>
                             <InputLabel value="Blood Group" />
-
-                            <input
-                                :value="resident.blood_group || ''"
-                                type="text"
-                                readonly
-                                class="mt-1 w-full cursor-not-allowed rounded-xl border-slate-200 bg-slate-50 text-sm text-slate-600"
-                            />
+                            <select
+                                id="blood_group"
+                                v-model="resident.blood_group"
+                                class="w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
+                            >
+                                <option value="">Select</option>
+                                <option value="A+">A+</option>
+                                <option value="A-">A-</option>
+                                <option value="B+">B+</option>
+                                <option value="B-">B-</option>
+                                <option value="AB+">AB+</option>
+                                <option value="AB-">AB-</option>
+                                <option value="O+">O+</option>
+                                <option value="O-">O-</option>
+                            </select>
                         </div>
 
                         <div>
@@ -760,8 +768,7 @@ const updateExpectedCheckout = () => {
                             <input
                                 :value="maskedAadhaar"
                                 type="text"
-                                readonly
-                                class="mt-1 w-full cursor-not-allowed rounded-xl border-slate-200 bg-slate-50 text-sm text-slate-600"
+                                class="mt-1 w-full rounded-xl border-slate-200 text-sm text-slate-600"
                             />
                         </div>
 
@@ -1226,7 +1233,8 @@ const updateExpectedCheckout = () => {
                                             v-model="profileForm.father_phone"
                                             type="text"
                                             maxlength="20"
-                                            class="w-full rounded-xl border-slate-300 bg-white py-2.5 pl-10 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                            readonly
+                                            class="w-full cursor-not-allowed bg-slate-50 rounded-xl border-slate-300 py-2.5 pl-10 text-sm focus:border-indigo-500 focus:ring-indigo-500"
                                         />
                                     </div>
 
@@ -1319,7 +1327,8 @@ const updateExpectedCheckout = () => {
                                             v-model="profileForm.mother_phone"
                                             type="text"
                                             maxlength="20"
-                                            class="w-full rounded-xl border-slate-300 bg-white py-2.5 pl-10 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                            readonly
+                                            class="w-full cursor-not-allowed bg-slate-50 rounded-xl border-slate-300 py-2.5 pl-10 text-sm focus:border-indigo-500 focus:ring-indigo-500"
                                         />
                                     </div>
 
@@ -1432,7 +1441,7 @@ const updateExpectedCheckout = () => {
                 </form>
 
                 <!-- Hostel -->
-                <form v-else-if="activeTab === 'hostel'" class="p-5 md:p-6">
+                <form v-else-if="activeTab === 'hostel'" class="p-5 md:p-6" @submit.prevent="updateExpectedCheckout">
                     <div>
                         <h2 class="text-base font-bold text-slate-900">
                             Current Hostel Stay

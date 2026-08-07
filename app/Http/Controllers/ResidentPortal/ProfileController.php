@@ -491,6 +491,8 @@ class ProfileController extends Controller
                 'editableFields' => [
                     'email',
                     'whatsapp_number',
+                    'blood_group',
+                    'aadhar_number',
 
                     'address',
                     'city',
@@ -505,11 +507,9 @@ class ProfileController extends Controller
                     'roll_number',
 
                     'father_name',
-                    'father_phone',
                     'father_email',
 
                     'mother_name',
-                    'mother_phone',
 
                     'expected_check_out_date' =>
                         optional(

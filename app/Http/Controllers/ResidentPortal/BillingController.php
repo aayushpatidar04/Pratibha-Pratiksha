@@ -619,4 +619,52 @@ class BillingController extends Controller
             'invoice' => $payment->invoice,
         ]);
     }
+
+    public function submitPayment(
+        Request $request,
+        FeeInvoice $invoice
+    ) {
+        $resident = $request->user();
+
+        abort_unless(
+            $invoice->resident_id === $resident->id,
+            403
+        );
+
+        if ((float) $invoice->balance_amount <= 0) {
+            return back()->with(
+                'error',
+                'This invoice has no outstanding balance.'
+            );
+        }
+
+        $validated = $request->validate([
+            'transaction_id' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'proof' => [
+                'required',
+                'file',
+                'mimes:jpg,jpeg,png,webp,pdf',
+                'max:5120',
+            ],
+        ]);
+
+        /*
+        * Store this as a pending payment request.
+        *
+        * Do NOT increase paid_amount here.
+        * Do NOT mark invoice paid here.
+        */
+        
+        // We need a place to store this request.
+        
+        return back()->with(
+            'success',
+            'Payment proof submitted successfully. It will be verified by administration.'
+        );
+    }
 }

@@ -2552,4 +2552,375 @@ class ResidentController extends Controller
         ]);
     }
 
+    public function export(Request $request)
+    {
+        $allowedColumns = [
+            'resident_code' => 'Resident Code',
+            'first_name' => 'First Name',
+            'last_name' => 'Last Name',
+            'gender' => 'Gender',
+            'date_of_birth' => 'Date of Birth',
+            'blood_group' => 'Blood Group',
+
+            'email' => 'Email',
+            'phone' => 'Phone',
+            'whatsapp_number' => 'WhatsApp Number',
+            'address' => 'Address',
+            'city' => 'City',
+            'state' => 'State',
+            'country' => 'Country',
+            'pincode' => 'Pincode',
+
+            'course' => 'Course',
+            'year' => 'Year',
+            'batch' => 'Batch',
+            'roll_number' => 'Roll Number',
+            'institute' => 'Institute',
+
+            'father_name' => 'Father Name',
+            'father_phone' => 'Father Phone',
+            'father_email' => 'Father Email',
+            'mother_name' => 'Mother Name',
+            'mother_phone' => 'Mother Phone',
+
+            'status' => 'Status',
+            'portal_enabled' => 'Portal Enabled',
+            'must_change_password' => 'Must Change Password',
+            'last_login_at' => 'Last Login',
+            'password_changed_at' => 'Password Changed At',
+            'created_at' => 'Created At',
+
+            'building' => 'Building',
+            'floor' => 'Floor',
+            'room' => 'Room',
+            'bed' => 'Bed',
+            'check_in_date' => 'Check In Date',
+            'expected_check_out_date' => 'Expected Check Out Date',
+            'billing_basis' => 'Billing Basis',
+            'rent_amount' => 'Rent Amount',
+            'deposit_amount' => 'Security Deposit',
+        ];
+
+        $columns = collect(
+            $request->input('columns', [])
+        )->filter(
+            fn ($column) => array_key_exists($column, $allowedColumns)
+        )->values();
+
+        if ($columns->isEmpty()) {
+            return back()->with(
+                'error',
+                'Please select at least one export column.'
+            );
+        }
+
+        $query = Resident::query()
+            ->with([
+                'currentStay.room',
+                'currentStay.building',
+                'currentStay.floor',
+                'currentStay.bed',
+            ]);
+
+        /*
+        * Same tab/sub filtering as Residents index.
+        */
+        $tab = $request->string('tab')->toString() ?: 'residents';
+        $sub = $request->string('sub')->toString() ?: 'active';
+
+        match ($tab) {
+            'upcoming_bookings' => $query->where(
+                'status',
+                'upcoming'
+            ),
+
+            'left_suspended' => $query->whereIn(
+                'status',
+                ['left', 'suspended']
+            ),
+
+            default => match ($sub) {
+                'student_list' => $query->whereIn(
+                    'status',
+                    ['active', 'upcoming']
+                ),
+
+                'new_joiners' => $query
+                    ->where('status', 'active')
+                    ->whereHas(
+                        'currentStay',
+                        fn ($q) => $q->where(
+                            'check_in_date',
+                            '>=',
+                            now()->subDays(30)
+                        )
+                    ),
+
+                default => $query->where(
+                    'status',
+                    'active'
+                ),
+            },
+        };
+
+        /*
+        * Search
+        */
+        if ($search = $request->string('search')->toString()) {
+            $query->where(function ($q) use ($search) {
+                $q->where(
+                    'first_name',
+                    'like',
+                    "%{$search}%"
+                )
+                    ->orWhere(
+                        'last_name',
+                        'like',
+                        "%{$search}%"
+                    )
+                    ->orWhere(
+                        'phone',
+                        'like',
+                        "%{$search}%"
+                    )
+                    ->orWhere(
+                        'resident_code',
+                        'like',
+                        "%{$search}%"
+                    )
+                    ->orWhere(
+                        'email',
+                        'like',
+                        "%{$search}%"
+                    )
+                    ->orWhere(
+                        'roll_number',
+                        'like',
+                        "%{$search}%"
+                    );
+            });
+        }
+
+        /*
+        * Filters
+        */
+        if ($gender = $request->string('gender')->toString()) {
+            $query->where('gender', $gender);
+        }
+
+        if ($course = $request->string('course')->toString()) {
+            $query->where(
+                'course',
+                'like',
+                "%{$course}%"
+            );
+        }
+
+        if ($institute = $request->string('institute')->toString()) {
+            $query->where(
+                'institute',
+                'like',
+                "%{$institute}%"
+            );
+        }
+
+        if ($country = $request->string('country')->toString()) {
+            $query->where('country', $country);
+        }
+
+        if ($state = $request->string('state')->toString()) {
+            $query->where('state', $state);
+        }
+
+        if ($city = $request->string('city')->toString()) {
+            $query->where('city', $city);
+        }
+
+        $bookingsFilter = $request
+            ->string('bookings_filter')
+            ->toString();
+
+        if ($bookingsFilter === 'no_living_end_date') {
+            $query->whereHas(
+                'currentStay',
+                fn ($q) => $q->whereNull(
+                    'expected_check_out_date'
+                )
+            );
+        } elseif ($bookingsFilter === 'leaving_7') {
+            $query->whereHas(
+                'currentStay',
+                fn ($q) => $q->whereBetween(
+                    'expected_check_out_date',
+                    [now(), now()->addDays(7)]
+                )
+            );
+        } elseif ($bookingsFilter === 'leaving_30') {
+            $query->whereHas(
+                'currentStay',
+                fn ($q) => $q->whereBetween(
+                    'expected_check_out_date',
+                    [now(), now()->addDays(30)]
+                )
+            );
+        }
+
+        if ($livingUpTo = $request->date('living_up_to')) {
+            $query->whereHas(
+                'currentStay',
+                fn ($q) => $q->whereDate(
+                    'expected_check_out_date',
+                    '<=',
+                    $livingUpTo
+                )
+            );
+        }
+
+        $selectedColumns = $columns->all();
+
+        $fileName =
+            'residents-' .
+            now()->format('Y-m-d-His') .
+            '.csv';
+
+        return response()->streamDownload(
+            function () use (
+                $query,
+                $selectedColumns,
+                $allowedColumns
+            ) {
+                $handle = fopen(
+                    'php://output',
+                    'w'
+                );
+
+                /*
+                * UTF-8 BOM for Excel.
+                */
+                fwrite(
+                    $handle,
+                    "\xEF\xBB\xBF"
+                );
+
+                /*
+                * Header
+                */
+                fputcsv(
+                    $handle,
+                    array_map(
+                        fn ($column) =>
+                            $allowedColumns[$column],
+                        $selectedColumns
+                    )
+                );
+
+                /*
+                * Process in chunks so large resident
+                * lists don't consume excessive memory.
+                */
+                $query
+                    ->orderByDesc('created_at')
+                    ->chunk(500, function ($residents) use (
+                        $handle,
+                        $selectedColumns
+                    ) {
+                        foreach ($residents as $resident) {
+                            $row = [];
+
+                            foreach ($selectedColumns as $column) {
+                                $row[] = $this->residentExportValue(
+                                    $resident,
+                                    $column
+                                );
+                            }
+
+                            fputcsv(
+                                $handle,
+                                $row
+                            );
+                        }
+                    });
+
+                fclose($handle);
+            },
+            $fileName,
+            [
+                'Content-Type' =>
+                    'text/csv; charset=UTF-8',
+                'Content-Disposition' =>
+                    'attachment; filename="' .
+                    $fileName .
+                    '"',
+            ]
+        );
+    }
+
+    private function residentExportValue(
+        Resident $resident,
+        string $column
+    ): mixed {
+        return match ($column) {
+            'portal_enabled' =>
+                $resident->portal_enabled ? 'Yes' : 'No',
+
+            'must_change_password' =>
+                $resident->must_change_password ? 'Yes' : 'No',
+
+            'gender' =>
+                ucfirst((string) $resident->gender),
+
+            'status' =>
+                ucfirst((string) $resident->status),
+
+            'last_login_at',
+            'password_changed_at',
+            'created_at' =>
+                $resident->{$column}
+                    ? \Carbon\Carbon::parse(
+                        $resident->{$column}
+                    )->format('Y-m-d H:i:s')
+                    : '',
+            
+            'building' =>
+                $resident->currentStay?->building?->name ?? '',
+
+            'floor' =>
+                $resident->currentStay?->floor?->name
+                    ?? $resident->currentStay?->floor?->floor_number
+                    ?? '',
+
+            'room' =>
+                $resident->currentStay?->room?->room_number ?? '',
+
+            'bed' =>
+                $resident->currentStay?->bed?->bed_number
+                    ?? $resident->currentStay?->bed?->name
+                    ?? '',
+
+            'check_in_date' =>
+                $resident->currentStay?->check_in_date ?? '',
+
+            'expected_check_out_date' =>
+                $resident->currentStay?->expected_check_out_date ?? '',
+
+            'billing_basis' =>
+                ucfirst(
+                    (string) (
+                        $resident->currentStay?->billing_basis
+                        ?? $resident->currentStay?->bill_type
+                        ?? ''
+                    )
+                ),
+
+            'rent_amount' =>
+                $resident->currentStay?->rent_amount ?? '',
+
+            'deposit_amount' =>
+                $resident->currentStay?->deposit_amount ?? '',
+
+            default =>
+                $resident->{$column} ?? '',
+        };
+    }
+
 }

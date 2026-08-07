@@ -7,6 +7,8 @@ use App\Models\Resident;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -106,5 +108,67 @@ class AuthenticatedSessionController extends Controller
         $request->session()->regenerateToken();
 
         return redirect()->route('resident.login');
+    }
+
+    public function firstChange(): Response|RedirectResponse
+    {
+        $resident = Auth::guard('resident')->user();
+
+        if (!$resident) {
+            return redirect()->route('resident.login');
+        }
+
+        // If password change is already completed,
+        // don't allow this page to be accessed again.
+        if (!$resident->must_change_password) {
+            return redirect()->route('resident.dashboard');
+        }
+
+        return Inertia::render('ResidentPortal/Auth/FirstChangePassword');
+    }
+
+    /**
+     * Update the resident's password for the first time.
+     */
+    public function updateFirstChange(Request $request): RedirectResponse
+    {
+        $resident = Auth::guard('resident')->user();
+
+        if (!$resident) {
+            return redirect()->route('login');
+        }
+
+        if (!$resident->must_change_password) {
+            return redirect()->route('resident.dashboard');
+        }
+
+        $validated = $request->validate([
+            'password' => [
+                'required',
+                'confirmed',
+                Password::min(8)
+                    ->letters()
+                    ->mixedCase()
+                    ->numbers(),
+            ],
+        ], [
+            'password.confirmed' =>
+                'The password confirmation does not match.',
+        ]);
+
+        $resident->update([
+            'password' => Hash::make($validated['password']),
+            'must_change_password' => false,
+        ]);
+
+        // Refresh the authenticated model.
+        $resident->refresh();
+
+        return redirect()
+            ->route('resident.dashboard')
+            ->with(
+                'success',
+                'Your password has been changed successfully.'
+            );
     }
 }

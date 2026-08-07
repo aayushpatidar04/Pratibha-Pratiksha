@@ -709,12 +709,12 @@
 
             <div class="summary">
                 <p>
-                    <strong>शब्दों में:</strong>
+                    <strong>In Words:</strong>
                     {{ $amountInWords }} Rupees Only
                 </p>
 
                 <p>
-                    <strong>टिप्पणी:</strong>
+                    <strong>Remarks:</strong>
                     {{ $invoice->description ?? '-' }}
                 </p>
 
@@ -743,6 +743,7 @@
                     </td>
                 </tr>
             </table>
+
             @if (
                     $invoice->status !== 'paid' &&
                     !$invoice->is_overdue &&
@@ -758,6 +759,15 @@
                     विलंब शुल्क देय होगा।
                 </p>
             @endif
+
+            <table class="footer">
+                <tr style="text-align: center;">
+                    <td class="footer-note">
+                        Scan QR to Pay Bill<br>
+                        <img src="/assets/images/Pratibha QR.jpeg" style="width: 150px; height: 150px;" alt="QR Code">
+                    </td>
+                </tr>
+            </table>
         </div>
     </div>
 
@@ -827,7 +837,7 @@
                 receipt.classList.add("pdf-export-mode");
 
                 const options = {
-                    margin: 0,
+                    margin: [3, 0, 3, 0],
                     filename: pdfFileName,
 
                     image: {

@@ -1540,7 +1540,7 @@ const residentPhotoUrl = (value) => {
         <Modal
             :show="actualCheckinOpen"
             @close="closeActualCheckin"
-            maxWidth="4xl"
+            maxWidth="3xl"
         >
             <form
                 v-if="checkingInStay"

@@ -15,7 +15,34 @@ import {
 
 const props = defineProps({
     config: Object,
-    preview: Array,
+    preview: {
+        type: Array,
+        default: () => [],
+    },
+});
+
+const search = ref("");
+
+const filteredPreview = computed(() => {
+    const term = search.value.trim().toLowerCase();
+
+    if (!term) {
+        return props.preview;
+    }
+
+    return props.preview.filter((p) => {
+        return (
+            String(p.resident_name ?? "")
+                .toLowerCase()
+                .includes(term) ||
+            String(p.resident_code ?? "")
+                .toLowerCase()
+                .includes(term) ||
+            String(p.room ?? "")
+                .toLowerCase()
+                .includes(term)
+        );
+    });
 });
 
 const selectedResidents = ref(
@@ -164,10 +191,70 @@ const formatCurrency = (amount) => {
                 </p>
             </div>
 
+            <!-- Resident Search -->
+            <div
+                class="bg-white rounded-xl border border-gray-100 shadow-sm p-4"
+            >
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <h3 class="text-sm font-semibold text-gray-900">
+                            Residents
+                        </h3>
+
+                        <p class="text-xs text-gray-500 mt-1">
+                            Search by resident name, resident code, or room number.
+                        </p>
+                    </div>
+
+                    <div class="relative w-full sm:w-80">
+                        <Search
+                            class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+                        />
+
+                        <input
+                            v-model="search"
+                            type="text"
+                            placeholder="Search residents..."
+                            class="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 pl-9 pr-9 text-sm text-gray-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                        />
+
+                        <button
+                            v-if="search"
+                            type="button"
+                            class="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                            @click="search = ''"
+                        >
+                            <X class="h-4 w-4" />
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mt-3 flex items-center justify-between">
+                    <p class="text-xs text-gray-500">
+                        Showing
+                        <span class="font-semibold text-gray-700">
+                            {{ filteredPreview.length }}
+                        </span>
+                        of
+                        <span class="font-semibold text-gray-700">
+                            {{ preview.length }}
+                        </span>
+                        residents
+                    </p>
+
+                    <p
+                        v-if="search"
+                        class="text-xs text-blue-600"
+                    >
+                        Search: "{{ search }}"
+                    </p>
+                </div>
+            </div>
+
             <!-- Resident List -->
             <div class="space-y-3">
                 <div
-                    v-for="p in preview"
+                    v-for="p in filteredPreview"
                     :key="p.resident_id"
                     class="bg-white rounded-xl border border-gray-100 shadow-sm p-4"
                     :class="{ 'opacity-50': p.skip }"
@@ -236,6 +323,32 @@ const formatCurrency = (amount) => {
                             </p>
                         </div>
                     </div>
+                </div>
+
+                <div
+                    v-if="filteredPreview.length === 0"
+                    class="rounded-xl border border-dashed border-gray-200 bg-white p-8 text-center"
+                >
+                    <Search
+                        class="mx-auto h-8 w-8 text-gray-300"
+                    />
+
+                    <p class="mt-2 text-sm font-medium text-gray-700">
+                        No residents found
+                    </p>
+
+                    <p class="mt-1 text-xs text-gray-500">
+                        Try searching with a different name, resident code, or room number.
+                    </p>
+
+                    <button
+                        v-if="search"
+                        type="button"
+                        class="mt-3 text-sm font-semibold text-blue-600 hover:text-blue-700"
+                        @click="search = ''"
+                    >
+                        Clear search
+                    </button>
                 </div>
             </div>
 

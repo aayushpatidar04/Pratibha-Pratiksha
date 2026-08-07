@@ -46,7 +46,7 @@ const fieldSteps = {
     email: 1,
     aadhar_number: 1,
     permanent_address: 1,
-    current_address: 1,
+    // current_address: 1,
     father_photo: 1,
     mother_photo: 1,
 
@@ -96,7 +96,7 @@ const fieldLabels = computed(() => ({
     email: t.value.email.replace(" *", ""),
     aadhar_number: t.value.aadharNumber.replace(" *", ""),
     permanent_address: t.value.permanentAddress.replace(" *", ""),
-    current_address: t.value.currentAddress,
+    // current_address: t.value.currentAddress,
     father_photo: t.value.fatherPhoto,
     mother_photo: t.value.motherPhoto,
 
@@ -239,7 +239,7 @@ const t = computed(() => ({
     aadharNumber: props.lang === "hi" ? "आधार नंबर *" : "Aadhar Number *",
     permanentAddress:
         props.lang === "hi" ? "स्थायी पता *" : "Permanent Address *",
-    currentAddress: props.lang === "hi" ? "वर्तमान पता" : "Current Address",
+    // currentAddress: props.lang === "hi" ? "वर्तमान पता" : "Current Address",
     studentPhoto:
         props.lang === "hi" ? "छात्र/छात्रा का फोटो *" : "Student Photo *",
     fatherPhoto: props.lang === "hi" ? "पिता का फोटो" : "Father's Photo",
@@ -381,7 +381,7 @@ const form = useForm({
     email: "",
     aadhar_number: "",
     permanent_address: "",
-    current_address: "",
+    // current_address: "",
 
     // Education
     institution_name: "",
@@ -1168,7 +1168,7 @@ const copyToClipboard = (text) => {
                         </p>
                     </div>
 
-                    <div>
+                    <!-- <div>
                         <label
                             class="block text-sm font-medium text-gray-700 mb-1"
                             >{{ t.currentAddress }}</label
@@ -1179,7 +1179,7 @@ const copyToClipboard = (text) => {
                             rows="3"
                             class="w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
                         ></textarea>
-                    </div>
+                    </div> -->
 
                     <!-- Parent Photos -->
                     <div
@@ -1863,7 +1863,7 @@ const copyToClipboard = (text) => {
                         </label>
 
                         <!-- Razorpay -->
-                        <label
+                        <!-- <label
                             class="flex cursor-pointer items-center gap-3 sm:gap-4 rounded-xl border-2 p-3 sm:p-4 transition-colors"
                             :class="
                                 form.payment_method === 'razorpay'
@@ -1902,7 +1902,7 @@ const copyToClipboard = (text) => {
                             >
                                 <Check class="h-3 w-3 text-white" />
                             </div>
-                        </label>
+                        </label> -->
 
                         <!-- UPI -->
                         <label
