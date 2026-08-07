@@ -490,7 +490,7 @@ class RegistrationController extends Controller
             [
                 'resident_id' => $application->resident_id,
                 'stay_id' => optional($application->resident)?->activeStay?->id,
-                'invoice_number' => 'INV-' . now()->format('Ym') . '-' . str_pad((string) (FeeInvoice::withTrashed()->count() + 1), 5, '0', STR_PAD_LEFT),
+                'invoice_number' => $this->generateInvoiceNumber(),
                 'amount' => $application->registration_fee,
                 'paid_amount' => $application->registration_fee,
                 'status' => 'paid',
@@ -588,5 +588,27 @@ class RegistrationController extends Controller
         $parts = preg_split('/\s+/', trim($fullName), 2);
 
         return [$parts[0] ?? $fullName, $parts[1] ?? ''];
+    }
+
+    private function generateInvoiceNumber(): string
+    {
+        // Get the latest invoice including trashed ones
+        $lastInvoice = FeeInvoice::withTrashed()
+            ->orderBy('id', 'desc')
+            ->first();
+
+        // Default start number
+        $nextNumber = 1;
+
+        if ($lastInvoice) {
+            // Extract the numeric part from invoice_number
+            // Assuming format: INV-YYYYMM-00001
+            $parts = explode('-', $lastInvoice->invoice_number);
+            $lastNumeric = isset($parts[2]) ? (int)$parts[2] : 0;
+
+            $nextNumber = $lastNumeric + 1;
+        }
+
+        return 'INV-' . now()->format('Ym') . '-' . str_pad((string) $nextNumber, 5, '0', STR_PAD_LEFT);
     }
 }
