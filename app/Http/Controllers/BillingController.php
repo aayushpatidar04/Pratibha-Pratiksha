@@ -1174,7 +1174,6 @@ class BillingController extends Controller
         return 'INV-' . now()->format('Ym') . '-' . str_pad((string) $nextNumber, 5, '0', STR_PAD_LEFT);
     }
 
-
     public function paymentReceipt(Payment $payment)
     {
         $payment->load([

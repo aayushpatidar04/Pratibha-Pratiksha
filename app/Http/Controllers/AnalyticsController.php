@@ -97,6 +97,8 @@ class AnalyticsController extends Controller
     {
         $filters = $request->only(['gender', 'course', 'institute', 'batch', 'year']);
 
+        $forecastDate = $request->date('forecast_date') ?? Carbon::today();
+
         $activeStays = ResidentStay::query()
             ->where('status', 'active')
             ->whereHas('resident', function ($q) use ($filters) {
@@ -215,6 +217,10 @@ class AnalyticsController extends Controller
                 'vacant_capacity' => $vacantCapacity,
                 'occupancy_percent' => $totalCapacity > 0 ? round(($filledCapacity / $totalCapacity) * 100) : 0,
             ],
+            'forecast' => $this->occupancyForecastData(
+                $request,
+                $forecastDate
+            ),
             'room_wise_distribution' => $roomWiseDistribution,
             'building_wise_chart' => $buildingWiseChart,
             'unit_wise' => $unitWise,
@@ -229,6 +235,777 @@ class AnalyticsController extends Controller
             'room_types' => $roomTypes,
         ];
     }
+
+    /**
+     * Forecast occupancy for a specific date.
+     *
+     * Rules:
+     * - check_in_date must be on or before the forecast date.
+     * - actual_check_out_date takes priority when it exists.
+     * - otherwise expected_check_out_date is used.
+     * - The checkout date itself is still considered occupied.
+     * - If there is no checkout date, the stay remains occupied.
+     */
+    protected function occupancyForecastData(
+        Request $request,
+        Carbon $forecastDate
+    ): array {
+        $forecastDate = $forecastDate->copy()->startOfDay();
+
+        $stays = ResidentStay::query()
+            ->with([
+                'resident:id,first_name,last_name,gender,status',
+                'building:id,name',
+                'room:id,room_number,room_type,capacity',
+                'bed:id,bed_number,room_id,status',
+            ])
+            ->whereDate('check_in_date', '<=', $forecastDate)
+            ->where(function ($query) use ($forecastDate) {
+                $query
+                    // Actual checkout exists:
+                    // occupied THROUGH the actual checkout date.
+                    ->whereDate(
+                        'actual_check_out_date',
+                        '>=',
+                        $forecastDate
+                    )
+
+                    // No actual checkout:
+                    // use expected checkout date.
+                    ->orWhere(function ($q) use ($forecastDate) {
+                        $q->whereNull('actual_check_out_date')
+                            ->where(function ($q2) use ($forecastDate) {
+                                // Expected checkout exists and is
+                                // on/after forecast date.
+                                $q2->whereDate(
+                                    'expected_check_out_date',
+                                    '>=',
+                                    $forecastDate
+                                )
+
+                                    // No expected checkout means
+                                    // indefinitely occupied.
+                                    ->orWhereNull(
+                                        'expected_check_out_date'
+                                    );
+                            });
+                    });
+            })
+            ->whereIn('status', ['upcoming', 'active'])
+            ->get();
+
+        $buildings = Building::query()
+            ->with([
+                'floors' => function ($floorQuery) {
+                    $floorQuery
+                        ->orderBy('floor_number')
+                        ->with([
+                            'rooms' => function ($roomQuery) {
+                                $roomQuery
+                                    ->orderBy('room_number')
+                                    ->with([
+                                        'beds' => function ($bedQuery) {
+                                            $bedQuery->orderBy('bed_number');
+                                        },
+                                    ]);
+                            },
+                        ]);
+                },
+            ])
+            ->orderBy('name')
+            ->get();
+
+        $occupiedByBed = $stays->keyBy('bed_id');
+
+        $occupiedByRoom = $stays
+            ->groupBy('room_id');
+
+        $occupiedByBuilding = $stays
+            ->groupBy('building_id');
+
+        return [
+            'forecast_date' => $forecastDate->toDateString(),
+
+            'summary' => [
+                'total_buildings' => $buildings->count(),
+
+                'total_rooms' => $buildings
+                    ->sum(
+                        fn($building) =>
+                        $building->floors->sum(
+                            fn($floor) => $floor->rooms->count()
+                        )
+                    ),
+
+                'total_beds' => $buildings
+                    ->sum(
+                        fn($building) =>
+                        $building->floors->sum(
+                            fn($floor) =>
+                            $floor->rooms->sum(
+                                fn($room) => $room->capacity
+                            )
+                        )
+                    ),
+
+                'occupied_beds' => $stays->count(),
+
+                'vacant_beds' => max(
+                    0,
+                    $buildings->sum(
+                        fn($building) =>
+                        $building->floors->sum(
+                            fn($floor) =>
+                            $floor->rooms->sum(
+                                fn($room) => $room->capacity
+                            )
+                        )
+                    ) - $stays->count()
+                ),
+            ],
+
+            'buildings' => $buildings->map(
+                function ($building) use ($occupiedByBed, $occupiedByRoom, $occupiedByBuilding) {
+                    $buildingBeds = $building->floors->sum(
+                        fn($floor) =>
+                        $floor->rooms->sum(
+                            fn($room) => $room->capacity
+                        )
+                    );
+
+                    $buildingOccupied =
+                        $occupiedByBuilding->get($building->id, collect())->count();
+
+                    return [
+                        'id' => $building->id,
+                        'name' => $building->name,
+
+                        'capacity' => $buildingBeds,
+
+                        'occupied_beds' => $buildingOccupied,
+
+                        'vacant_beds' => max(
+                            0,
+                            $buildingBeds - $buildingOccupied
+                        ),
+
+                        'floors' => $building->floors->map(
+                            function ($floor) use ($occupiedByBed, $occupiedByRoom) {
+                                return [
+                                    'id' => $floor->id,
+                                    'name' => $floor->name,
+                                    'floor_number' => $floor->floor_number,
+
+                                    'rooms' => $floor->rooms->map(
+                                        function ($room) use ($occupiedByBed, $occupiedByRoom) {
+                                            $roomStays =
+                                                $occupiedByRoom->get(
+                                                    $room->id,
+                                                    collect()
+                                                );
+
+                                            $occupiedBeds =
+                                                $roomStays->count();
+
+                                            return [
+                                                'id' => $room->id,
+
+                                                'room_number' =>
+                                                    $room->room_number,
+
+                                                'room_type' =>
+                                                    $room->room_type,
+
+                                                'capacity' =>
+                                                    (int) $room->capacity,
+
+                                                'occupied_beds' =>
+                                                    $occupiedBeds,
+
+                                                'vacant_beds' =>
+                                                    max(
+                                                        0,
+                                                        (int) $room->capacity
+                                                        - $occupiedBeds
+                                                    ),
+
+                                                'status' =>
+                                                    $occupiedBeds <= 0
+                                                    ? 'vacant'
+                                                    : (
+                                                        $occupiedBeds >=
+                                                        $room->capacity
+                                                        ? 'occupied'
+                                                        : 'partially_occupied'
+                                                    ),
+
+                                                'beds' =>
+                                                    $room->beds->map(
+                                                        function ($bed) use ($occupiedByBed) {
+                                                            $stay =
+                                                                $occupiedByBed->get(
+                                                                    $bed->id
+                                                                );
+
+                                                            return [
+                                                                'id' =>
+                                                                    $bed->id,
+
+                                                                'bed_number' =>
+                                                                    $bed->bed_number,
+
+                                                                'status' =>
+                                                                    $stay
+                                                                    ? 'occupied'
+                                                                    : 'vacant',
+
+                                                                'stay' =>
+                                                                    $stay
+                                                                    ? [
+                                                                        'stay_id' =>
+                                                                            $stay->id,
+
+                                                                        'resident_id' =>
+                                                                            $stay->resident_id,
+
+                                                                        'resident_name' =>
+                                                                            trim(
+                                                                                ($stay->resident?->first_name ?? '')
+                                                                                . ' ' .
+                                                                                ($stay->resident?->last_name ?? '')
+                                                                            ),
+
+                                                                        'gender' =>
+                                                                            $stay->resident?->gender,
+
+                                                                        'check_in_date' =>
+                                                                            $stay->check_in_date,
+
+                                                                        'expected_check_out_date' =>
+                                                                            $stay->expected_check_out_date,
+
+                                                                        'actual_check_out_date' =>
+                                                                            $stay->actual_check_out_date,
+                                                                    ]
+                                                                    : null,
+                                                            ];
+                                                        }
+                                                    )->values(),
+                                            ];
+                                        }
+                                    )->values(),
+                                ];
+                            }
+                        )->values(),
+                    ];
+                }
+            )->values(),
+        ];
+    }
+
+    /**
+     * Forecast room/bed occupancy for a selected date.
+     *
+     * Rules:
+     * - A stay is relevant only if it has started by the selected date.
+     * - If actual_check_out_date exists, that is the real checkout date.
+     * - Otherwise expected_check_out_date is used.
+     * - If expected checkout is ON the selected date, the resident is
+     *   still considered occupied for that date.
+     * - If checkout is BEFORE the selected date, the bed is available.
+     * - No checkout date means the stay continues indefinitely.
+     */
+
+    public function occupancyForecast(Request $request)
+    {
+        $validated = $request->validate([
+            'date' => ['required', 'date'],
+        ]);
+
+        $forecastDate = Carbon::parse($validated['date'])->startOfDay();
+
+        /*
+         * ------------------------------------------------------------
+         * 1. Get stays which are occupied on the forecast date
+         * ------------------------------------------------------------
+         *
+         * Rules:
+         *
+         * check_in_date <= forecast date
+         *
+         * Actual checkout exists:
+         *     actual_checkout >= forecast date
+         *
+         * No actual checkout:
+         *     expected_checkout >= forecast date
+         *     OR expected_checkout is NULL
+         *
+         * Therefore:
+         *
+         * checkout = 7 Aug
+         * forecast = 7 Aug
+         * => OCCUPIED
+         *
+         * checkout = 7 Aug
+         * forecast = 8 Aug
+         * => VACANT
+         */
+
+        $stays = ResidentStay::query()
+            ->with([
+                'resident:id,first_name,last_name,gender,status',
+                'building:id,name',
+                'room:id,room_number,room_type,capacity',
+                'bed:id,bed_number,room_id,status',
+            ])
+            ->whereDate('check_in_date', '<=', $forecastDate)
+
+            ->where(function ($query) use ($forecastDate) {
+
+                /*
+                 * Actual checkout exists.
+                 *
+                 * Stay remains occupied THROUGH the actual
+                 * checkout date.
+                 */
+                $query
+                    ->whereDate(
+                        'actual_check_out_date',
+                        '>=',
+                        $forecastDate
+                    )
+
+                    /*
+                     * No actual checkout.
+                     *
+                     * Use expected checkout date.
+                     */
+                    ->orWhere(function ($q) use ($forecastDate) {
+
+                        $q->whereNull('actual_check_out_date')
+
+                            ->where(function ($q2) use ($forecastDate) {
+
+                                /*
+                                 * Expected checkout exists and
+                                 * is on/after forecast date.
+                                 */
+                                $q2->whereDate(
+                                    'expected_check_out_date',
+                                    '>=',
+                                    $forecastDate
+                                )
+
+                                    /*
+                                     * No expected checkout.
+                                     *
+                                     * Consider indefinitely occupied.
+                                     */
+                                    ->orWhereNull(
+                                        'expected_check_out_date'
+                                    );
+                            });
+                    });
+            })
+
+            /*
+             * Only these stays participate in forecast occupancy.
+             */
+            ->whereIn('status', [
+                'upcoming',
+                'active',
+            ])
+
+            ->get();
+
+
+        /*
+         * ------------------------------------------------------------
+         * 2. Load the actual hierarchy
+         * ------------------------------------------------------------
+         *
+         * Building
+         *     -> Floors
+         *          -> Rooms
+         *               -> Beds
+         *
+         * We are NOT assuming building.rooms exists.
+         */
+        $buildings = Building::query()
+            ->with([
+                'floors' => function ($floorQuery) {
+
+                    $floorQuery
+                        ->orderBy('floor_number')
+                        ->with([
+                            'rooms' => function ($roomQuery) {
+
+                                $roomQuery
+                                    ->orderBy('room_number')
+                                    ->with([
+                                        'beds' => function ($bedQuery) {
+
+                                            $bedQuery
+                                                ->orderBy('bed_number');
+                                        },
+                                    ]);
+                            },
+                        ]);
+                },
+            ])
+            ->orderBy('name')
+            ->get();
+
+
+        /*
+         * ------------------------------------------------------------
+         * 3. Index occupied stays
+         * ------------------------------------------------------------
+         *
+         * This allows us to quickly determine whether a particular
+         * bed is occupied on the forecast date.
+         */
+        $occupiedByBed = $stays->keyBy('bed_id');
+
+
+        /*
+         * Group stays by room for room-level calculations.
+         */
+        $occupiedByRoom = $stays->groupBy('room_id');
+
+
+        /*
+         * Group stays by building for building-level calculations.
+         */
+        $occupiedByBuilding = $stays->groupBy('building_id');
+
+
+        /*
+         * ------------------------------------------------------------
+         * 4. Calculate summary
+         * ------------------------------------------------------------
+         */
+
+        $totalRooms = $buildings->sum(
+            fn($building) =>
+            $building->floors->sum(
+                fn($floor) =>
+                $floor->rooms->count()
+            )
+        );
+
+        $totalBeds = $buildings->sum(
+            fn($building) =>
+            $building->floors->sum(
+                fn($floor) =>
+                $floor->rooms->sum(
+                    fn($room) =>
+                    (int) $room->capacity
+                )
+            )
+        );
+
+        $occupiedBeds = $stays->count();
+
+        $vacantBeds = max(
+            0,
+            $totalBeds - $occupiedBeds
+        );
+
+
+        /*
+         * ------------------------------------------------------------
+         * 5. Build final response
+         * ------------------------------------------------------------
+         */
+
+        return response()->json([
+
+            'forecast_date' => $forecastDate->toDateString(),
+
+            'summary' => [
+
+                'total_buildings' => $buildings->count(),
+
+                'total_rooms' => $totalRooms,
+
+                'total_beds' => $totalBeds,
+
+                'occupied_beds' => $occupiedBeds,
+
+                'vacant_beds' => $vacantBeds,
+            ],
+
+
+            /*
+             * --------------------------------------------------------
+             * Building
+             *     -> Floor
+             *          -> Room
+             *               -> Bed
+             * --------------------------------------------------------
+             */
+            'buildings' => $buildings->map(
+                function ($building) use ($occupiedByBed, $occupiedByRoom, $occupiedByBuilding) {
+
+                    /*
+                     * Building capacity.
+                     */
+                    $buildingBeds = $building->floors->sum(
+                        fn($floor) =>
+                        $floor->rooms->sum(
+                            fn($room) =>
+                            (int) $room->capacity
+                        )
+                    );
+
+
+                    /*
+                     * Occupied beds in this building.
+                     */
+                    $buildingOccupied =
+                        $occupiedByBuilding
+                            ->get($building->id, collect())
+                            ->count();
+
+
+                    return [
+
+                        'id' => $building->id,
+
+                        'name' => $building->name,
+
+                        'capacity' => (int) $buildingBeds,
+
+                        'occupied_beds' => (int) $buildingOccupied,
+
+                        'vacant_beds' => max(
+                            0,
+                            (int) $buildingBeds - $buildingOccupied
+                        ),
+
+
+                        /*
+                         * ------------------------------------------------
+                         * Floors
+                         * ------------------------------------------------
+                         */
+                        'floors' => $building->floors->map(
+
+                            function ($floor) use ($occupiedByBed, $occupiedByRoom) {
+
+                                return [
+
+                                    'id' => $floor->id,
+
+                                    'name' => $floor->name,
+
+                                    'floor_number' =>
+                                        $floor->floor_number,
+
+
+                                    /*
+                                     * ------------------------------------
+                                     * Rooms
+                                     * ------------------------------------
+                                     */
+                                    'rooms' => $floor->rooms->map(
+
+                                        function ($room) use ($occupiedByBed, $occupiedByRoom) {
+
+                                            /*
+                                             * Get stays occupying beds
+                                             * belonging to this room.
+                                             */
+                                            $roomStays =
+                                                $occupiedByRoom->get(
+                                                    $room->id,
+                                                    collect()
+                                                );
+
+
+                                            $occupiedBeds =
+                                                $roomStays->count();
+
+
+                                            $capacity =
+                                                (int) $room->capacity;
+
+
+                                            $vacantBeds = max(
+                                                0,
+                                                $capacity - $occupiedBeds
+                                            );
+
+
+                                            /*
+                                             * Room status.
+                                             */
+                                            $status = match (true) {
+
+                                                $occupiedBeds <= 0 =>
+                                                'vacant',
+
+                                                $occupiedBeds >= $capacity =>
+                                                'occupied',
+
+                                                default =>
+                                                'partially_occupied',
+                                            };
+
+
+                                            return [
+
+                                                'id' => $room->id,
+
+                                                'room_number' =>
+                                                    $room->room_number,
+
+                                                'room_type' =>
+                                                    $room->room_type,
+
+                                                'capacity' =>
+                                                    $capacity,
+
+                                                'occupied_beds' =>
+                                                    $occupiedBeds,
+
+                                                'vacant_beds' =>
+                                                    $vacantBeds,
+
+                                                'status' =>
+                                                    $status,
+
+
+                                                /*
+                                                 * --------------------------------
+                                                 * Beds
+                                                 * --------------------------------
+                                                 */
+                                                'beds' => $room->beds->map(
+
+                                                    function ($bed) use ($occupiedByBed) {
+
+                                                        $stay =
+                                                            $occupiedByBed->get(
+                                                                $bed->id
+                                                            );
+
+
+                                                        /*
+                                                         * No stay means
+                                                         * this bed is vacant
+                                                         * on forecast date.
+                                                         */
+                                                        if (!$stay) {
+
+                                                            return [
+
+                                                                'id' =>
+                                                                    $bed->id,
+
+                                                                'bed_number' =>
+                                                                    $bed->bed_number,
+
+                                                                'status' =>
+                                                                    'vacant',
+
+                                                                'stay' =>
+                                                                    null,
+                                                            ];
+                                                        }
+
+
+                                                        /*
+                                                         * Bed is occupied.
+                                                         */
+                                                        return [
+
+                                                            'id' =>
+                                                                $bed->id,
+
+                                                            'bed_number' =>
+                                                                $bed->bed_number,
+
+                                                            'status' =>
+                                                                'occupied',
+
+
+                                                            'stay' => [
+
+                                                                'stay_id' =>
+                                                                    $stay->id,
+
+                                                                'resident_id' =>
+                                                                    $stay->resident_id,
+
+                                                                'resident_name' =>
+                                                                    trim(
+                                                                        ($stay->resident?->first_name ?? '')
+                                                                        . ' ' .
+                                                                        ($stay->resident?->last_name ?? '')
+                                                                    ),
+
+                                                                'gender' =>
+                                                                    $stay->resident?->gender,
+
+                                                                'resident_status' =>
+                                                                    $stay->resident?->status,
+
+                                                                'check_in_date' =>
+                                                                    optional(
+                                                                        $stay->check_in_date
+                                                                    )->toDateString(),
+
+                                                                'expected_check_out_date' =>
+                                                                    optional(
+                                                                        $stay->expected_check_out_date
+                                                                    )->toDateString(),
+
+                                                                'actual_check_out_date' =>
+                                                                    optional(
+                                                                        $stay->actual_check_out_date
+                                                                    )->toDateString(),
+
+                                                                /*
+                                                                 * Useful for
+                                                                 * debugging / UI.
+                                                                 *
+                                                                 * Actual checkout
+                                                                 * has priority.
+                                                                 */
+                                                                'checkout_date_used' =>
+                                                                    $stay->actual_check_out_date
+                                                                    ? Carbon::parse(
+                                                                        $stay->actual_check_out_date
+                                                                    )->toDateString()
+                                                                    : (
+                                                                        $stay->expected_check_out_date
+                                                                        ? Carbon::parse(
+                                                                            $stay->expected_check_out_date
+                                                                        )->toDateString()
+                                                                        : null
+                                                                    ),
+                                                            ],
+                                                        ];
+                                                    }
+
+                                                )->values(),
+                                            ];
+                                        }
+
+                                    )->values(),
+                                ];
+                            }
+
+                        )->values(),
+                    ];
+                }
+
+            )->values(),
+        ]);
+    }
+
 
     protected function leavesData(Request $request): array
     {

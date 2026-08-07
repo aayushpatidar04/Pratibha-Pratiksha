@@ -49,6 +49,7 @@ Route::middleware(['auth', 'user.active'])->group(function () {
         ->middleware('permission:analytics,view');
     Route::get('/analytics/occupancy/heatmap', [AnalyticsController::class, 'occupancyHeatmap'])->name('analytics.occupancy.heatmap')
         ->middleware('permission:analytics,view');
+    Route::get('/analytics/occupancy-forecast', [AnalyticsController::class, 'occupancyForecast'])->name('analytics.occupancy-forecast');
 
     // Infrastructure
     Route::get('/infrastructure/buildings', [BuildingController::class, 'index'])->name('buildings.index')->middleware('permission:buildings,view');
