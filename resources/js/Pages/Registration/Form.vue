@@ -880,6 +880,12 @@ const copyToClipboard = (text) => {
                 </div>
             </div>
 
+            <div class="mb-2 mx-auto bg-yellow-100 border border-yellow-400 rounded-lg p-4 shadow-md">
+                <p class="text-red-600 font-bold text-lg font-[Noto_Sans_Devanagari]">
+                नोट: कृपया नाम, माता-पिता का नाम, पता, शहर सभी हिंदी में भरें।
+                </p>
+            </div>
+
             <form @submit.prevent="handleSubmit" class="space-y-6" novalidate>
                 <!-- Step 1: Personal Details -->
                 <div

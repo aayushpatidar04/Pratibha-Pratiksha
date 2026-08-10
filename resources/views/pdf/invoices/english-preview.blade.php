@@ -92,7 +92,7 @@
         }
 
         .receipt-wrapper {
-            padding: 18px;
+            /* padding: 18px; */
         }
 
         /*
@@ -103,7 +103,7 @@
             width: 105mm;
             min-height: 148mm;
             margin: 0 auto;
-            padding: 5mm;
+            padding: 0mm 2mm;
             overflow: visible;
             background: #fff;
             box-shadow: 0 5px 22px rgba(0, 0, 0, 0.15);
@@ -292,7 +292,7 @@
             .receipt-page {
                 box-shadow: none;
                 margin: 0;
-                padding: 4mm;
+                padding: 0mm 2mm;
                 overflow: visible;
             }
         }
@@ -687,25 +687,38 @@
             </div>
 
             <div class="summary">
-                <p>
-                    <strong>In Words:</strong>
-                    {{ $amountInWords }} Rupees Only
-                </p>
-
-                <p>
-                    <strong>Remark:</strong>
-                    {{ $invoice->description ?? '-' }}
-                </p>
-
-                @if ($invoice->late_fee_waived)
-                    <p>
-                        <strong>Late Fee Waived:</strong>
-                        Yes
-                        @if ($invoice->waive_reason)
-                            — {{ $invoice->waive_reason }}
-                        @endif
-                    </p>
-                @endif
+                <table>
+                    <tr>
+                        <td>
+                            <p>
+                                <strong>In Words:</strong>
+                                {{ $amountInWords }} Rupees Only
+                            </p>
+            
+                            <p>
+                                <strong>Remark:</strong>
+                                {{ $invoice->description ?? '-' }}
+                            </p>
+            
+                            @if ($invoice->late_fee_waived)
+                                <p>
+                                    <strong>Late Fee Waived:</strong>
+                                    Yes
+                                    @if ($invoice->waive_reason)
+                                        — {{ $invoice->waive_reason }}
+                                    @endif
+                                </p>
+                            @endif
+                        </td>
+                        <td>
+                            @if($invoice->fee_type === 'security_deposit' && $invoice->refund_status === 'refunded')
+                                <img src="/assets/images/REFUNDED.png" style="width: 50px; height: 50px;" alt="REFUNDED">
+                            @elseif ($invoice->status === 'paid')
+                                <img src="/assets/images/PAID.png" style="width: 50px; height: 50px;" alt="PAID">
+                            @endif
+                        </td>
+                    </tr>
+                </table>
             </div>
 
             <table class="footer">
@@ -738,8 +751,10 @@
             <table class="footer">
                 <tr style="text-align: center;">
                     <td class="footer-note">
+                        @if ($invoice->status != 'paid')
                         Scan QR to Pay Bill<br>
                         <img src="/assets/images/Pratibha QR.jpeg" style="width: 150px; height: 150px;" alt="QR Code">
+                        @endif
                     </td>
                 </tr>
             </table>

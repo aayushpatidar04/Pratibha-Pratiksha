@@ -38,6 +38,7 @@ const props = defineProps({
     stats: Object,
     filters: Object,
     residents: Array,
+    applications: Array,
     monthlyConfigs: Array,
     feeTypes: Array,
 });
@@ -105,7 +106,9 @@ const paymentProofs = ref([]);
 const transactionIdChecked = ref(false);
 
 const createForm = useForm({
+    invoice_for: "resident",
     resident_id: "",
+    application_id: "",
     rent_amount: "",
     mess_amount: "",
     other_amount: "",
@@ -323,6 +326,18 @@ const paymentBalanceDue = computed(() => {
             Number(payingInvoice.value?.paid_amount || 0),
     );
 });
+
+const selectInvoiceTarget = (target) => {
+    createForm.invoice_target = target;
+
+    if (target === "resident") {
+        createForm.application_id = null;
+    } else {
+        createForm.resident_id = null;
+    }
+
+    createForm.clearErrors("resident_id", "application_id");
+};
 </script>
 
 <template>
@@ -965,26 +980,72 @@ const paymentBalanceDue = computed(() => {
                     </ul>
                 </div>
 
+                <!-- Invoice Target -->
                 <div>
+                    <InputLabel value="Invoice For *" />
+
+                    <select
+                        v-model="createForm.invoice_for"
+                        class="w-full rounded-lg border-gray-300 text-sm"
+                        required
+                    >
+                        <option value="resident">Existing Resident</option>
+                        <option value="application">Pre-Booking Application</option>
+                    </select>
+                </div>
+
+                <!-- Existing Resident -->
+                <div v-if="createForm.invoice_for === 'resident'">
                     <InputLabel value="Resident *" />
+
                     <select
                         v-model="createForm.resident_id"
-                        required
                         class="w-full rounded-lg border-gray-300 text-sm"
+                        :required="createForm.invoice_for === 'resident'"
                     >
                         <option value="" disabled>Select resident</option>
+
                         <option
                             v-for="r in residents"
                             :key="r.id"
                             :value="r.id"
                         >
-                            {{ r.first_name }} {{ r.last_name }} ({{
-                                r.resident_code
-                            }})
+                            {{ r.first_name }} {{ r.last_name }}
+                            ({{ r.resident_code }})
                         </option>
                     </select>
+
                     <InputError :message="createForm.errors.resident_id" />
                 </div>
+
+                <!-- Pre-Booking Application -->
+                <div v-if="createForm.invoice_for === 'application'">
+                    <InputLabel value="Pre-Booking Application *" />
+
+                    <select
+                        v-model="createForm.application_id"
+                        class="w-full rounded-lg border-gray-300 text-sm"
+                        :required="createForm.invoice_for === 'application'"
+                    >
+                        <option value="" disabled>
+                            Select application
+                        </option>
+
+                        <option
+                            v-for="application in applications"
+                            :key="application.id"
+                            :value="application.id"
+                        >
+                            {{ application.application_no }}
+                            -
+                            {{ application.student_name }}
+                            ({{ application.room_type }})
+                        </option>
+                    </select>
+
+                    <InputError :message="createForm.errors.application_id" />
+                </div>
+
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <InputLabel value="Rent" />
