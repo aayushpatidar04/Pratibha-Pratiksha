@@ -274,7 +274,7 @@ class BillingController extends Controller
 
             'feeTypes' => $feeTypes,
 
-            'residents' => Resident::where('status', 'active')
+            'residents' => Resident::whereIn('status', ['active', 'upcoming'])
                 ->orderBy('first_name')
                 ->get([
                     'id',
