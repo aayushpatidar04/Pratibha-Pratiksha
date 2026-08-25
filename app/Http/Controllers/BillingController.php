@@ -1342,4 +1342,28 @@ class BillingController extends Controller
             'invoice' => $payment->invoice,
         ]);
     }
+
+    public function updatePaymentMode(Request $request, Payment $payment): RedirectResponse {
+        $validated = $request->validate([
+            'payment_mode' => [
+                'required',
+                Rule::in([
+                    'cash',
+                    'upi',
+                    'card',
+                    'bank_transfer',
+                    'other',
+                ]),
+            ],
+        ]);
+
+        $payment->update([
+            'payment_mode' => $validated['payment_mode'],
+        ]);
+
+        return back()->with(
+            'success',
+            'Payment mode updated successfully.'
+        );
+    }
 }

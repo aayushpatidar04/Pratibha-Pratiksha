@@ -21,6 +21,7 @@ import {
     QrCode,
     X,
 } from "lucide-vue-next";
+import Modal from "@/Components/Modal.vue";
 
 const props = defineProps({
     lang: { type: String, default: "en" },
@@ -354,8 +355,8 @@ const t = computed(() => ({
     // Declaration
     declaration:
         props.lang === "hi"
-            ? "हम शपथ पूर्वक वचन देते हैं कि उपरोक्त संपूर्ण जानकारी हमारे द्वारा प्रदान की गई है वह पूर्णरूपेण सत्य है। हमने आपके द्वारा निर्धारित समस्त शर्तें एवं नियमों का अध्ययन कर लिया है जो हमें पूर्णतः मान्य है तथा भविष्य में भी जो नियम /शर्ते आप निर्धारित करेंगे हमें मान्य रहेंगे, हमें आपके छात्रावास में प्रवेश प्रदान करने का कष्ट करें। अगर हमारे द्वारा छात्रावास के नियमों का उल्लंघन या अनुशासन हीनता होने पर आप बिना सूचना तथा अमानत राशि वापस दिए बिना छात्रावास से निष्कासित कर सकते हैं। छात्रावास छोड़ने के एक माह पूर्व हम लिखित सुचना देंगे अन्यथा जमा वापसी योग्य राशि प्राप्त करने के अधिकारी नहीं रहेंगे।"
-            : "I solemnly declare that all the above information provided by me is true and correct.",
+            ? "हम शपथपूर्वक वचन देते हैं कि उपरोक्त संपूर्ण जानकारी हमारे द्वारा प्रदान की गई है और वह पूर्णरूपेण सत्य है। हमने विद्यागुरू नियमावली तथा आपके द्वारा निर्धारित समस्त शर्तों एवं नियमों का अध्ययन कर लिया है और उन्हें पूर्णतः स्वीकार करते हैं। भविष्य में छात्रावास प्रबंधन द्वारा निर्धारित किए जाने वाले नियम एवं शर्तें भी हमें मान्य रहेंगे। यदि हमारे द्वारा छात्रावास के नियमों का उल्लंघन या अनुशासनहीनता की जाती है तो छात्रावास प्रबंधन हमें बिना सूचना तथा बिना अमानत राशि वापस किए छात्रावास से निष्कासित कर सकता है। छात्रावास छोड़ने के एक माह पूर्व हम लिखित सूचना देंगे, अन्यथा हम जमा वापसी योग्य राशि प्राप्त करने के अधिकारी नहीं रहेंगे।"
+            : "I solemnly declare that all the information provided by me is true and correct. I confirm that I have read, understood, and accepted the VidyaGuru Rules & Regulations mentioned below. I agree to comply with all hostel rules and conditions and understand that disciplinary action, including removal from the hostel, may be taken in case of any violation. I also understand that I must provide one month's prior written notice before leaving the hostel; otherwise, I may not be eligible for the refund of the applicable refundable deposit.",
 
     // Navigation
     next: props.lang === "hi" ? "आगे" : "Next",
@@ -366,6 +367,8 @@ const t = computed(() => ({
     required:
         props.lang === "hi" ? "यह फील्ड आवश्यक है" : "This field is required",
 }));
+
+const policyModalOpen = ref(false);
 
 const form = useForm({
     // Personal
@@ -880,9 +883,14 @@ const copyToClipboard = (text) => {
                 </div>
             </div>
 
-            <div class="mb-2 mx-auto bg-yellow-100 border border-yellow-400 rounded-lg p-4 shadow-md">
-                <p class="text-red-600 font-bold text-lg font-[Noto_Sans_Devanagari]">
-                नोट: कृपया नाम, माता-पिता का नाम, पता, शहर सभी हिंदी में भरें।
+            <div
+                class="mb-2 mx-auto bg-yellow-100 border border-yellow-400 rounded-lg p-4 shadow-md"
+            >
+                <p
+                    class="text-red-600 font-bold text-lg font-[Noto_Sans_Devanagari]"
+                >
+                    नोट: कृपया नाम, माता-पिता का नाम, पता, शहर सभी हिंदी में
+                    भरें।
                 </p>
             </div>
 
@@ -2230,11 +2238,26 @@ const copyToClipboard = (text) => {
                                 required
                                 class="mt-1 text-indigo-600 focus:ring-indigo-500 rounded shrink-0"
                             />
-                            <p
-                                class="text-xs sm:text-sm text-gray-700 leading-relaxed"
-                            >
-                                {{ t.declaration }}
-                            </p>
+
+                            <div>
+                                <p
+                                    class="text-xs sm:text-sm text-gray-700 leading-relaxed"
+                                >
+                                    {{ t.declaration }}
+                                </p>
+
+                                <button
+                                    type="button"
+                                    class="mt-2 text-xs sm:text-sm font-semibold text-indigo-600 hover:text-indigo-800 underline underline-offset-2"
+                                    @click.stop.prevent="policyModalOpen = true"
+                                >
+                                    {{
+                                        props.lang === "hi"
+                                            ? "विद्यागुरू नियमावली पढ़ें"
+                                            : "Read VidyaGuru Rules & Regulations"
+                                    }}
+                                </button>
+                            </div>
                         </label>
                     </div>
 
@@ -2337,4 +2360,242 @@ const copyToClipboard = (text) => {
             </form>
         </div>
     </div>
+
+    <Modal
+        :show="policyModalOpen"
+        max-width="2xl"
+        @close="policyModalOpen = false"
+    >
+        <div class="max-h-[85vh] flex flex-col">
+            <!-- Header -->
+            <div
+                class="flex items-center justify-between gap-4 px-5 py-4 border-b border-gray-200"
+            >
+                <div>
+                    <h2 class="text-lg font-bold text-gray-900">
+                        {{
+                            props.lang === "hi"
+                                ? "विद्यागुरू नियमावली"
+                                : "VidyaGuru Rules & Regulations"
+                        }}
+                    </h2>
+
+                    <p class="text-xs text-gray-500 mt-1">
+                        {{
+                            props.lang === "hi"
+                                ? "छात्रावास में रहने वाले सभी छात्राओं के लिए नियम एवं शर्तें"
+                                : "Rules and conditions applicable to all hostel residents"
+                        }}
+                    </p>
+                </div>
+
+                <button
+                    type="button"
+                    class="text-gray-400 hover:text-gray-700 text-xl"
+                    @click="policyModalOpen = false"
+                >
+                    ×
+                </button>
+            </div>
+
+            <!-- Policy Content -->
+            <div class="overflow-y-auto p-5">
+                <!-- Hindi Policy -->
+                <div>
+                    <p class="text-sm text-gray-700 leading-relaxed mb-5">
+                        प्रिय छात्रा,<br /><br />
+                        यह छात्रावास, घर से दूर आपका घर विद्यागुरु मंदिर है।
+                    </p>
+
+                    <ul class="space-y-4 text-sm text-gray-700 leading-relaxed">
+                        <li>
+                            छात्रावास में अनुशासन एवं स्वच्छता बनाए रखना
+                            अनिवार्य है।
+                        </li>
+
+                        <li>
+                            जब भी छात्रा बाहर जाए या छात्रावास में वापस आए,
+                            बायोमेट्रिक मशीन पर थंब लगाना अनिवार्य है।
+                        </li>
+
+                        <li>
+                            प्रत्येक छात्रा को रात्रि 8:30 बजे तक छात्रावास में
+                            प्रवेश कर रजिस्टर पर एंट्री करना अनिवार्य है। विशेष
+                            परिस्थिति में छात्रावास प्रबंधक की अनुमति से रात्रि
+                            9:00 बजे तक प्रवेश किया जा सकेगा।
+                        </li>
+
+                        <li>
+                            प्रत्येक छात्रा को सूर्यास्त के पूर्व भोजन करना
+                            होगा। केवल वही छात्राएं सूर्यास्त के बाद भोजन कर
+                            सकती हैं जो कोचिंग या कॉलेज से देर से आती हैं।
+                            मार्केट आदि कार्य से बाहर जाने पर सूर्यास्त के बाद
+                            भोजन उपलब्ध नहीं होगा।
+                        </li>
+
+                        <li>
+                            छात्रा अपने कक्ष में हीटर, प्रेस, केटल, म्यूजिक
+                            सिस्टम या किसी भी अन्य इलेक्ट्रॉनिक वस्तु का उपयोग
+                            नहीं करेगी। ऐसा करने पर ₹1,000 का दण्ड लगाया जाएगा
+                            तथा उपकरण जब्त कर लिया जाएगा। गलती दोबारा होने पर
+                            छात्रावास से निष्कासित किया जा सकता है।
+                        </li>
+
+                        <li>
+                            कक्ष में अभिभावक, मित्र या अन्य किसी व्यक्ति को जाने
+                            या ठहरने की अनुमति नहीं है।
+                        </li>
+
+                        <li>
+                            ऑनलाइन भोजन, पिज्जा, नूडल्स आदि छात्रावास में
+                            मंगवाना और खाना पूर्णतः वर्जित है।
+                        </li>
+
+                        <li>
+                            लहसुन, प्याज और आलू से बनी प्रतिबंधित खाद्य सामग्री
+                            छात्रावास में लाना या खाना वर्जित है। ऐसी वस्तु
+                            मिलने पर ₹300 प्रति नग या पैकेट का दण्ड लगाया जा
+                            सकता है।
+                        </li>
+
+                        <li>
+                            भोजनशाला से कमरे में खाद्य सामग्री या बर्तन ले जाने
+                            की अनुमति नहीं है। बर्तन पाए जाने पर ₹50 प्रति बर्तन
+                            दण्ड लगाया जाएगा।
+                        </li>
+
+                        <li>
+                            प्रत्येक छात्रा को संध्या कालीन कक्षा में उपस्थित
+                            होना अनिवार्य है। विशेष कारण होने पर छात्रावास
+                            प्रबंधक से पूर्व अनुमति लेना आवश्यक है।
+                        </li>
+
+                        <li>
+                            रविवार के दिन सामूहिक पूजन अनिवार्य है। पूजन के लिए
+                            सुबह 9:00 बजे से 9:15 बजे तक मंदिर पहुंचना आवश्यक
+                            है।
+                        </li>
+
+                        <li>
+                            प्रत्येक छात्रा को VIP नियमावली का पालन करना
+                            अनिवार्य है।
+                        </li>
+
+                        <li>
+                            छात्रावास छोड़ने के एक माह पूर्व लिखित रूप में सूचना
+                            देना अनिवार्य है। अन्यथा वापसी योग्य जमा राशि (कॉशन
+                            मनी) देय नहीं होगी।
+                        </li>
+
+                        <li>
+                            छात्रावास शुल्क प्रत्येक माह की 1 से 5 तारीख के बीच
+                            जमा करना अनिवार्य है। 6 तारीख से ₹50 विलम्ब शुल्क
+                            लगाया जाएगा।
+                        </li>
+
+                        <li>
+                            यदि कोई छात्रा शाम का भोजन बाहर करती है तो उसकी
+                            सूचना उसी दिन दोपहर 3 बजे तक देना आवश्यक है।
+                        </li>
+
+                        <li>
+                            छात्रावास परिसर में शराब, ड्रग्स, मांसाहारी भोजन,
+                            सिगरेट, तंबाकू या अन्य किसी निषिद्ध उत्पाद का सेवन
+                            पूर्णतः वर्जित है। ऐसा पाए जाने पर छात्रा को बिना
+                            सूचना और बिना वापसी योग्य राशि दिए तत्काल छात्रावास
+                            से निष्कासित किया जा सकता है।
+                        </li>
+
+                        <li>
+                            रैगिंग, मारपीट, छेड़छाड़ या किसी भी व्यक्ति के साथ
+                            दुर्व्यवहार की गतिविधि में संलग्न होने की शिकायत
+                            मिलने पर अनुशासनात्मक कार्रवाई की जाएगी तथा
+                            छात्रावास प्रभारी द्वारा उचित निर्णय लिया जाएगा।
+                        </li>
+
+                        <li>
+                            छात्रावास परिसर के बाहर छात्रा के साथ किसी भी
+                            दुर्घटना, दुराचरण, मेल-मिलाप या शैक्षणिक संस्था में
+                            अनुपस्थित रहने आदि की जिम्मेदारी छात्रावास प्रबंधन
+                            की नहीं होगी। ऐसी स्थिति में छात्रा अथवा उसके
+                            अभिभावक स्वयं जिम्मेदार होंगे।
+                        </li>
+
+                        <li>
+                            किसी भी पिछली बीमारी या चोट के बारे में छात्रावास
+                            प्रबंधन को सूचित करना अनिवार्य है।
+                        </li>
+
+                        <li>
+                            छात्रावास छोड़ने पर छात्रावास द्वारा प्रदान की गई
+                            सभी वस्तुएं उचित स्थिति में वापस करनी होंगी, अन्यथा
+                            उनका मूल्य छात्रा द्वारा वहन किया जाएगा।
+                        </li>
+
+                        <li>
+                            अपने निजी सामान की देखभाल करना छात्रा की स्वयं की
+                            जिम्मेदारी है। किसी भी नुकसान के लिए छात्रावास
+                            प्रबंधक जिम्मेदार नहीं होगा।
+                        </li>
+
+                        <li>
+                            छात्रावास कर्मचारियों के साथ उचित व्यवहार करना
+                            अनिवार्य है। अन्यथा अनुशासनात्मक कार्रवाई की जा सकती
+                            है।
+                        </li>
+
+                        <li>
+                            छात्रा अपने कमरे में ताला नहीं लगा सकती है। बाहर
+                            जाते समय अपनी व्यक्तिगत अलमारी में ताला लगाया जा
+                            सकता है।
+                        </li>
+
+                        <li>
+                            छात्रा अपने कक्ष की दीवारों पर किसी भी प्रकार की
+                            तस्वीरें या पोस्टर नहीं लगा सकती है।
+                        </li>
+
+                        <li>
+                            छात्रावास प्रबंधक किसी भी समय किसी भी छात्रा के
+                            सामान की जांच कर सकते हैं।
+                        </li>
+
+                        <li>
+                            छात्रावास प्रबंधक को नियमावली में परिवर्तन करने का
+                            पूर्ण अधिकार है।
+                        </li>
+
+                        <li>
+                            नियमों का पालन न करने या अनुशासनहीनता बढ़ने पर
+                            छात्रावास प्रबंधक के निर्देशानुसार छात्रा को तत्काल
+                            छात्रावास खाली करना होगा।
+                        </li>
+                    </ul>
+
+                    <div
+                        class="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-xl"
+                    >
+                        <p
+                            class="text-sm font-medium text-gray-800 leading-relaxed"
+                        >
+                            मैंने बिना किसी दबाव के सभी नियमों और नियमावली को
+                            अपने पूर्ण मनोयोग से पढ़ा है और मैं उन्हें हृदय से
+                            स्वीकार करती हूं।
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="px-5 py-4 border-t border-gray-200 flex justify-end">
+                <button
+                    type="button"
+                    class="px-4 py-2 text-sm font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-700"
+                    @click="policyModalOpen = false"
+                >
+                    {{ props.lang === "hi" ? "समझ गया" : "I Understand" }}
+                </button>
+            </div>
+        </div>
+    </Modal>
 </template>

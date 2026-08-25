@@ -2604,8 +2604,8 @@ class ResidentController extends Controller
         $columns = collect(
             $request->input('columns', [])
         )->filter(
-            fn ($column) => array_key_exists($column, $allowedColumns)
-        )->values();
+                fn($column) => array_key_exists($column, $allowedColumns)
+            )->values();
 
         if ($columns->isEmpty()) {
             return back()->with(
@@ -2623,8 +2623,8 @@ class ResidentController extends Controller
             ]);
 
         /*
-        * Same tab/sub filtering as Residents index.
-        */
+         * Same tab/sub filtering as Residents index.
+         */
         $tab = $request->string('tab')->toString() ?: 'residents';
         $sub = $request->string('sub')->toString() ?: 'active';
 
@@ -2640,32 +2640,32 @@ class ResidentController extends Controller
             ),
 
             default => match ($sub) {
-                'student_list' => $query->whereIn(
-                    'status',
-                    ['active', 'upcoming']
-                ),
-
-                'new_joiners' => $query
-                    ->where('status', 'active')
-                    ->whereHas(
-                        'currentStay',
-                        fn ($q) => $q->where(
-                            'check_in_date',
-                            '>=',
-                            now()->subDays(30)
-                        )
+                    'student_list' => $query->whereIn(
+                        'status',
+                        ['active', 'upcoming']
                     ),
 
-                default => $query->where(
-                    'status',
-                    'active'
-                ),
-            },
+                    'new_joiners' => $query
+                        ->where('status', 'active')
+                        ->whereHas(
+                            'currentStay',
+                            fn($q) => $q->where(
+                                'check_in_date',
+                                '>=',
+                                now()->subDays(30)
+                            )
+                        ),
+
+                    default => $query->where(
+                        'status',
+                        'active'
+                    ),
+                },
         };
 
         /*
-        * Search
-        */
+         * Search
+         */
         if ($search = $request->string('search')->toString()) {
             $query->where(function ($q) use ($search) {
                 $q->where(
@@ -2702,8 +2702,8 @@ class ResidentController extends Controller
         }
 
         /*
-        * Filters
-        */
+         * Filters
+         */
         if ($gender = $request->string('gender')->toString()) {
             $query->where('gender', $gender);
         }
@@ -2743,14 +2743,14 @@ class ResidentController extends Controller
         if ($bookingsFilter === 'no_living_end_date') {
             $query->whereHas(
                 'currentStay',
-                fn ($q) => $q->whereNull(
+                fn($q) => $q->whereNull(
                     'expected_check_out_date'
                 )
             );
         } elseif ($bookingsFilter === 'leaving_7') {
             $query->whereHas(
                 'currentStay',
-                fn ($q) => $q->whereBetween(
+                fn($q) => $q->whereBetween(
                     'expected_check_out_date',
                     [now(), now()->addDays(7)]
                 )
@@ -2758,7 +2758,7 @@ class ResidentController extends Controller
         } elseif ($bookingsFilter === 'leaving_30') {
             $query->whereHas(
                 'currentStay',
-                fn ($q) => $q->whereBetween(
+                fn($q) => $q->whereBetween(
                     'expected_check_out_date',
                     [now(), now()->addDays(30)]
                 )
@@ -2768,7 +2768,7 @@ class ResidentController extends Controller
         if ($livingUpTo = $request->date('living_up_to')) {
             $query->whereHas(
                 'currentStay',
-                fn ($q) => $q->whereDate(
+                fn($q) => $q->whereDate(
                     'expected_check_out_date',
                     '<=',
                     $livingUpTo
@@ -2784,46 +2784,39 @@ class ResidentController extends Controller
             '.csv';
 
         return response()->streamDownload(
-            function () use (
-                $query,
-                $selectedColumns,
-                $allowedColumns
-            ) {
+            function () use ($query, $selectedColumns, $allowedColumns) {
                 $handle = fopen(
                     'php://output',
                     'w'
                 );
 
                 /*
-                * UTF-8 BOM for Excel.
-                */
+                 * UTF-8 BOM for Excel.
+                 */
                 fwrite(
                     $handle,
                     "\xEF\xBB\xBF"
                 );
 
                 /*
-                * Header
-                */
+                 * Header
+                 */
                 fputcsv(
                     $handle,
                     array_map(
-                        fn ($column) =>
-                            $allowedColumns[$column],
+                        fn($column) =>
+                        $allowedColumns[$column],
                         $selectedColumns
                     )
                 );
 
                 /*
-                * Process in chunks so large resident
-                * lists don't consume excessive memory.
-                */
+                 * Process in chunks so large resident
+                 * lists don't consume excessive memory.
+                 */
                 $query
                     ->orderByDesc('created_at')
-                    ->chunk(500, function ($residents) use (
-                        $handle,
-                        $selectedColumns
-                    ) {
+                    ->chunk(500, function ($residents) use ($handle, $selectedColumns) {
                         foreach ($residents as $resident) {
                             $row = [];
 
@@ -2861,66 +2854,145 @@ class ResidentController extends Controller
     ): mixed {
         return match ($column) {
             'portal_enabled' =>
-                $resident->portal_enabled ? 'Yes' : 'No',
+            $resident->portal_enabled ? 'Yes' : 'No',
 
             'must_change_password' =>
-                $resident->must_change_password ? 'Yes' : 'No',
+            $resident->must_change_password ? 'Yes' : 'No',
 
             'gender' =>
-                ucfirst((string) $resident->gender),
+            ucfirst((string) $resident->gender),
 
             'status' =>
-                ucfirst((string) $resident->status),
+            ucfirst((string) $resident->status),
 
             'last_login_at',
             'password_changed_at',
             'created_at' =>
+            $resident->{$column}
+            ? \Carbon\Carbon::parse(
                 $resident->{$column}
-                    ? \Carbon\Carbon::parse(
-                        $resident->{$column}
-                    )->format('Y-m-d H:i:s')
-                    : '',
-            
+            )->format('Y-m-d H:i:s')
+            : '',
+
             'building' =>
-                $resident->currentStay?->building?->name ?? '',
+            $resident->currentStay?->building?->name ?? '',
 
             'floor' =>
-                $resident->currentStay?->floor?->name
-                    ?? $resident->currentStay?->floor?->floor_number
-                    ?? '',
+            $resident->currentStay?->floor?->name
+            ?? $resident->currentStay?->floor?->floor_number
+            ?? '',
 
             'room' =>
-                $resident->currentStay?->room?->room_number ?? '',
+            $resident->currentStay?->room?->room_number ?? '',
 
             'bed' =>
-                $resident->currentStay?->bed?->bed_number
-                    ?? $resident->currentStay?->bed?->name
-                    ?? '',
+            $resident->currentStay?->bed?->bed_number
+            ?? $resident->currentStay?->bed?->name
+            ?? '',
 
             'check_in_date' =>
-                $resident->currentStay?->check_in_date ?? '',
+            $resident->currentStay?->check_in_date ?? '',
 
             'expected_check_out_date' =>
-                $resident->currentStay?->expected_check_out_date ?? '',
+            $resident->currentStay?->expected_check_out_date ?? '',
 
             'billing_basis' =>
-                ucfirst(
-                    (string) (
-                        $resident->currentStay?->billing_basis
-                        ?? $resident->currentStay?->bill_type
-                        ?? ''
-                    )
-                ),
+            ucfirst(
+                (string) (
+                    $resident->currentStay?->billing_basis
+                    ?? $resident->currentStay?->bill_type
+                    ?? ''
+                )
+            ),
 
             'rent_amount' =>
-                $resident->currentStay?->rent_amount ?? '',
+            $resident->currentStay?->rent_amount ?? '',
 
             'deposit_amount' =>
-                $resident->currentStay?->deposit_amount ?? '',
+            $resident->currentStay?->deposit_amount ?? '',
 
             default =>
-                $resident->{$column} ?? '',
+            $resident->{$column} ?? '',
         };
+    }
+
+    public function birthdays(Request $request): Response
+    {
+        $filter = $request->input('filter', 'today');
+
+        $startDate = Carbon::today();
+        $endDate = match ($filter) {
+            'tomorrow' => Carbon::tomorrow(),
+            '3_days' => Carbon::today()->addDays(3),
+            '5_days' => Carbon::today()->addDays(5),
+            '7_days' => Carbon::today()->addDays(7),
+            '1_month' => Carbon::today()->addMonth(),
+            default => Carbon::today(),
+        };
+
+        if ($filter === 'tomorrow') {
+            $startDate = Carbon::tomorrow();
+        }
+
+        $residents = Resident::query()
+            ->whereIn('status', ['active', 'upcoming'])
+            ->whereNotNull('date_of_birth')
+            ->with([
+                'activeStay.room.floor.building',
+            ])
+            ->get([
+                'id',
+                'first_name',
+                'last_name',
+                'resident_code',
+                'date_of_birth',
+                'mobile',
+            ])
+            ->filter(function ($resident) use ($startDate, $endDate) {
+                $birthday = Carbon::parse($resident->date_of_birth);
+
+                $nextBirthday = $birthday->copy()->year($startDate->year);
+
+                if ($nextBirthday->lt($startDate->copy()->startOfDay())) {
+                    $nextBirthday->addYear();
+                }
+
+                return $nextBirthday->betweenIncluded(
+                    $startDate->copy()->startOfDay(),
+                    $endDate->copy()->endOfDay()
+                );
+            })
+            ->map(function ($resident) use ($startDate) {
+                $birthday = Carbon::parse($resident->date_of_birth);
+
+                $nextBirthday = $birthday->copy()->year($startDate->year);
+
+                if ($nextBirthday->lt($startDate->copy()->startOfDay())) {
+                    $nextBirthday->addYear();
+                }
+
+                $stay = $resident->activeStay;
+
+                return [
+                    'id' => $resident->id,
+                    'name' => trim($resident->first_name . ' ' . $resident->last_name),
+                    'resident_code' => $resident->resident_code,
+                    'date_of_birth' => $resident->date_of_birth->format('Y-m-d'),
+                    'birthday_date' => $nextBirthday->format('Y-m-d'),
+                    'phone' => $resident->mobile,
+
+                    'building' => $stay?->room?->floor?->building?->name,
+                    'floor' => $stay?->room?->floor?->name,
+                    'room' => $stay?->room?->room_number,
+                ];
+            })
+            ->sortBy('birthday_date')
+            ->values();
+
+        return Inertia::render('Residents/Birthdays', [
+            'residents' => $residents,
+            'selectedFilter' => $filter,
+        ]);
     }
 
 }

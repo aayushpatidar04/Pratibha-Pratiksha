@@ -43,8 +43,6 @@ const props = defineProps({
     feeTypes: Array,
 });
 
-
-
 const statusColor = {
     pending: "amber",
     paid: "green",
@@ -338,6 +336,39 @@ const selectInvoiceTarget = (target) => {
 
     createForm.clearErrors("resident_id", "application_id");
 };
+
+const editingPaymentModeId = ref(null);
+
+const paymentModeOptions = [
+    { value: "cash", label: "Cash" },
+    { value: "upi", label: "UPI" },
+    { value: "card", label: "Card" },
+    { value: "bank_transfer", label: "Bank Transfer" },
+    { value: "other", label: "Other" },
+];
+
+const startEditPaymentMode = (payment) => {
+    editingPaymentModeId.value = payment.id;
+};
+
+const cancelEditPaymentMode = () => {
+    editingPaymentModeId.value = null;
+};
+
+const updatePaymentMode = (payment) => {
+    router.put(
+        route("billing.payments.update-mode", payment.id),
+        {
+            payment_mode: payment.payment_mode,
+        },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                editingPaymentModeId.value = null;
+            },
+        },
+    );
+};
 </script>
 
 <template>
@@ -369,7 +400,9 @@ const selectInvoiceTarget = (target) => {
 
         <div class="space-y-5">
             <!-- Billing Tabs -->
-            <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-1 flex">
+            <div
+                class="bg-white rounded-xl border border-gray-100 shadow-sm p-1 flex"
+            >
                 <button
                     type="button"
                     @click="
@@ -563,7 +596,9 @@ const selectInvoiceTarget = (target) => {
                             {{
                                 type
                                     .replace(/_/g, " ")
-                                    .replace(/\b\w/g, (char) => char.toUpperCase())
+                                    .replace(/\b\w/g, (char) =>
+                                        char.toUpperCase(),
+                                    )
                             }}
                         </option>
                     </select>
@@ -593,19 +628,14 @@ const selectInvoiceTarget = (target) => {
                         </p>
                     </div>
 
-                    <div
-                        v-if="filters.tab === 'refunded'"
-                        class="text-right"
-                    >
-                        <p class="text-xs text-gray-500">
-                            Total Refunded
-                        </p>
+                    <div v-if="filters.tab === 'refunded'" class="text-right">
+                        <p class="text-xs text-gray-500">Total Refunded</p>
                         <p class="text-sm font-bold text-purple-600">
                             {{ formatCurrency(stats.refundedAmount || 0) }}
                         </p>
                     </div>
                 </div>
-                
+
                 <table class="w-full text-sm">
                     <thead class="bg-gray-50 text-gray-700 text-xs uppercase">
                         <tr>
@@ -630,8 +660,17 @@ const selectInvoiceTarget = (target) => {
                                 <p class="font-medium text-gray-900">
                                     {{ inv.invoice_number }}
                                 </p>
-                                <Badge v-if="inv.fee_type === 'security_deposit' && inv.refund_status === 'refunded'" :color="statusColor[inv.refund_status]">
-                                    {{ statusLabel[inv.refund_status] || inv.refund_status }}
+                                <Badge
+                                    v-if="
+                                        inv.fee_type === 'security_deposit' &&
+                                        inv.refund_status === 'refunded'
+                                    "
+                                    :color="statusColor[inv.refund_status]"
+                                >
+                                    {{
+                                        statusLabel[inv.refund_status] ||
+                                        inv.refund_status
+                                    }}
                                 </Badge>
 
                                 <span
@@ -651,7 +690,8 @@ const selectInvoiceTarget = (target) => {
                                 <div class="flex items-center gap-2">
                                     <div class="text-gray-600">
                                         <template v-if="inv.resident">
-                                            {{ inv.resident.first_name }} {{ inv.resident.last_name }}
+                                            {{ inv.resident.first_name }}
+                                            {{ inv.resident.last_name }}
                                         </template>
                                         <template v-else>
                                             {{ inv.application?.student_name }}
@@ -673,8 +713,15 @@ const selectInvoiceTarget = (target) => {
                                     </Link>
                                 </div>
                                 <div>
-                                    <p class="text-xs text-gray-900" v-if="inv.resident?.current_stay">
-                                        Room no. - {{ inv.resident?.current_stay?.room?.room_number }}
+                                    <p
+                                        class="text-xs text-gray-900"
+                                        v-if="inv.resident?.current_stay"
+                                    >
+                                        Room no. -
+                                        {{
+                                            inv.resident?.current_stay?.room
+                                                ?.room_number
+                                        }}
                                     </p>
                                 </div>
                             </td>
@@ -762,15 +809,18 @@ const selectInvoiceTarget = (target) => {
                                         v-if="!inv.deleted_at"
                                     >
                                         <!-- Current Bills Actions -->
-                                        <template v-if="filters.tab === 'current'">
-
+                                        <template
+                                            v-if="filters.tab === 'current'"
+                                        >
                                             <!-- Record Payment -->
                                             <button
                                                 v-if="inv.status !== 'paid'"
                                                 @click="openPay(inv)"
                                                 class="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
                                             >
-                                                <CreditCard class="h-3.5 w-3.5" />
+                                                <CreditCard
+                                                    class="h-3.5 w-3.5"
+                                                />
                                                 Pay
                                             </button>
 
@@ -779,7 +829,8 @@ const selectInvoiceTarget = (target) => {
                                                 v-if="
                                                     inv.late_fee_amount > 0 &&
                                                     !inv.late_fee_waived &&
-                                                    inv.status === 'late_fee_pending'
+                                                    inv.status ===
+                                                        'late_fee_pending'
                                                 "
                                                 @click="openWaive(inv)"
                                                 class="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-700"
@@ -787,19 +838,18 @@ const selectInvoiceTarget = (target) => {
                                                 <Ban class="h-3.5 w-3.5" />
                                                 Waive
                                             </button>
-
                                         </template>
 
                                         <!-- Refunded Bills Actions -->
                                         <template v-else>
-
                                             <span
                                                 class="inline-flex items-center gap-1.5 rounded-lg bg-purple-50 border border-purple-200 px-3 py-1.5 text-xs font-medium text-purple-700"
                                             >
-                                                <CheckCircle class="h-3.5 w-3.5" />
+                                                <CheckCircle
+                                                    class="h-3.5 w-3.5"
+                                                />
                                                 Refund Completed
                                             </span>
-
                                         </template>
 
                                         <!-- View Payments -->
@@ -827,7 +877,12 @@ const selectInvoiceTarget = (target) => {
                                         </a>
 
                                         <a
-                                            :href="route('billing.print.hi', inv.id)"
+                                            :href="
+                                                route(
+                                                    'billing.print.hi',
+                                                    inv.id,
+                                                )
+                                            "
                                             target="_blank"
                                             class="inline-flex items-center gap-1.5 rounded-lg bg-purple-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-purple-700"
                                         >
@@ -871,14 +926,62 @@ const selectInvoiceTarget = (target) => {
                                         class="flex items-center justify-between py-1.5 border-b border-gray-200 last:border-0"
                                     >
                                         <div>
-                                            <p class="text-xs text-gray-900">
-                                                {{
-                                                    formatCurrency(
-                                                        payment.amount,
-                                                    )
-                                                }}
-                                                via {{ payment.payment_mode }}
-                                            </p>
+                                            <div
+                                                class="flex items-center gap-2"
+                                            >
+                                                <p
+                                                    class="text-xs text-gray-900"
+                                                >
+                                                    {{
+                                                        formatCurrency(
+                                                            payment.amount,
+                                                        )
+                                                    }}
+                                                </p>
+
+                                                <!-- Normal display -->
+                                                <button
+                                                    v-if="
+                                                        editingPaymentModeId !==
+                                                        payment.id
+                                                    "
+                                                    type="button"
+                                                    class="text-xs text-blue-600 hover:text-blue-800 hover:underline"
+                                                    @click="
+                                                        startEditPaymentMode(
+                                                            payment,
+                                                        )
+                                                    "
+                                                >
+                                                    via
+                                                    {{ payment.payment_mode }}
+                                                </button>
+
+                                                <!-- Edit mode -->
+                                                <select
+                                                    v-else
+                                                    v-model="
+                                                        payment.payment_mode
+                                                    "
+                                                    class="rounded-md border-gray-300 text-xs py-1"
+                                                    @change="
+                                                        updatePaymentMode(
+                                                            payment,
+                                                        )
+                                                    "
+                                                    @blur="
+                                                        cancelEditPaymentMode
+                                                    "
+                                                >
+                                                    <option
+                                                        v-for="mode in paymentModeOptions"
+                                                        :key="mode.value"
+                                                        :value="mode.value"
+                                                    >
+                                                        {{ mode.label }}
+                                                    </option>
+                                                </select>
+                                            </div>
                                             <p
                                                 class="text-[10px] text-gray-700"
                                             >
@@ -990,7 +1093,9 @@ const selectInvoiceTarget = (target) => {
                         required
                     >
                         <option value="resident">Existing Resident</option>
-                        <option value="application">Pre-Booking Application</option>
+                        <option value="application">
+                            Pre-Booking Application
+                        </option>
                     </select>
                 </div>
 
@@ -1010,8 +1115,9 @@ const selectInvoiceTarget = (target) => {
                             :key="r.id"
                             :value="r.id"
                         >
-                            {{ r.first_name }} {{ r.last_name }}
-                            ({{ r.resident_code }})
+                            {{ r.first_name }} {{ r.last_name }} ({{
+                                r.resident_code
+                            }})
                         </option>
                     </select>
 
@@ -1027,9 +1133,7 @@ const selectInvoiceTarget = (target) => {
                         class="w-full rounded-lg border-gray-300 text-sm"
                         :required="createForm.invoice_for === 'application'"
                     >
-                        <option value="" disabled>
-                            Select application
-                        </option>
+                        <option value="" disabled>Select application</option>
 
                         <option
                             v-for="application in applications"

@@ -43,6 +43,7 @@ import {
     CheckCircle2,
     XCircle,
     Bike,
+    Gift,
 } from "lucide-vue-next";
 
 const page = usePage();
@@ -121,6 +122,12 @@ const rawNav = [
                 icon: Bike,
                 module: "student_vehicles",
             },
+            {
+                label: "Student Birthdays",
+                path: "/residents/birthdays",
+                icon: Gift,
+                module: "residents",
+            }
         ],
     },
     { label: "Admin", icon: UserCog, path: "/admin", module: "admin_users" },

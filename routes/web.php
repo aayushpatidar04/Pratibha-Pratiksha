@@ -80,6 +80,8 @@ Route::middleware(['auth', 'user.active'])->group(function () {
     Route::put('/residents/{resident}', [ResidentController::class, 'update'])->name('residents.update')->middleware('permission:residents,edit');
     Route::delete('/residents/{resident}', [ResidentController::class, 'destroy'])->name('residents.destroy')->middleware('permission:residents,delete');
 
+    Route::get('/residents/birthdays', [ResidentController::class, 'birthdays'])->name('residents.birthdays')->middleware('permission:residents,view');
+    
     // Residents > KYC
     Route::get('/residents/kyc', [KycController::class, 'index'])->name('kyc.index')->middleware('permission:kyc,view');
     Route::get('/residents/kyc/settings', [KycController::class, 'settings'])->name('kyc.settings')->middleware('permission:kyc_settings,view');
@@ -205,6 +207,7 @@ Route::middleware(['auth', 'user.active'])->group(function () {
         Route::get('/{invoice}/pdf/hi', [BillingController::class, 'exportPdfHindi'])->name('billing.pdf.hi')->middleware('permission:billing,view');
         Route::get('/{invoice}/print/hi', [BillingController::class, 'previewHindi'])->name('billing.print.hi')->middleware('permission:billing,view');
         Route::get('/payments/{payment}/receipt', [BillingController::class, 'paymentReceipt'])->name('billing.payments.receipt')->middleware('permission:billing,view');
+        Route::put('/payments/{payment}/mode', [BillingController::class, 'updatePaymentMode'])->name('billing.payments.update-mode')->middleware('permission:billing,edit');
 
         // Resident payment history
         Route::get('/resident/{resident}/history', [BillingController::class, 'residentHistory'])->name('billing.resident.history')->middleware('permission:billing,view');

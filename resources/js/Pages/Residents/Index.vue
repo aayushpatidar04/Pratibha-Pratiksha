@@ -1478,11 +1478,11 @@ const exportResidents = () => {
                                                 {{ r.resident_code }}
                                             </span>
 
-                                            <Badge
+                                            <!-- <Badge
                                                 :color="genderColor[r.gender]"
                                             >
                                                 {{ r.gender }}
-                                            </Badge>
+                                            </Badge> -->
                                         </div>
 
                                         <p
