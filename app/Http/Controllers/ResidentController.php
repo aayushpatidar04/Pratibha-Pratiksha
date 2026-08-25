@@ -2946,7 +2946,7 @@ class ResidentController extends Controller
                 'last_name',
                 'resident_code',
                 'date_of_birth',
-                'mobile',
+                'phone',
             ])
             ->filter(function ($resident) use ($startDate, $endDate) {
                 $birthday = Carbon::parse($resident->date_of_birth);
@@ -2979,7 +2979,7 @@ class ResidentController extends Controller
                     'resident_code' => $resident->resident_code,
                     'date_of_birth' => $resident->date_of_birth->format('Y-m-d'),
                     'birthday_date' => $nextBirthday->format('Y-m-d'),
-                    'phone' => $resident->mobile,
+                    'phone' => $resident->phone,
 
                     'building' => $stay?->room?->floor?->building?->name,
                     'floor' => $stay?->room?->floor?->name,
