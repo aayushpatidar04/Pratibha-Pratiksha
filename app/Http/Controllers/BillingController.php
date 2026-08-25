@@ -962,7 +962,7 @@ class BillingController extends Controller
                 'resident_id',
                 $residentId
             )
-                ->where('status', 'active')
+                ->whereIn('status', ['active', 'upcoming'])
                 ->value('id');
 
             if (!$stayId) {
