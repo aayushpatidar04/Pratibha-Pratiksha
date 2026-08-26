@@ -4,7 +4,6 @@ namespace App\Models;
 
 use DateTimeInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Model;
 
 class MessMenu extends Model
@@ -14,7 +13,6 @@ class MessMenu extends Model
     protected $table = 'mess_menu';
 
     protected $fillable = [
-        'building_id',
         'menu_date',
         'meal_type',
         'items',
@@ -25,19 +23,12 @@ class MessMenu extends Model
     {
         return [
             'menu_date' => 'date:Y-m-d',
+            'items' => 'array',
         ];
     }
 
     protected function serializeDate(DateTimeInterface $date): string
     {
         return $date->format('Y-m-d');
-    }
-
-    public function building(): BelongsTo
-    {
-        return $this->belongsTo(
-            Building::class,
-            'building_id'
-        );
     }
 }

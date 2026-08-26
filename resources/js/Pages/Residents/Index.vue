@@ -1428,11 +1428,11 @@ const exportResidents = () => {
                     </thead>
                     <tbody class="divide-y divide-gray-100">
                         <tr
-                            v-for="r in studentWise.residents.data"
+                            v-for="(r, index) in studentWise.residents.data"
                             :key="r.id"
                             class="group transition-colors duration-200 hover:bg-blue-50/50"
                         >
-                            <td class="px-4 py-3 text-gray-600">{{ r.id }}</td>
+                            <td class="px-4 py-3 text-gray-600">{{ index + 1 }}</td>
                             <td class="px-4 py-3">
                                 <div
                                     class="flex items-center gap-3 transition-transform duration-200 ease-out group-hover:translate-x-1 group-hover:scale-[1.025]"

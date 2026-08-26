@@ -47,7 +47,7 @@ const props = defineProps({
 const meals = [
     {
         key: "breakfast",
-        label: "Breakfast",
+        label: "प्रातराश",
         icon: Coffee,
         time: "Morning",
         cardClass:
@@ -59,7 +59,7 @@ const meals = [
     },
     {
         key: "lunch",
-        label: "Lunch",
+        label: "भोजन",
         icon: Soup,
         time: "Afternoon",
         cardClass:
@@ -71,7 +71,7 @@ const meals = [
     },
     {
         key: "snacks",
-        label: "Snacks",
+        label: "स्वल्पाहार",
         icon: Cookie,
         time: "Evening",
         cardClass:
@@ -83,7 +83,7 @@ const meals = [
     },
     {
         key: "dinner",
-        label: "Dinner",
+        label: "संध्याकालीन भोज",
         icon: Moon,
         time: "Night",
         cardClass:

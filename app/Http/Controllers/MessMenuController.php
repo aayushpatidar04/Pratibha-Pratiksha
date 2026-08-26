@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Building;
+use App\Models\MessItem;
 use App\Models\MessMenu;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
@@ -20,12 +21,6 @@ class MessMenuController extends Controller
                 'nullable',
                 'date_format:Y-m-d',
             ],
-
-            'building_id' => [
-                'nullable',
-                'integer',
-                'exists:buildings,id',
-            ],
         ]);
 
         $weekStart = filled($validated['week'] ?? null)
@@ -39,31 +34,13 @@ class MessMenuController extends Controller
             ->copy()
             ->addDays(6);
 
-        $buildings = Building::query()
-            ->orderBy('name')
-            ->get([
-                'id',
-                'name',
-            ]);
-
-        $selectedBuildingId = isset(
-            $validated['building_id']
-        )
-            ? (int) $validated['building_id']
-            : (int) ($buildings->first()?->id ?? 0);
-
-        if ($selectedBuildingId) {
-            $this->prepareBuildingWeekMenu(
-                weekStart: $weekStart,
-                buildingId: $selectedBuildingId
-            );
-        }
+        /*
+        * If the requested week has no menu yet,
+        * automatically prepare it from the previous week.
+        */
+        $this->prepareWeekMenu($weekStart);
 
         $menus = MessMenu::query()
-            ->where(
-                'building_id',
-                $selectedBuildingId
-            )
             ->whereBetween('menu_date', [
                 $weekStart->toDateString(),
                 $weekEnd->toDateString(),
@@ -80,23 +57,24 @@ class MessMenuController extends Controller
             ")
             ->get();
 
+        $messItems = MessItem::query()
+            ->orderBy('name')
+            ->get([
+                'id',
+                'name',
+            ]);
+
         return Inertia::render('Mess/Index', [
             'menus' => $menus,
 
             'weekStart' =>
                 $weekStart->toDateString(),
 
-            'selectedBuildingId' =>
-                $selectedBuildingId,
-
-            'buildings' => $buildings,
+            'messItems' => $messItems,
         ]);
     }
 
-    private function prepareBuildingWeekMenu(
-        Carbon $weekStart,
-        int $buildingId
-    ): void {
+    private function prepareWeekMenu(Carbon $weekStart): void {
         $weekStart = $weekStart
             ->copy()
             ->startOfWeek(Carbon::MONDAY);
@@ -106,42 +84,17 @@ class MessMenuController extends Controller
             ->addDays(6);
 
         /*
-         * Do nothing when the selected building already has
-         * at least one entry for this week.
-         */
-        $buildingWeekExists = MessMenu::query()
-            ->where('building_id', $buildingId)
+        * If even one menu entry exists for this week,
+        * do not recreate/copy the week.
+        */
+        $weekExists = MessMenu::query()
             ->whereBetween('menu_date', [
                 $weekStart->toDateString(),
                 $weekEnd->toDateString(),
             ])
             ->exists();
 
-        if ($buildingWeekExists) {
-            return;
-        }
-
-        /*
-         * First preference:
-         * legacy/common menu from the exact requested week.
-         *
-         * This handles your original records where
-         * building_id was null.
-         */
-        $commonCurrentWeekMenus =
-            $this->getWeekMenus(
-                weekStart: $weekStart,
-                buildingId: null
-            );
-
-        if ($commonCurrentWeekMenus->isNotEmpty()) {
-            $this->copyWeekMenus(
-                sourceMenus: $commonCurrentWeekMenus,
-                sourceWeekStart: $weekStart,
-                destinationWeekStart: $weekStart,
-                destinationBuildingId: $buildingId
-            );
-
+        if ($weekExists) {
             return;
         }
 
@@ -150,51 +103,22 @@ class MessMenuController extends Controller
             ->subWeek()
             ->startOfWeek(Carbon::MONDAY);
 
-        /*
-         * Second preference:
-         * previous week menu of the selected building.
-         */
-        $previousBuildingMenus =
-            $this->getWeekMenus(
-                weekStart: $previousWeekStart,
-                buildingId: $buildingId
-            );
+        $previousWeekMenus = $this->getWeekMenus(
+            $previousWeekStart
+        );
 
-        if ($previousBuildingMenus->isNotEmpty()) {
-            $this->copyWeekMenus(
-                sourceMenus: $previousBuildingMenus,
-                sourceWeekStart: $previousWeekStart,
-                destinationWeekStart: $weekStart,
-                destinationBuildingId: $buildingId
-            );
-
+        if ($previousWeekMenus->isEmpty()) {
             return;
         }
 
-        /*
-         * Last fallback:
-         * previous week's legacy/common menu.
-         */
-        $previousCommonMenus =
-            $this->getWeekMenus(
-                weekStart: $previousWeekStart,
-                buildingId: null
-            );
-
-        if ($previousCommonMenus->isNotEmpty()) {
-            $this->copyWeekMenus(
-                sourceMenus: $previousCommonMenus,
-                sourceWeekStart: $previousWeekStart,
-                destinationWeekStart: $weekStart,
-                destinationBuildingId: $buildingId
-            );
-        }
+        $this->copyWeekMenus(
+            sourceMenus: $previousWeekMenus,
+            sourceWeekStart: $previousWeekStart,
+            destinationWeekStart: $weekStart
+        );
     }
 
-    private function getWeekMenus(
-        Carbon $weekStart,
-        ?int $buildingId
-    ) {
+    private function getWeekMenus(Carbon $weekStart) {
         $weekStart = $weekStart
             ->copy()
             ->startOfWeek(Carbon::MONDAY);
@@ -204,18 +128,6 @@ class MessMenuController extends Controller
             ->addDays(6);
 
         return MessMenu::query()
-            ->when(
-                $buildingId === null,
-                fn($query) =>
-                $query->whereNull(
-                    'building_id'
-                ),
-                fn($query) =>
-                $query->where(
-                    'building_id',
-                    $buildingId
-                )
-            )
             ->whereBetween('menu_date', [
                 $weekStart->toDateString(),
                 $weekEnd->toDateString(),
@@ -233,14 +145,13 @@ class MessMenuController extends Controller
             ->values();
     }
 
-    private function copyWeekMenus(
-        $sourceMenus,
-        Carbon $sourceWeekStart,
-        Carbon $destinationWeekStart,
-        int $destinationBuildingId
-    ): void {
+    private function copyWeekMenus($sourceMenus, Carbon $sourceWeekStart, Carbon $destinationWeekStart): void {
         DB::transaction(
-            function () use ($sourceMenus, $sourceWeekStart, $destinationWeekStart, $destinationBuildingId): void {
+            function () use (
+                $sourceMenus,
+                $sourceWeekStart,
+                $destinationWeekStart
+            ): void {
                 foreach ($sourceMenus as $menu) {
                     $sourceDate = Carbon::parse(
                         $menu->menu_date
@@ -270,11 +181,7 @@ class MessMenuController extends Controller
 
                     MessMenu::updateOrCreate(
                         [
-                            'building_id' =>
-                                $destinationBuildingId,
-
-                            'menu_date' =>
-                                $destinationDate,
+                            'menu_date' => $destinationDate,
 
                             'meal_type' =>
                                 $menu->meal_type,
@@ -292,20 +199,12 @@ class MessMenuController extends Controller
         );
     }
 
-    public function store(
-        Request $request
-    ): RedirectResponse {
+    public function store(Request $request): RedirectResponse {
         $validated = $request->validate([
             'id' => [
                 'nullable',
                 'integer',
                 'exists:mess_menu,id',
-            ],
-
-            'building_id' => [
-                'required',
-                'integer',
-                'exists:buildings,id',
             ],
 
             'menu_date' => [
@@ -320,8 +219,14 @@ class MessMenuController extends Controller
 
             'items' => [
                 'required',
+                'array',
+                'min:1',
+            ],
+
+            'items.*' => [
+                'required',
                 'string',
-                'max:3000',
+                'max:255',
             ],
 
             'special_notes' => [
@@ -331,10 +236,22 @@ class MessMenuController extends Controller
             ],
         ]);
 
-        $data = [
-            'building_id' =>
-                (int) $validated['building_id'],
+        $items = collect($validated['items'])
+            ->map(
+                fn($item) => trim($item)
+            )
+            ->filter()
+            ->unique()
+            ->values();
 
+        if ($items->isEmpty()) {
+            return back()->withErrors([
+                'items' =>
+                    'Please select or add at least one item.',
+            ]);
+        }
+
+        $data = [
             'menu_date' =>
                 Carbon::createFromFormat(
                     'Y-m-d',
@@ -345,7 +262,7 @@ class MessMenuController extends Controller
                 $validated['meal_type'],
 
             'items' =>
-                trim($validated['items']),
+                $items->all(),
 
             'special_notes' =>
                 filled(
@@ -358,7 +275,23 @@ class MessMenuController extends Controller
                 : null,
         ];
 
-        DB::transaction(function () use ($validated, $data): void {
+        DB::transaction(function () use (
+            $validated,
+            $data,
+            $items
+        ): void {
+            /*
+            * Save newly used items in master items list.
+            */
+            foreach ($items as $item) {
+                MessItem::firstOrCreate([
+                    'name' => $item,
+                ]);
+            }
+
+            /*
+            * Same store method for add/edit.
+            */
             if (!empty($validated['id'])) {
                 $menu = MessMenu::query()
                     ->findOrFail(
@@ -368,15 +301,10 @@ class MessMenuController extends Controller
                 $menu->update($data);
 
                 /*
-                 * Remove an older duplicate if the date,
-                 * meal or building was changed.
-                 */
+                * Remove duplicate if date or meal type changed.
+                */
                 MessMenu::query()
                     ->whereKeyNot($menu->id)
-                    ->where(
-                        'building_id',
-                        $data['building_id']
-                    )
                     ->whereDate(
                         'menu_date',
                         $data['menu_date']
@@ -392,9 +320,6 @@ class MessMenuController extends Controller
 
             MessMenu::updateOrCreate(
                 [
-                    'building_id' =>
-                        $data['building_id'],
-
                     'menu_date' =>
                         $data['menu_date'],
 
@@ -417,10 +342,8 @@ class MessMenuController extends Controller
         );
     }
 
-    public function destroy(
-        MessMenu $menu
-    ): RedirectResponse {
-        $menu->delete();
+    public function destroy(MessMenu $messMenu): RedirectResponse {
+        $messMenu->delete();
 
         return back()->with(
             'success',

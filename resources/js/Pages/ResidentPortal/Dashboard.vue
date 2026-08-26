@@ -137,22 +137,22 @@ const kycClass = computed(() => {
 const meals = [
     {
         key: "breakfast",
-        label: "Breakfast",
+        label: "प्रातराश",
         icon: Coffee,
     },
     {
         key: "lunch",
-        label: "Lunch",
+        label: "भोजन",
         icon: Soup,
     },
     {
         key: "snacks",
-        label: "Snacks",
+        label: "स्वल्पाहार",
         icon: Cookie,
     },
     {
         key: "dinner",
-        label: "Dinner",
+        label: "संध्याकालीन भोज",
         icon: Moon,
     },
 ];

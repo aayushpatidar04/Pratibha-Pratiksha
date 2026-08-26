@@ -275,6 +275,9 @@ class BillingController extends Controller
             'feeTypes' => $feeTypes,
 
             'residents' => Resident::whereIn('status', ['active', 'upcoming'])
+                 ->with([
+                    'activeStay.room.floor.building', 'activeStay.bed'
+                ])
                 ->orderBy('first_name')
                 ->get([
                     'id',
@@ -419,10 +422,7 @@ class BillingController extends Controller
     }
 
     // ==================== AUTO GENERATE BILLS ====================
-    public function autoGenerate(
-        Request $request,
-        MonthlyBillingConfig $config
-    ): Response {
+    public function autoGenerate(Request $request, MonthlyBillingConfig $config): Response {
         $billingMonthStart = Carbon::create(
             $config->year,
             $config->month,
@@ -631,10 +631,7 @@ class BillingController extends Controller
     }
 
     // Actually generate after preview confirmation
-    public function confirmGenerate(
-        Request $request,
-        MonthlyBillingConfig $config
-    ): RedirectResponse {
+    public function confirmGenerate(Request $request, MonthlyBillingConfig $config): RedirectResponse {
         $validated = $request->validate([
             'selected_residents' => ['required', 'array', 'min:1'],
             'selected_residents.*' => ['required', 'integer', 'exists:residents,id'],
@@ -1083,10 +1080,7 @@ class BillingController extends Controller
     }
 
     // ==================== RECORD PAYMENT WITH PROOF ====================
-    public function recordPayment(
-        Request $request,
-        FeeInvoice $invoice
-    ): RedirectResponse {
+    public function recordPayment(Request $request, FeeInvoice $invoice): RedirectResponse {
         $validated = $request->validate([
             'amount' => ['required', 'numeric', 'min:0.01'],
             'payment_mode' => [

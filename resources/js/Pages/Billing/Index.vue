@@ -1117,7 +1117,7 @@ const updatePaymentMode = (payment) => {
                         >
                             {{ r.first_name }} {{ r.last_name }} ({{
                                 r.resident_code
-                            }})
+                            }}) ({{ r.active_stay.room.floor.building.name }} - {{ r.active_stay.room.floor.name }} - {{ r.active_stay.room.room_number }} - {{ r.active_stay.bed.bed_number }})
                         </option>
                     </select>
 

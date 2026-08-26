@@ -11,13 +11,8 @@ import { UtensilsCrossed, Plus, Pencil, Trash2 } from "lucide-vue-next";
 const props = defineProps({
     menus: Array,
     weekStart: String,
-    buildings: Array,
-    selectedBuildingId: [Number, String],
+    messItems: Array,
 });
-
-const buildingId = ref(
-    Number(props.selectedBuildingId) || "",
-);
 
 const normalizeDate = (date) => {
     if (!date) return "";
@@ -32,52 +27,46 @@ const parseDate = (value) => {
         .split("-")
         .map(Number);
 
-    return new Date(
-        year,
-        month - 1,
-        day,
-        12,
-        0,
-        0,
-    );
+    return new Date(year, month - 1, day, 12, 0, 0);
 };
 
 const formatLocalDate = (date) => {
     const year = date.getFullYear();
 
-    const month = String(
-        date.getMonth() + 1,
-    ).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
 
-    const day = String(
-        date.getDate(),
-    ).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
 
     return `${year}-${month}-${day}`;
 };
 
 const days = computed(() => {
-    const start = parseDate(
-        props.weekStart,
-    );
+    const start = parseDate(props.weekStart);
 
     if (!start) return [];
 
-    return Array.from(
-        { length: 7 },
-        (_, index) => {
-            const date = new Date(start);
+    return Array.from({ length: 7 }, (_, index) => {
+        const date = new Date(start);
 
-            date.setDate(
-                start.getDate() + index,
-            );
+        date.setDate(start.getDate() + index);
 
-            return formatLocalDate(date);
-        },
-    );
+        return formatLocalDate(date);
+    });
 });
 
-const meals = ["breakfast", "lunch", "snacks", "dinner"];
+const meals = {
+    breakfast: "प्रातराश",
+    lunch: "भोजन",
+    snacks: "स्वल्पाहार",
+    dinner: "संध्याकालीन भोज"
+};
+
+
+const availableItems = computed(() => {
+    return props.messItems || [];
+});
+
+const newItem = ref("");
 
 const menuFor = (date, meal) => {
     return props.menus.find(
@@ -85,14 +74,35 @@ const menuFor = (date, meal) => {
     );
 };
 
+const addItem = () => {
+    const item = newItem.value.trim();
+
+    if (!item) {
+        return;
+    }
+
+    const exists = form.items.some(
+        (selected) => selected.toLowerCase() === item.toLowerCase(),
+    );
+
+    if (!exists) {
+        form.items.push(item);
+    }
+
+    newItem.value = "";
+};
+
+const removeItem = (index) => {
+    form.items.splice(index, 1);
+};
+
 const editOpen = ref(false);
 
 const form = useForm({
     id: null,
-    building_id: Number(props.selectedBuildingId) || "",
     menu_date: "",
     meal_type: "",
-    items: "",
+    items: [],
     special_notes: "",
 });
 
@@ -104,15 +114,12 @@ const openEdit = (date, meal) => {
 
     form.id = existing?.id || null;
 
-    form.building_id =
-        Number(buildingId.value);
-
     form.menu_date = date;
     form.meal_type = meal;
-    form.items = existing?.items || "";
-    form.special_notes =
-        existing?.special_notes || "";
+    form.items = Array.isArray(existing?.items) ? [...existing.items] : [];
+    form.special_notes = existing?.special_notes || "";
 
+    newItem.value = "";
     editOpen.value = true;
 };
 
@@ -139,22 +146,16 @@ const deleteMenu = (menu) => {
 };
 
 const changeWeek = (weeks) => {
-    const date = parseDate(
-        props.weekStart,
-    );
+    const date = parseDate(props.weekStart);
 
     if (!date) return;
 
-    date.setDate(
-        date.getDate() + weeks * 7,
-    );
+    date.setDate(date.getDate() + weeks * 7);
 
     router.get(
         "/mess",
         {
             week: formatLocalDate(date),
-            building_id:
-                Number(buildingId.value),
         },
         {
             preserveScroll: true,
@@ -173,17 +174,13 @@ const nextWeek = () => {
 };
 
 const currentWeekLabel = computed(() => {
-    const start = parseDate(
-        props.weekStart,
-    );
+    const start = parseDate(props.weekStart);
 
     if (!start) return "";
 
     const end = new Date(start);
 
-    end.setDate(
-        start.getDate() + 6,
-    );
+    end.setDate(start.getDate() + 6);
 
     const options = {
         day: "2-digit",
@@ -194,43 +191,8 @@ const currentWeekLabel = computed(() => {
     return `${start.toLocaleDateString(
         "en-IN",
         options,
-    )} - ${end.toLocaleDateString(
-        "en-IN",
-        options,
-    )}`;
+    )} - ${end.toLocaleDateString("en-IN", options)}`;
 });
-
-const changeBuilding = () => {
-    router.get(
-        "/mess",
-        {
-            week: props.weekStart,
-            building_id:
-                Number(buildingId.value),
-        },
-        {
-            preserveState: false,
-            preserveScroll: true,
-            replace: true,
-        },
-    );
-};
-
-watch(
-    () => props.selectedBuildingId,
-    (value) => {
-        buildingId.value =
-            Number(value) || "";
-    },
-);
-
-watch(
-    buildingId,
-    (value) => {
-        form.building_id =
-            Number(value) || "";
-    },
-);
 </script>
 
 <template>
@@ -259,19 +221,6 @@ watch(
                 </div>
 
                 <div class="flex gap-2">
-                    <select
-                        v-model="buildingId"
-                        class="rounded-lg border-gray-300 text-sm"
-                        @change="changeBuilding"
-                    >
-                        <option
-                            v-for="building in buildings"
-                            :key="building.id"
-                            :value="building.id"
-                        >
-                            {{ building.name }}
-                        </option>
-                    </select>
                     <button
                         class="px-3 py-1.5 text-sm rounded-lg border border-gray-300 hover:bg-gray-50"
                         @click="prevWeek"
@@ -311,11 +260,11 @@ watch(
                     </thead>
 
                     <tbody class="divide-y divide-gray-100">
-                        <tr v-for="meal in meals" :key="meal">
+                        <tr v-for="meal in Object.keys(meals)" :key="meal">
                             <td
                                 class="px-3 py-4 font-medium text-gray-900 capitalize bg-gray-50/40"
                             >
-                                {{ meal }}
+                                {{ meals[meal] }}
                             </td>
 
                             <td
@@ -328,11 +277,16 @@ watch(
                                     class="group rounded-lg border border-gray-100 bg-white p-2 hover:border-blue-200 hover:bg-blue-50/30 transition"
                                 >
                                     <div class="flex justify-between gap-2">
-                                        <p
-                                            class="text-xs text-gray-800 whitespace-pre-line leading-relaxed"
-                                        >
-                                            {{ menuFor(d, meal).items }}
-                                        </p>
+                                        <div class="flex flex-wrap gap-1">
+                                            <span
+                                                v-for="item in menuFor(d, meal)
+                                                    .items"
+                                                :key="item"
+                                                class="px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[11px]"
+                                            >
+                                                {{ item }}
+                                            </span>
+                                        </div>
 
                                         <div
                                             class="flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition"
@@ -394,13 +348,78 @@ watch(
                 <div>
                     <InputLabel value="Items *" />
 
-                    <textarea
-                        v-model="form.items"
-                        rows="4"
-                        required
-                        class="w-full rounded-lg border-gray-300 text-sm focus:border-blue-500 focus:ring-blue-500"
-                        placeholder="e.g. Poha, Bread Butter, Tea"
-                    ></textarea>
+                    <!-- Existing items -->
+                    <select
+                        @change="
+                            (event) => {
+                                const value = event.target.value;
+
+                                if (
+                                    value &&
+                                    !form.items.some(
+                                        (item) =>
+                                            item.toLowerCase() ===
+                                            value.toLowerCase(),
+                                    )
+                                ) {
+                                    form.items.push(value);
+                                }
+
+                                event.target.value = '';
+                            }
+                        "
+                        class="w-full mt-1 rounded-lg border-gray-300 text-sm"
+                    >
+                        <option value="">Select from existing items</option>
+
+                        <option
+                            v-for="item in availableItems"
+                            :key="item.id"
+                            :value="item.name"
+                        >
+                            {{ item.name }}
+                        </option>
+                    </select>
+
+                    <!-- Add new item -->
+                    <div class="flex gap-2 mt-2">
+                        <TextInput
+                            v-model="newItem"
+                            class="flex-1"
+                            placeholder="Or type a new item"
+                            @keyup.enter.prevent="addItem"
+                        />
+
+                        <button
+                            type="button"
+                            class="px-3 py-2 text-sm rounded-lg border border-blue-200 text-blue-700 hover:bg-blue-50"
+                            @click="addItem"
+                        >
+                            Add
+                        </button>
+                    </div>
+
+                    <!-- Selected items -->
+                    <div
+                        v-if="form.items.length"
+                        class="flex flex-wrap gap-2 mt-3"
+                    >
+                        <span
+                            v-for="(item, index) in form.items"
+                            :key="`${item}-${index}`"
+                            class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-xs"
+                        >
+                            {{ item }}
+
+                            <button
+                                type="button"
+                                class="font-bold hover:text-red-600"
+                                @click="removeItem(index)"
+                            >
+                                ×
+                            </button>
+                        </span>
+                    </div>
 
                     <p
                         v-if="form.errors.items"
