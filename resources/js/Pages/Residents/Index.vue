@@ -1022,8 +1022,9 @@ const allExportColumnsSelected = computed(() =>
 
 const toggleExportColumn = (key) => {
     if (selectedExportColumns.value.includes(key)) {
-        selectedExportColumns.value =
-            selectedExportColumns.value.filter((item) => item !== key);
+        selectedExportColumns.value = selectedExportColumns.value.filter(
+            (item) => item !== key,
+        );
     } else {
         selectedExportColumns.value.push(key);
     }
@@ -1125,7 +1126,8 @@ const exportResidents = () => {
             </div>
 
             <!-- Top-level tabs -->
-            <div v-if="studentWise"
+            <div
+                v-if="studentWise"
                 class="flex gap-1 bg-white p-1 rounded-xl border border-gray-100 w-fit"
             >
                 <button
@@ -1155,7 +1157,7 @@ const exportResidents = () => {
 
             <!-- Sub-tabs (Residents tab only) -->
             <div
-                v-if="tab === 'residents' && studentWise" 
+                v-if="tab === 'residents' && studentWise"
                 class="flex gap-5 border-b border-gray-200 text-sm"
             >
                 <button
@@ -1432,7 +1434,14 @@ const exportResidents = () => {
                             :key="r.id"
                             class="group transition-colors duration-200 hover:bg-blue-50/50"
                         >
-                            <td class="px-4 py-3 text-gray-600">{{ index + 1 }}</td>
+                            <td class="px-4 py-3 text-gray-600">
+                                {{
+                                    (studentWise.residents.current_page - 1) *
+                                        studentWise.residents.per_page +
+                                    index +
+                                    1
+                                }}
+                            </td>
                             <td class="px-4 py-3">
                                 <div
                                     class="flex items-center gap-3 transition-transform duration-200 ease-out group-hover:translate-x-1 group-hover:scale-[1.025]"
@@ -5648,8 +5657,8 @@ const exportResidents = () => {
                     </h2>
 
                     <p class="text-xs text-gray-600 mt-1">
-                        Select the columns you want to include in the CSV export.
-                        Current search and filters will also be applied.
+                        Select the columns you want to include in the CSV
+                        export. Current search and filters will also be applied.
                     </p>
                 </div>
 
@@ -5687,9 +5696,7 @@ const exportResidents = () => {
                         v-for="(columns, group) in exportColumnGroups"
                         :key="group"
                     >
-                        <div
-                            class="flex items-center justify-between mb-2"
-                        >
+                        <div class="flex items-center justify-between mb-2">
                             <h3
                                 class="text-xs font-semibold uppercase tracking-wide text-gray-700"
                             >
@@ -5717,9 +5724,7 @@ const exportResidents = () => {
                             </button>
                         </div>
 
-                        <div
-                            class="grid grid-cols-1 sm:grid-cols-2 gap-2"
-                        >
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             <label
                                 v-for="column in columns"
                                 :key="column.key"
@@ -5732,9 +5737,7 @@ const exportResidents = () => {
                                             column.key,
                                         )
                                     "
-                                    @change="
-                                        toggleExportColumn(column.key)
-                                    "
+                                    @change="toggleExportColumn(column.key)"
                                     class="rounded border-gray-300 text-blue-600"
                                 />
 
@@ -5747,9 +5750,7 @@ const exportResidents = () => {
                 </div>
 
                 <!-- Current filters -->
-                <div
-                    class="rounded-lg bg-blue-50 border border-blue-100 p-3"
-                >
+                <div class="rounded-lg bg-blue-50 border border-blue-100 p-3">
                     <p class="text-xs font-medium text-blue-800">
                         Export scope
                     </p>

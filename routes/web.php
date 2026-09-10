@@ -197,6 +197,8 @@ Route::middleware(['auth', 'user.active'])->group(function () {
         // Main billing
         Route::get('/', [BillingController::class, 'index'])->name('billing.index')->middleware('permission:billing,view');
         Route::post('/', [BillingController::class, 'store'])->name('billing.store')->middleware('permission:billing,create');
+        Route::get('/{invoice}/edit', [BillingController::class, 'edit'])->name('billing.edit')->middleware('permission:billing,edit');
+        Route::put('/{invoice}', [BillingController::class, 'update'])->name('billing.update')->middleware('permission:billing,edit');
         Route::post('/check-transaction-id', [BillingController::class, 'checkTransactionId'])->name('billing.check-transaction')->middleware('permission:billing,view');
         Route::post('/{invoice}/payments', [BillingController::class, 'recordPayment'])->name('billing.payments.store')->middleware('permission:billing,edit');
         Route::post('/{invoice}/waive-late-fee', [BillingController::class, 'waiveLateFee'])->name('billing.waive-late-fee')->middleware('permission:billing,edit');

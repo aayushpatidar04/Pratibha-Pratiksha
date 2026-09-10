@@ -275,8 +275,9 @@ class BillingController extends Controller
             'feeTypes' => $feeTypes,
 
             'residents' => Resident::whereIn('status', ['active', 'upcoming'])
-                 ->with([
-                    'activeStay.room.floor.building', 'activeStay.bed'
+                ->with([
+                    'activeStay.room.floor.building',
+                    'activeStay.bed'
                 ])
                 ->orderBy('first_name')
                 ->get([
@@ -422,7 +423,8 @@ class BillingController extends Controller
     }
 
     // ==================== AUTO GENERATE BILLS ====================
-    public function autoGenerate(Request $request, MonthlyBillingConfig $config): Response {
+    public function autoGenerate(Request $request, MonthlyBillingConfig $config): Response
+    {
         $billingMonthStart = Carbon::create(
             $config->year,
             $config->month,
@@ -631,7 +633,8 @@ class BillingController extends Controller
     }
 
     // Actually generate after preview confirmation
-    public function confirmGenerate(Request $request, MonthlyBillingConfig $config): RedirectResponse {
+    public function confirmGenerate(Request $request, MonthlyBillingConfig $config): RedirectResponse
+    {
         $validated = $request->validate([
             'selected_residents' => ['required', 'array', 'min:1'],
             'selected_residents.*' => ['required', 'integer', 'exists:residents,id'],
@@ -928,16 +931,16 @@ class BillingController extends Controller
         ]);
 
         /*
-        * Determine invoice owner.
-        *
-        * Resident invoice:
-        *   resident_id = selected resident
-        *   application_id = null
-        *
-        * Pre-booking invoice:
-        *   resident_id = null
-        *   application_id = selected application
-        */
+         * Determine invoice owner.
+         *
+         * Resident invoice:
+         *   resident_id = selected resident
+         *   application_id = null
+         *
+         * Pre-booking invoice:
+         *   resident_id = null
+         *   application_id = selected application
+         */
         $residentId = $validated['invoice_for'] === 'resident'
             ? $validated['resident_id']
             : null;
@@ -947,11 +950,11 @@ class BillingController extends Controller
             : null;
 
         /*
-        * Stay is only relevant for an existing resident.
-        *
-        * A registration application does not have a resident stay yet,
-        * so no active stay lookup should happen for pre-booking invoices.
-        */
+         * Stay is only relevant for an existing resident.
+         *
+         * A registration application does not have a resident stay yet,
+         * so no active stay lookup should happen for pre-booking invoices.
+         */
         $stayId = null;
 
         if ($validated['invoice_for'] === 'resident') {
@@ -971,8 +974,8 @@ class BillingController extends Controller
         }
 
         /*
-        * Build invoice items.
-        */
+         * Build invoice items.
+         */
         $items = [];
         $totalAmount = 0;
 
@@ -1015,14 +1018,7 @@ class BillingController extends Controller
             );
         }
 
-        DB::transaction(function () use (
-            $validated,
-            $stayId,
-            $items,
-            $totalAmount,
-            $residentId,
-            $applicationId
-        ) {
+        DB::transaction(function () use ($validated, $stayId, $items, $totalAmount, $residentId, $applicationId) {
             $invoice = FeeInvoice::create([
                 'resident_id' => $residentId,
                 'application_id' => $applicationId,
@@ -1062,6 +1058,163 @@ class BillingController extends Controller
         );
     }
 
+    // ==================== EDIT / UPDATE INVOICE ====================
+    public function edit(FeeInvoice $invoice): Response
+    {
+        $invoice->load([
+            'resident',
+            'application',
+            'stay.room.floor.building',
+            'items',
+            'payments',
+        ]);
+
+        $invoice->status = $invoice->computed_status;
+        $invoice->late_fee_amount = $invoice->effective_late_fee_amount;
+
+        $residents = Resident::whereIn('status', ['active', 'upcoming'])
+            ->with(['activeStay.room.floor.building', 'activeStay.bed'])
+            ->orderBy('first_name')
+            ->get(['id', 'first_name', 'last_name', 'resident_code']);
+
+        $stay = null;
+        if ($invoice->resident_id) {
+            $stay = ResidentStay::with('room.floor.building', 'bed')
+                ->where('resident_id', $invoice->resident_id)
+                ->whereIn('status', ['active', 'upcoming'])
+                ->first();
+        }
+
+        return Inertia::render('Billing/Edit', [
+            'invoice' => $invoice,
+            'residents' => $residents,
+            'stay' => $stay,
+            'paymentCount' => $invoice->payments->count(),
+            'canEdit' => $invoice->payments->count() === 0
+                && (float) $invoice->paid_amount === 0.0,
+        ]);
+    }
+
+    public function update(Request $request, FeeInvoice $invoice): RedirectResponse
+    {
+        // Block editing once any payment has been recorded.
+        // If you need to correct something post-payment, record an adjustment
+        // payment or refund instead — direct edits to a paid invoice
+        // would corrupt the paid-amount ledger.
+        $hasPayments = $invoice->payments()->exists();
+        $hasPaidAmount = (float) $invoice->paid_amount > 0;
+
+        if ($hasPayments || $hasPaidAmount) {
+            return back()->with(
+                'error',
+                'This invoice cannot be edited because a payment has already been recorded against it. Use refund/adjustment flows instead.'
+            );
+        }
+
+        $validated = $request->validate([
+            'invoice_for' => [
+                'required',
+                Rule::in(['resident', 'application']),
+            ],
+            'resident_id' => [
+                'nullable',
+                'required_if:invoice_for,resident',
+                'exists:residents,id',
+            ],
+            'application_id' => [
+                'nullable',
+                'required_if:invoice_for,application',
+                'exists:registration_applications,id',
+            ],
+            'stay_id' => [
+                'nullable',
+                'exists:resident_stays,id',
+            ],
+            'rent_amount' => ['nullable', 'numeric', 'min:0'],
+            'mess_amount' => ['nullable', 'numeric', 'min:0'],
+            'other_amount' => ['nullable', 'numeric', 'min:0'],
+            'other_title' => ['nullable', 'string', 'max:100'],
+            'due_date' => ['required', 'date'],
+            'description' => ['nullable', 'string'],
+            'late_fee_per_day' => ['nullable', 'numeric', 'min:0'],
+        ]);
+
+        $residentId = $validated['invoice_for'] === 'resident'
+            ? $validated['resident_id']
+            : null;
+        $applicationId = $validated['invoice_for'] === 'application'
+            ? $validated['application_id']
+            : null;
+
+        $stayId = null;
+        if ($validated['invoice_for'] === 'resident') {
+            $stayId = $validated['stay_id'] ?? ResidentStay::where(
+                'resident_id',
+                $residentId
+            )
+                ->whereIn('status', ['active', 'upcoming'])
+                ->value('id');
+
+            if (!$stayId) {
+                return back()->with('error', 'No active stay found for this resident.');
+            }
+        }
+
+        $items = [];
+        $totalAmount = 0;
+
+        foreach ([
+            ['rent_amount', 'rent', 'rent', 'Room Rent'],
+            ['mess_amount', 'mess', 'mess', 'Mess Charges'],
+            ['other_amount', 'other', 'custom', $validated['other_title'] ?: 'Other Charges'],
+        ] as [$field, $type, $amenity, $title]) {
+            if (($validated[$field] ?? 0) > 0) {
+                $items[] = [
+                    'item_type' => $type,
+                    'amenity_type' => $amenity,
+                    'title' => $title,
+                    'amount' => $validated[$field],
+                ];
+                $totalAmount += $validated[$field];
+            }
+        }
+
+        if (empty($items)) {
+            return back()->with('error', 'Please enter at least one amount.');
+        }
+
+        DB::transaction(function () use ($invoice, $validated, $items, $totalAmount, $residentId, $applicationId, $stayId) {
+            $invoice->update([
+                'resident_id' => $residentId,
+                'application_id' => $applicationId,
+                'stay_id' => $stayId,
+                'amount' => $totalAmount,
+                'due_date' => $validated['due_date'],
+                'late_fee_per_day' => (float) ($validated['late_fee_per_day'] ?? 0),
+                'description' => $validated['description'] ?? null,
+                // Status is recomputed on the next read via computed_status.
+            ]);
+
+            // Replace the items set so what the user sees in the table matches
+            // exactly what they saved. We deliberately don't touch late_fee
+            // items here — those are managed by waiveLateFee / payment flows.
+            $invoice->items()
+                ->where('is_late_fee', '!=', true)
+                ->delete();
+
+            foreach ($items as $item) {
+                FeeInvoiceItem::create([
+                    'invoice_id' => $invoice->id,
+                    ...$item,
+                    'is_late_fee' => false,
+                ]);
+            }
+        });
+
+        return redirect()->route('billing.index')
+            ->with('success', "Invoice {$invoice->invoice_number} updated successfully.");
+    }
+
     public function checkTransactionId(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -1080,7 +1233,8 @@ class BillingController extends Controller
     }
 
     // ==================== RECORD PAYMENT WITH PROOF ====================
-    public function recordPayment(Request $request, FeeInvoice $invoice): RedirectResponse {
+    public function recordPayment(Request $request, FeeInvoice $invoice): RedirectResponse
+    {
         $validated = $request->validate([
             'amount' => ['required', 'numeric', 'min:0.01'],
             'payment_mode' => [
@@ -1311,7 +1465,7 @@ class BillingController extends Controller
             // Extract the numeric part from invoice_number
             // Assuming format: INV-YYYYMM-00001
             $parts = explode('-', $lastInvoice->invoice_number);
-            $lastNumeric = isset($parts[2]) ? (int)$parts[2] : 0;
+            $lastNumeric = isset($parts[2]) ? (int) $parts[2] : 0;
 
             $nextNumber = $lastNumeric + 1;
         }
@@ -1337,7 +1491,8 @@ class BillingController extends Controller
         ]);
     }
 
-    public function updatePaymentMode(Request $request, Payment $payment): RedirectResponse {
+    public function updatePaymentMode(Request $request, Payment $payment): RedirectResponse
+    {
         $validated = $request->validate([
             'payment_mode' => [
                 'required',

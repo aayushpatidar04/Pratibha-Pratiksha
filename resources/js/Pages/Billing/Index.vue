@@ -7,7 +7,7 @@ import TextInput from "@/Components/TextInput.vue";
 import InputError from "@/Components/InputError.vue";
 import PrimaryButton from "@/Components/PrimaryButton.vue";
 import Badge from "@/Components/Badge.vue";
-import { Head, useForm, router, Link } from "@inertiajs/vue3";
+import { Head, useForm, router, Link, usePage } from "@inertiajs/vue3";
 import { ref, reactive, computed, watch } from "vue";
 import {
     Receipt,
@@ -23,6 +23,7 @@ import {
     AlertTriangle,
     CheckCircle,
     XCircle,
+    Pencil,
     Upload,
     Eye,
     Ban,
@@ -42,6 +43,8 @@ const props = defineProps({
     monthlyConfigs: Array,
     feeTypes: Array,
 });
+
+const page = usePage();
 
 const statusColor = {
     pending: "amber",
@@ -159,6 +162,7 @@ const handleProofUpload = (e) => {
 
 const submitPay = async () => {
     // ── DUPLICATE TRANSACTION ID CHECK ──
+
     if (payForm.transaction_id && !transactionIdChecked.value) {
         try {
             const response = await fetch(route("billing.check-transaction"), {
@@ -174,7 +178,9 @@ const submitPay = async () => {
                 }),
             });
 
-            if (!response.ok) throw new Error("Network response was not ok");
+            if (!response.ok) {
+                throw new Error("Network response was not ok");
+            }
 
             const data = await response.json();
 
@@ -182,48 +188,63 @@ const submitPay = async () => {
                 const msg =
                     (data.message ? data.message + "\n\n" : "") +
                     "Are you sure you want to record another payment with this same transaction ID?";
+
                 const confirmed = window.confirm(msg);
 
-                if (!confirmed) return; // user cancelled
+                if (!confirmed) {
+                    return;
+                }
             }
 
-            // Mark as checked so we don't ask again on resubmit
             transactionIdChecked.value = true;
         } catch (err) {
             console.error("Transaction ID check failed:", err);
+
             alert("Could not verify transaction ID. Please try again.");
+
             return;
         }
     }
 
     // ── NORMAL SUBMISSION ──
-    const formData = new FormData();
-    formData.append("amount", payForm.amount);
-    formData.append("payment_mode", payForm.payment_mode);
-    formData.append("transaction_id", payForm.transaction_id);
-    formData.append("payment_date", payForm.payment_date);
-    formData.append("notes", payForm.notes);
 
-    payForm.proofs.forEach((file, i) => {
-        formData.append(`proofs[${i}]`, file);
-    });
+    payForm.post(`/billing/${payingInvoice.value.id}/payments`, {
+        forceFormData: true,
 
-    payForm.post(`/billing/${payingInvoice.value.id}/payments`, formData, {
+        preserveScroll: true,
+
         onSuccess: () => {
-            payOpen.value = false;
+            console.log("Payment success");
+
+            // Reset form first
             payForm.reset();
+
+            payForm.clearErrors();
+
+            // Clear proof previews
             paymentProofs.value = [];
+
+            // Reset transaction check
             transactionIdChecked.value = false;
+
+            // Clear invoice
+            payingInvoice.value = null;
+
+            // Close modal LAST
+            payOpen.value = false;
         },
+
         onError: (errors) => {
             console.error("Payment validation errors:", errors);
+
             transactionIdChecked.value = false;
         },
+
         onFinish: () => {
             console.log("Request finished");
+
             transactionIdChecked.value = false;
         },
-        preserveScroll: true,
     });
 };
 
@@ -897,6 +918,25 @@ const updatePaymentMode = (payment) => {
                                         >
                                             <Trash2 class="h-3.5 w-3.5" />
                                         </button>
+
+                                        <Link
+                                            v-if="
+                                                page.props.auth.user.permissions?.billing?.includes(
+                                                    'edit',
+                                                ) ||
+                                                page.props.auth.user.role ===
+                                                    'super_admin'
+                                                // &&
+                                                // (!inv.payments ||
+                                                //     inv.payments.length ===
+                                                //         0)
+                                            "
+                                            :href="`/billing/${inv.id}/edit`"
+                                            class="text-indigo-600 hover:text-indigo-900 rounded-lg inline-flex items-center bg-gray-200 px-3 py-1.5"
+                                            title="Edit invoice"
+                                        >
+                                            <Pencil class="w-4 h-4" />
+                                        </Link>
                                     </div>
                                     <div v-else>
                                         <button
@@ -1117,7 +1157,12 @@ const updatePaymentMode = (payment) => {
                         >
                             {{ r.first_name }} {{ r.last_name }} ({{
                                 r.resident_code
-                            }}) ({{ r.active_stay?.room?.floor?.building?.name }} - {{ r.active_stay?.room?.floor?.name }} - {{ r.active_stay?.room?.room_number }} - {{ r.active_stay?.bed?.bed_number }})
+                            }}) ({{
+                                r.active_stay?.room?.floor?.building?.name
+                            }}
+                            - {{ r.active_stay?.room?.floor?.name }} -
+                            {{ r.active_stay?.room?.room_number }} -
+                            {{ r.active_stay?.bed?.bed_number }})
                         </option>
                     </select>
 
@@ -1400,8 +1445,26 @@ const updatePaymentMode = (payment) => {
                     >
                         Cancel
                     </button>
-                    <PrimaryButton :disabled="payForm.processing">
-                        <Wallet class="h-4 w-4 mr-1" /> Record Payment
+                    <PrimaryButton
+                        type="submit"
+                        :disabled="payForm.processing"
+                        class="flex items-center justify-center"
+                    >
+                        <Wallet
+                            v-if="!payForm.processing"
+                            class="h-4 w-4 mr-1"
+                        />
+
+                        <span
+                            v-else
+                            class="h-4 w-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin"
+                        ></span>
+
+                        {{
+                            payForm.processing
+                                ? "Submitting..."
+                                : "Record Payment"
+                        }}
                     </PrimaryButton>
                 </div>
             </form>
