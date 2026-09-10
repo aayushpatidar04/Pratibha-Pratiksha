@@ -136,17 +136,31 @@ class BillingController extends Controller
         |--------------------------------------------------------------------------
         */
 
-        if ($month = $request->integer('month')) {
-            $query->where(function ($q) use ($month) {
-                $q->whereHas('monthlyConfig', fn($q) => $q->where('month', $month))
-                    ->orWhereRaw('MONTH(created_at) = ?', [$month]);
+        $monthParam = $request->integer('month');
+        $yearParam = $request->integer('year');
+
+        if ($monthParam) {
+            $query->where(function ($q) use ($monthParam, $yearParam) {
+                $q->whereHas('monthlyConfig', function ($q) use ($monthParam, $yearParam) {
+                    $q->where('month', $monthParam);
+                    if ($yearParam) {
+                        $q->where('year', $yearParam);
+                    }
+                })
+                    ->orWhere(function ($q) use ($monthParam, $yearParam) {
+                        $q->whereDoesntHave('monthlyConfig');
+                        $q->whereMonth('created_at', $monthParam);
+                        if ($yearParam) {
+                            $q->whereYear('created_at', $yearParam);
+                        }
+                    });
             });
         }
 
-        if ($year = $request->integer('year')) {
-            $query->where(function ($q) use ($year) {
-                $q->whereHas('monthlyConfig', fn($q) => $q->where('year', $year))
-                    ->orWhereRaw('YEAR(created_at) = ?', [$year]);
+        if ($yearParam) {
+            $query->where(function ($q) use ($yearParam) {
+                $q->whereHas('monthlyConfig', fn($q) => $q->where('year', $yearParam))
+                    ->orWhereRaw('YEAR(created_at) = ?', [$yearParam]);
             });
         }
 
