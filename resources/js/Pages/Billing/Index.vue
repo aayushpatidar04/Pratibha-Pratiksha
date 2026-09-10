@@ -926,10 +926,8 @@ const updatePaymentMode = (payment) => {
                                                 ) ||
                                                 page.props.auth.user.role ===
                                                     'super_admin'
-                                                // &&
-                                                // (!inv.payments ||
-                                                //     inv.payments.length ===
-                                                //         0)
+                                                &&
+                                                (inv.status != 'paid' && inv.status != 'late_fee_pending')
                                             "
                                             :href="`/billing/${inv.id}/edit`"
                                             class="text-indigo-600 hover:text-indigo-900 rounded-lg inline-flex items-center bg-gray-200 px-3 py-1.5"

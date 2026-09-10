@@ -1064,7 +1064,7 @@ class BillingController extends Controller
     }
 
     // ==================== EDIT / UPDATE INVOICE ====================
-    public function edit(FeeInvoice $invoice): Response
+    public function edit(FeeInvoice $invoice)
     {
         $invoice->load([
             'resident',
@@ -1090,31 +1090,36 @@ class BillingController extends Controller
                 ->first();
         }
 
+        $canEditAmounts = true; // all editable invoices can change amounts
+
+        $status = $invoice->computed_status;
+
+        $blocksEdit = in_array($status, ['paid', 'late_fee_pending'], true)
+            || $invoice->refund_status === 'refunded';
+
+        if ($blocksEdit) {
+            $reason = match ($status) {
+                'paid' => 'This invoice is fully paid and cannot be edited.',
+                'late_fee_pending' => 'This invoice has only a pending late fee — amounts are locked.',
+                default => 'Refunded invoices cannot be edited.',
+            };
+
+            return redirect()->route('billing.index')->with('error', $reason);
+        }
+
         return Inertia::render('Billing/Edit', [
             'invoice' => $invoice,
             'residents' => $residents,
             'stay' => $stay,
             'paymentCount' => $invoice->payments->count(),
-            'canEdit' => $invoice->payments->count() === 0
-                && (float) $invoice->paid_amount === 0.0,
+            'canEdit' => true, // non-amount edits always allowed
+            'canEditAmounts' => $canEditAmounts,
         ]);
     }
 
     public function update(Request $request, FeeInvoice $invoice): RedirectResponse
     {
-        // Block editing once any payment has been recorded.
-        // If you need to correct something post-payment, record an adjustment
-        // payment or refund instead — direct edits to a paid invoice
-        // would corrupt the paid-amount ledger.
-        $hasPayments = $invoice->payments()->exists();
-        $hasPaidAmount = (float) $invoice->paid_amount > 0;
-
-        if ($hasPayments || $hasPaidAmount) {
-            return back()->with(
-                'error',
-                'This invoice cannot be edited because a payment has already been recorded against it. Use refund/adjustment flows instead.'
-            );
-        }
+        $canEditAmounts = true;
 
         $validated = $request->validate([
             'invoice_for' => [
@@ -1135,18 +1140,27 @@ class BillingController extends Controller
                 'nullable',
                 'exists:resident_stays,id',
             ],
-            'rent_amount' => ['nullable', 'numeric', 'min:0'],
-            'mess_amount' => ['nullable', 'numeric', 'min:0'],
-            'other_amount' => ['nullable', 'numeric', 'min:0'],
-            'other_title' => ['nullable', 'string', 'max:100'],
+            // Dynamic items array (for hostel_fee)
+            'items' => ['nullable', 'array'],
+            'items.*.item_type' => ['nullable', 'string', 'max:50'],
+            'items.*.amenity_type' => ['nullable', 'string', 'max:50'],
+            'items.*.title' => ['nullable', 'string', 'max:150'],
+            'items.*.amount' => ['nullable', 'numeric', 'min:0'],
+            // Single-amount invoice fields
+            'deposit_amount' => ['nullable', 'numeric', 'min:0'],
+            'registration_amount' => ['nullable', 'numeric', 'min:0'],
+            'short_stay_amount' => ['nullable', 'numeric', 'min:0'],
+            // Common fields
             'due_date' => ['required', 'date'],
             'description' => ['nullable', 'string'],
             'late_fee_per_day' => ['nullable', 'numeric', 'min:0'],
         ]);
 
+        // ── Resolve owner ─────────────────────────────────────────────
         $residentId = $validated['invoice_for'] === 'resident'
             ? $validated['resident_id']
             : null;
+
         $applicationId = $validated['invoice_for'] === 'application'
             ? $validated['application_id']
             : null;
@@ -1159,60 +1173,128 @@ class BillingController extends Controller
             )
                 ->whereIn('status', ['active', 'upcoming'])
                 ->value('id');
-
-            if (!$stayId) {
-                return back()->with('error', 'No active stay found for this resident.');
-            }
         }
 
-        $items = [];
+        // ── Compute new total + items from fee-type-appropriate fields ─
+        $feeType = $invoice->fee_type;
         $totalAmount = 0;
+        $itemsToCreate = [];
 
-        foreach ([
-            ['rent_amount', 'rent', 'rent', 'Room Rent'],
-            ['mess_amount', 'mess', 'mess', 'Mess Charges'],
-            ['other_amount', 'other', 'custom', $validated['other_title'] ?: 'Other Charges'],
-        ] as [$field, $type, $amenity, $title]) {
-            if (($validated[$field] ?? 0) > 0) {
-                $items[] = [
-                    'item_type' => $type,
-                    'amenity_type' => $amenity,
+        if ($feeType === 'hostel_fee') {
+            $rawItems = $request->input('items', []);
+
+            foreach ($rawItems as $raw) {
+                $itemType = $raw['item_type'] ?? 'other';
+                $amenityType = $raw['amenity_type'] ?? null;
+                $title = trim((string) ($raw['title'] ?? ''));
+                $amount = (float) ($raw['amount'] ?? 0);
+
+                if ($amount <= 0 && $itemType !== 'rent' && $itemType !== 'mess') {
+                    continue;
+                }
+
+                if ($itemType === 'rent') {
+                    $amenityType = null;
+                    if (!$title)
+                        $title = 'Room Rent';
+                } elseif ($itemType === 'mess') {
+                    $amenityType = null;
+                    if (!$title)
+                        $title = 'Mess Charges';
+                } elseif ($itemType === 'amenity') {
+                    if (!$title)
+                        $title = 'Amenity';
+                } else {
+                    $itemType = 'other';
+                    $amenityType = 'custom';
+                    if (!$title)
+                        $title = 'Other Charges';
+                }
+
+                $itemsToCreate[] = [
+                    'item_type' => $itemType,
+                    'amenity_type' => $amenityType,
                     'title' => $title,
-                    'amount' => $validated[$field],
+                    'amount' => $amount,
+                    'is_late_fee' => false,
                 ];
-                $totalAmount += $validated[$field];
+
+                $totalAmount += $amount;
+            }
+        } elseif ($feeType === 'security_deposit') {
+            $totalAmount = (float) ($validated['deposit_amount'] ?? 0);
+            if ($totalAmount > 0) {
+                $itemsToCreate[] = [
+                    'item_type' => 'security_deposit',
+                    'amenity_type' => null,
+                    'title' => 'Refundable Security Deposit',
+                    'amount' => $totalAmount,
+                    'is_late_fee' => false,
+                ];
+            }
+        } elseif ($feeType === 'registration_fee') {
+            $totalAmount = (float) ($validated['registration_amount'] ?? 0);
+            if ($totalAmount > 0) {
+                $itemsToCreate[] = [
+                    'item_type' => 'registration_fee',
+                    'amenity_type' => null,
+                    'title' => 'Registration Fee',
+                    'amount' => $totalAmount,
+                    'description' => $validated['description'] ?? null,
+                    'is_late_fee' => false,
+                ];
+            }
+        } elseif ($feeType === 'short_stay') {
+            $totalAmount = (float) ($validated['short_stay_amount'] ?? 0);
+            if ($totalAmount > 0) {
+                $itemsToCreate[] = [
+                    'item_type' => 'short_stay',
+                    'amenity_type' => 'accommodation',
+                    'title' => 'Short Stay Accommodation',
+                    'amount' => $totalAmount,
+                    'description' => $validated['description'] ?? null,
+                    'is_late_fee' => false,
+                ];
             }
         }
 
-        if (empty($items)) {
-            return back()->with('error', 'Please enter at least one amount.');
+        // ── Guard: amount reduction below already-paid ─────────────────
+        if ($canEditAmounts && $totalAmount < (float) $invoice->paid_amount) {
+            throw ValidationException::withMessages([
+                'amount' => 'New total cannot be less than already-paid amount (₹'
+                    . (float) $invoice->paid_amount
+                    . '). Process a refund first.',
+            ]);
         }
 
-        DB::transaction(function () use ($invoice, $validated, $items, $totalAmount, $residentId, $applicationId, $stayId) {
-            $invoice->update([
+        // ── Save ───────────────────────────────────────────────────────
+        DB::transaction(function () use ($invoice, $validated, $totalAmount, $residentId, $applicationId, $stayId, $itemsToCreate, $canEditAmounts) {
+            $alwaysUpdate = [
                 'resident_id' => $residentId,
                 'application_id' => $applicationId,
                 'stay_id' => $stayId,
-                'amount' => $totalAmount,
                 'due_date' => $validated['due_date'],
-                'late_fee_per_day' => (float) ($validated['late_fee_per_day'] ?? 0),
                 'description' => $validated['description'] ?? null,
-                // Status is recomputed on the next read via computed_status.
-            ]);
+                'late_fee_per_day' => (float) ($validated['late_fee_per_day'] ?? 0),
+            ];
 
-            // Replace the items set so what the user sees in the table matches
-            // exactly what they saved. We deliberately don't touch late_fee
-            // items here — those are managed by waiveLateFee / payment flows.
-            $invoice->items()
-                ->where('is_late_fee', '!=', true)
-                ->delete();
+            if ($canEditAmounts) {
+                $alwaysUpdate['amount'] = round($totalAmount, 2);
+            }
 
-            foreach ($items as $item) {
-                FeeInvoiceItem::create([
-                    'invoice_id' => $invoice->id,
-                    ...$item,
-                    'is_late_fee' => false,
-                ]);
+            $invoice->update($alwaysUpdate);
+
+            if ($canEditAmounts) {
+                $invoice->items()
+                    ->where('is_late_fee', '!=', true)
+                    ->delete();
+
+                foreach ($itemsToCreate as $item) {
+                    FeeInvoiceItem::create([
+                        'invoice_id' => $invoice->id,
+                        ...$item,
+                    ]);
+                }
             }
         });
 

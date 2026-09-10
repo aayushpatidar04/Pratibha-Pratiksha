@@ -1,49 +1,164 @@
 <!-- resources/js/Pages/Billing/Edit.vue -->
 <script setup>
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
-import Modal from "@/Components/Modal.vue";
 import InputLabel from "@/Components/InputLabel.vue";
 import TextInput from "@/Components/TextInput.vue";
 import InputError from "@/Components/InputError.vue";
 import PrimaryButton from "@/Components/PrimaryButton.vue";
 import SecondaryButton from "@/Components/SecondaryButton.vue";
 import { Head, useForm, router, Link } from "@inertiajs/vue3";
-import { computed } from "vue";
-import { ArrowLeft, AlertTriangle, Save, Receipt } from "lucide-vue-next";
+import { computed, ref, watch } from "vue";
+import {
+    ArrowLeft,
+    AlertTriangle,
+    Save,
+    Receipt,
+    Plus,
+    Trash2,
+} from "lucide-vue-next";
 
 const props = defineProps({
     invoice: { type: Object, required: true },
     residents: { type: Array, default: () => [] },
     stay: { type: Object, default: null },
     paymentCount: { type: Number, default: 0 },
-    canEdit: { type: Boolean, default: false },
+    canEdit: { type: Boolean, default: true },
+    canEditAmounts: { type: Boolean, default: true },
 });
 
+const feeType = computed(() => props.invoice.fee_type);
 const isForResident = computed(() => !!props.invoice.resident_id);
 
-// Pre-fill the form from the existing invoice's items.
-// We map back from items to the three amount fields the controller knows.
-const rentItem = props.invoice.items?.find((i) => i.item_type === "rent");
-const messItem = props.invoice.items?.find((i) => i.item_type === "mess");
-const otherItem = props.invoice.items?.find(
-    (i) => i.item_type === "other" || i.item_type === "custom",
-);
+// ─── Hostel fee: dynamic item rows ───────────────────────────────
+const editableItems = ref([]);
 
+function defaultTitleFor(itemType, amenityType) {
+    if (itemType === "rent") return "Room Rent";
+    if (itemType === "mess") return "Mess Charges";
+    if (itemType === "amenity") {
+        if (amenityType === "cooler") return "Cooler Charges";
+        if (amenityType === "wifi") return "WiFi Charges";
+        return "Amenity Charges";
+    }
+    return "Other Charges";
+}
+
+function initEditableItems() {
+    const existing = (props.invoice.items || []).filter((i) => !i.is_late_fee);
+
+    if (existing.length === 0) {
+        editableItems.value = [
+            {
+                id: null,
+                item_type: "rent",
+                amenity_type: null,
+                title: "Room Rent",
+                amount: 0,
+            },
+            {
+                id: null,
+                item_type: "mess",
+                amenity_type: null,
+                title: "Mess Charges",
+                amount: 0,
+            },
+        ];
+        return;
+    }
+
+    editableItems.value = existing.map((i) => ({
+        id: i.id ?? null,
+        item_type: i.item_type || "other",
+        amenity_type: i.amenity_type ?? null,
+        title: String(i.title ?? defaultTitleFor(i.item_type, i.amenity_type)),
+        // Always a Number — Vue number inputs need numeric value, not string,
+        // or the field renders empty for 0
+        amount: Number(i.amount ?? 0),
+    }));
+}
+
+initEditableItems();
+
+const newItemType = ref("other");
+
+const itemTypeOptions = [
+    { value: "rent", label: "Room Rent" },
+    { value: "mess", label: "Mess Charges" },
+    { value: "amenity", label: "Amenity (Cooler / WiFi / ...)" },
+    { value: "other", label: "Other / Custom Charge" },
+];
+
+function addItem() {
+    const type = newItemType.value;
+    const defaults = {
+        rent: { title: "Room Rent", amenity_type: null },
+        mess: { title: "Mess Charges", amenity_type: null },
+        amenity: { title: "", amenity_type: "" },
+        other: { title: "", amenity_type: "custom" },
+    };
+    const d = defaults[type] || defaults.other;
+    editableItems.value.push({
+        id: null,
+        item_type: type,
+        amenity_type: d.amenity_type,
+        title: d.title,
+        amount: 0,
+    });
+}
+
+function removeItem(index) {
+    editableItems.value.splice(index, 1);
+}
+
+// ─── Find the existing item of a given type (single-item fee types) ─
+function findItemByType(type) {
+    return (props.invoice.items || []).find((i) => i.item_type === type);
+}
+
+const depositInitial = computed(() => {
+    const it = findItemByType("security_deposit");
+    return it ? Number(it.amount ?? 0) : 0;
+});
+const registrationInitial = computed(() => {
+    const it = findItemByType("registration_fee");
+    return it ? Number(it.amount ?? 0) : 0;
+});
+const shortStayInitial = computed(() => {
+    const it = findItemByType("short_stay");
+    return it ? Number(it.amount ?? 0) : 0;
+});
+
+// ─── Form ────────────────────────────────────────────────────────
 const form = useForm({
     invoice_for: isForResident.value ? "resident" : "application",
     resident_id: props.invoice.resident_id ?? "",
     application_id: props.invoice.application_id ?? "",
     stay_id: props.invoice.stay_id ?? "",
-    rent_amount: rentItem ? rentItem.amount : 0,
-    mess_amount: messItem ? messItem.amount : 0,
-    other_amount: otherItem ? otherItem.amount : 0,
-    other_title: otherItem ? otherItem.title : "Other Charges",
+    items: [],
+    deposit_amount: depositInitial.value,
+    registration_amount: registrationInitial.value,
+    short_stay_amount: shortStayInitial.value,
     due_date: props.invoice.due_date
         ? String(props.invoice.due_date).substring(0, 10)
         : "",
     description: props.invoice.description ?? "",
-    late_fee_per_day: props.invoice.late_fee_per_day ?? 0,
+    late_fee_per_day: Number(props.invoice.late_fee_per_day ?? 0),
 });
+
+watch(
+    editableItems,
+    (newItems) => {
+        if (feeType.value === "hostel_fee") {
+            form.items = newItems.map((i) => ({
+                item_type: i.item_type,
+                amenity_type: i.amenity_type ?? null,
+                title: String(i.title ?? ""),
+                amount: Number(i.amount ?? 0),
+            }));
+        }
+    },
+    { deep: true },
+);
 
 const submit = () => {
     form.put(`/billing/${props.invoice.id}`, {
@@ -51,12 +166,34 @@ const submit = () => {
     });
 };
 
-const total = computed(
-    () =>
-        Number(form.rent_amount || 0) +
-        Number(form.mess_amount || 0) +
-        Number(form.other_amount || 0),
-);
+const titleMap = {
+    hostel_fee: "Hostel Fee",
+    security_deposit: "Security Deposit",
+    registration_fee: "Registration Fee",
+    short_stay: "Short Stay",
+};
+
+const amountLocked = computed(() => !props.canEditAmounts);
+const fieldsLocked = computed(() => !props.canEdit);
+
+const total = computed(() => {
+    if (feeType.value === "hostel_fee") {
+        return editableItems.value.reduce(
+            (s, i) => s + Number(i.amount || 0),
+            0,
+        );
+    }
+    if (feeType.value === "security_deposit") {
+        return Number(form.deposit_amount || 0);
+    }
+    if (feeType.value === "registration_fee") {
+        return Number(form.registration_amount || 0);
+    }
+    if (feeType.value === "short_stay") {
+        return Number(form.short_stay_amount || 0);
+    }
+    return 0;
+});
 </script>
 
 <template>
@@ -72,42 +209,45 @@ const total = computed(
                             Edit Invoice {{ invoice.invoice_number }}
                         </h2>
                         <p class="text-sm text-gray-500">
-                            Update the invoice details below.
+                            {{ titleMap[feeType] || feeType }} invoice
+                            <span v-if="amountLocked" class="text-amber-600">
+                                — amounts locked ({{ paymentCount }} payment(s)
+                                recorded)
+                            </span>
+                            <span v-else class="text-green-600"
+                                >— fully editable</span
+                            >
                         </p>
                     </div>
                 </div>
             </div>
         </template>
-        <div class="mb-2">
-            <div class="flex gap-2 justify-end">
-                <Link
-                    :href="route('billing.index')"
-                    class="px-3 py-2 text-sm rounded-lg border border-gray-300 flex items-center gap-1.5 text-gray-600 hover:bg-gray-50"
-                >
-                    <ArrowLeft class="h-4 w-4" /> Back to billing
-                </Link>
-            </div>
-        </div>
+        <Link
+            :href="route('billing.index')"
+            class="text-sm text-gray-600 hover:text-gray-900 inline-flex items-center gap-1"
+        >
+            <ArrowLeft class="w-4 h-4" /> Back to billing
+        </Link>
 
         <div class="py-12">
             <div class="max-w-3xl mx-auto sm:px-6 lg:px-8 space-y-6">
-                <!-- Hard lock if payments already exist -->
+                <!-- Locked notice -->
                 <div
-                    v-if="!canEdit"
-                    class="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3"
+                    v-if="amountLocked"
+                    class="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3"
                 >
                     <AlertTriangle
-                        class="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0"
+                        class="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0"
                     />
                     <div>
-                        <p class="font-semibold text-red-800">
-                            This invoice cannot be edited.
+                        <p class="font-semibold text-amber-800">
+                            Amounts are locked
                         </p>
-                        <p class="text-sm text-red-700">
-                            {{ paymentCount }} payment(s) have already been
-                            recorded against this invoice. Direct edits would
-                            corrupt the payment ledger. Use the refund or
-                            adjustment flows instead.
+                        <p class="text-sm text-amber-700">
+                            {{ paymentCount }} payment(s) recorded. You can
+                            update the due date, description, and late fee
+                            settings, but changing amounts would corrupt the
+                            payment ledger.
                         </p>
                     </div>
                 </div>
@@ -116,7 +256,7 @@ const total = computed(
                     @submit.prevent="submit"
                     class="bg-white shadow rounded-lg p-6 space-y-6"
                 >
-                    <!-- Resident / Application toggle -->
+                    <!-- ─── Resident / Application toggle ─── -->
                     <div>
                         <InputLabel value="Invoice For" />
                         <div class="flex gap-4 mt-2">
@@ -125,7 +265,7 @@ const total = computed(
                                     type="radio"
                                     value="resident"
                                     v-model="form.invoice_for"
-                                    :disabled="!canEdit"
+                                    :disabled="fieldsLocked"
                                 />
                                 <span>Resident</span>
                             </label>
@@ -134,7 +274,7 @@ const total = computed(
                                     type="radio"
                                     value="application"
                                     v-model="form.invoice_for"
-                                    :disabled="!canEdit"
+                                    :disabled="fieldsLocked"
                                 />
                                 <span>Application (Pre-booking)</span>
                             </label>
@@ -147,7 +287,7 @@ const total = computed(
                             id="resident_id"
                             v-model="form.resident_id"
                             class="mt-1 block w-full border-gray-300 rounded-md"
-                            :disabled="!canEdit"
+                            :disabled="fieldsLocked"
                         >
                             <option value="">Select resident...</option>
                             <option
@@ -166,71 +306,188 @@ const total = computed(
                         />
                     </div>
 
-                    <!-- Amounts -->
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                            <InputLabel for="rent_amount" value="Room Rent" />
-                            <TextInput
-                                id="rent_amount"
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                v-model="form.rent_amount"
-                                class="mt-1 block w-full"
-                                :disabled="!canEdit"
-                            />
-                            <InputError
-                                :message="form.errors.rent_amount"
-                                class="mt-1"
-                            />
+                    <!-- ═══════════════════════════════════════════════ -->
+                    <!-- HOSTEL FEE — dynamic item rows -->
+                    <!-- ═══════════════════════════════════════════════ -->
+                    <div v-if="feeType === 'hostel_fee'">
+                        <p class="text-sm font-medium text-gray-700 mb-2">
+                            Invoice Items
+                        </p>
+
+                        <div class="space-y-2">
+                            <div
+                                v-for="(item, index) in editableItems"
+                                :key="index"
+                                class="flex items-start gap-2"
+                            >
+                                <!-- Item type tag -->
+                                <span
+                                    class="inline-flex items-center px-2 py-2 rounded-md text-xs font-medium bg-gray-100 text-gray-700 min-w-[80px] justify-center"
+                                >
+                                    {{
+                                        item.item_type === "amenity"
+                                            ? (
+                                                  item.amenity_type || "amenity"
+                                              ).toUpperCase()
+                                            : item.item_type.toUpperCase()
+                                    }}
+                                </span>
+
+                                <!-- Title input (plain input with explicit full-width) -->
+                                <input
+                                    type="text"
+                                    v-model="item.title"
+                                    :placeholder="
+                                        item.item_type === 'amenity'
+                                            ? 'e.g. Cooler, WiFi'
+                                            : 'Charge name'
+                                    "
+                                    class="flex-1 min-w-0 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+                                    :disabled="amountLocked"
+                                />
+
+                                <!-- Amenity type (only for amenity rows) -->
+                                <input
+                                    v-if="item.item_type === 'amenity'"
+                                    type="text"
+                                    v-model="item.amenity_type"
+                                    placeholder="cooler"
+                                    class="w-24 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+                                    :disabled="amountLocked"
+                                />
+
+                                <!-- Amount -->
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    v-model.number="item.amount"
+                                    class="w-32 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm text-right"
+                                    :disabled="amountLocked"
+                                />
+
+                                <!-- Remove -->
+                                <button
+                                    v-if="
+                                        canEditAmounts &&
+                                        editableItems.length > 1
+                                    "
+                                    type="button"
+                                    @click="removeItem(index)"
+                                    class="p-2 text-red-600 hover:bg-red-50 rounded"
+                                    title="Remove item"
+                                >
+                                    <Trash2 class="w-4 h-4" />
+                                </button>
+                            </div>
                         </div>
-                        <div>
-                            <InputLabel
-                                for="mess_amount"
-                                value="Mess Charges"
-                            />
-                            <TextInput
-                                id="mess_amount"
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                v-model="form.mess_amount"
-                                class="mt-1 block w-full"
-                                :disabled="!canEdit"
-                            />
-                            <InputError
-                                :message="form.errors.mess_amount"
-                                class="mt-1"
-                            />
-                        </div>
-                        <div>
-                            <InputLabel for="other_amount" value="Other" />
-                            <TextInput
-                                id="other_amount"
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                v-model="form.other_amount"
-                                class="mt-1 block w-full"
-                                :disabled="!canEdit"
-                            />
-                            <InputError
-                                :message="form.errors.other_amount"
-                                class="mt-1"
-                            />
+
+                        <!-- Add item -->
+                        <div
+                            v-if="canEditAmounts"
+                            class="flex items-center gap-2 mt-3"
+                        >
+                            <select
+                                v-model="newItemType"
+                                class="rounded-md border-gray-300 text-sm"
+                            >
+                                <option
+                                    v-for="opt in itemTypeOptions"
+                                    :key="opt.value"
+                                    :value="opt.value"
+                                >
+                                    {{ opt.label }}
+                                </option>
+                            </select>
+                            <button
+                                type="button"
+                                @click="addItem"
+                                class="inline-flex items-center gap-1 px-3 py-2 text-sm rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200"
+                            >
+                                <Plus class="w-4 h-4" /> Add
+                            </button>
                         </div>
                     </div>
 
-                    <div>
-                        <InputLabel for="other_title" value="Other Title" />
+                    <!-- ═══════════════════════════════════════════════ -->
+                    <!-- SECURITY DEPOSIT -->
+                    <!-- ═══════════════════════════════════════════════ -->
+                    <div v-if="feeType === 'security_deposit'">
+                        <InputLabel
+                            for="deposit_amount"
+                            value="Deposit Amount (₹)"
+                        />
                         <TextInput
-                            id="other_title"
-                            v-model="form.other_title"
+                            id="deposit_amount"
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            v-model.number="form.deposit_amount"
                             class="mt-1 block w-full"
-                            :disabled="!canEdit"
+                            :disabled="amountLocked"
+                        />
+                        <p class="text-xs text-gray-500 mt-1">
+                            Refundable security deposit for this stay.
+                        </p>
+                        <InputError
+                            :message="form.errors.deposit_amount"
+                            class="mt-1"
                         />
                     </div>
 
+                    <!-- ═══════════════════════════════════════════════ -->
+                    <!-- REGISTRATION FEE -->
+                    <!-- ═══════════════════════════════════════════════ -->
+                    <div v-if="feeType === 'registration_fee'">
+                        <InputLabel
+                            for="registration_amount"
+                            value="Registration Fee (₹)"
+                        />
+                        <TextInput
+                            id="registration_amount"
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            v-model.number="form.registration_amount"
+                            class="mt-1 block w-full"
+                            :disabled="amountLocked"
+                        />
+                        <p class="text-xs text-gray-500 mt-1">
+                            One-time registration fee for this application.
+                        </p>
+                        <InputError
+                            :message="form.errors.registration_amount"
+                            class="mt-1"
+                        />
+                    </div>
+
+                    <!-- ═══════════════════════════════════════════════ -->
+                    <!-- SHORT STAY -->
+                    <!-- ═══════════════════════════════════════════════ -->
+                    <div v-if="feeType === 'short_stay'">
+                        <InputLabel
+                            for="short_stay_amount"
+                            value="Stay Amount (₹)"
+                        />
+                        <TextInput
+                            id="short_stay_amount"
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            v-model.number="form.short_stay_amount"
+                            class="mt-1 block w-full"
+                            :disabled="amountLocked"
+                        />
+                        <p class="text-xs text-gray-500 mt-1">
+                            Total accommodation charge for the short stay.
+                        </p>
+                        <InputError
+                            :message="form.errors.short_stay_amount"
+                            class="mt-1"
+                        />
+                    </div>
+
+                    <!-- ─── Common: Due Date + Late Fee ─── -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <InputLabel for="due_date" value="Due Date" />
@@ -239,7 +496,7 @@ const total = computed(
                                 type="date"
                                 v-model="form.due_date"
                                 class="mt-1 block w-full"
-                                :disabled="!canEdit"
+                                :disabled="fieldsLocked"
                             />
                             <InputError
                                 :message="form.errors.due_date"
@@ -256,9 +513,9 @@ const total = computed(
                                 type="number"
                                 step="0.01"
                                 min="0"
-                                v-model="form.late_fee_per_day"
+                                v-model.number="form.late_fee_per_day"
                                 class="mt-1 block w-full"
-                                :disabled="!canEdit"
+                                :disabled="fieldsLocked"
                             />
                         </div>
                     </div>
@@ -270,11 +527,13 @@ const total = computed(
                             v-model="form.description"
                             rows="3"
                             class="mt-1 block w-full border-gray-300 rounded-md"
-                            :disabled="!canEdit"
+                            :disabled="fieldsLocked"
                         />
                     </div>
 
+                    <!-- Total -->
                     <div
+                        v-if="canEditAmounts"
                         class="bg-gray-50 rounded-md p-4 flex items-center justify-between"
                     >
                         <span class="text-sm text-gray-600">New total</span>
@@ -289,10 +548,7 @@ const total = computed(
                                 >Cancel</SecondaryButton
                             >
                         </Link>
-                        <PrimaryButton
-                            v-if="canEdit"
-                            :disabled="form.processing"
-                        >
+                        <PrimaryButton :disabled="form.processing">
                             <Save class="w-4 h-4 mr-2" /> Save Changes
                         </PrimaryButton>
                     </div>
