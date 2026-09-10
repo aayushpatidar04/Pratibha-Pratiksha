@@ -58,11 +58,11 @@ class DashboardController extends Controller
         $outstandingAmount = $outstandingInvoices
             ->sum(
                 fn(FeeInvoice $invoice) =>
-                max(
-                    0,
-                    (float) $invoice->amount
-                    - (float) $invoice->paid_amount
-                )
+                    max(
+                        0,
+                        (float) $invoice->amount
+                        - (float) $invoice->paid_amount
+                    )
             );
 
         $nextDueInvoice = (clone $invoiceQuery)
@@ -286,10 +286,10 @@ class DashboardController extends Controller
                 ->whereDoesntHave(
                     'reads',
                     fn(Builder $query) =>
-                    $query->where(
-                        'resident_id',
-                        $resident->id
-                    )
+                        $query->where(
+                            'resident_id',
+                            $resident->id
+                        )
                 )
                 ->count();
 
@@ -304,22 +304,22 @@ class DashboardController extends Controller
                         ->whereDoesntHave(
                             'reads',
                             fn(Builder $readQuery) =>
-                            $readQuery->where(
-                                'resident_id',
-                                $resident->id
-                            )
+                                $readQuery->where(
+                                    'resident_id',
+                                    $resident->id
+                                )
                         )
                         ->orWhereHas(
                             'reads',
                             fn(Builder $readQuery) =>
-                            $readQuery
-                                ->where(
-                                    'resident_id',
-                                    $resident->id
-                                )
-                                ->whereNull(
-                                    'acknowledged_at'
-                                )
+                                $readQuery
+                                    ->where(
+                                        'resident_id',
+                                        $resident->id
+                                    )
+                                    ->whereNull(
+                                        'acknowledged_at'
+                                    )
                         );
                 })
                 ->count();
@@ -366,35 +366,17 @@ class DashboardController extends Controller
          * Today's mess menu
          * --------------------------------------------------------------
          */
-        $buildingId = $currentStay?->building_id;
         $today = today()->toDateString();
 
         $todayMenus = MessMenu::query()
             ->whereDate('menu_date', $today)
-            ->where(function (Builder $query) use ($buildingId): void {
-                if ($buildingId) {
-                    $query
-                        ->where(
-                            'building_id',
-                            $buildingId
-                        )
-                        ->orWhereNull('building_id');
-
-                    return;
-                }
-
-                $query->whereNull('building_id');
-            })
-            ->orderByRaw(
-                'CASE WHEN building_id IS NULL THEN 2 ELSE 1 END'
-            )
             ->orderByRaw("
                 CASE meal_type
-                    WHEN 'breakfast' THEN 1
-                    WHEN 'lunch' THEN 2
-                    WHEN 'snacks' THEN 3
-                    WHEN 'dinner' THEN 4
-                    ELSE 5
+                WHEN 'breakfast' THEN 1
+                WHEN 'lunch' THEN 2
+                WHEN 'snacks' THEN 3
+                WHEN 'dinner' THEN 4
+                ELSE 5
                 END
             ")
             ->get()
@@ -443,7 +425,7 @@ class DashboardController extends Controller
             $requiredTypes
                 ->filter(
                     fn(string $type) =>
-                    $documentsByType->has($type)
+                        $documentsByType->has($type)
                 )
                 ->count();
 
@@ -451,10 +433,10 @@ class DashboardController extends Controller
             $requiredTypes
                 ->filter(
                     fn(string $type) =>
-                    $documentsByType
-                        ->get($type)
-                            ?->verification_status
-                    === 'verified'
+                        $documentsByType
+                            ->get($type)
+                                ?->verification_status
+                        === 'verified'
                 )
                 ->count();
 
@@ -462,27 +444,27 @@ class DashboardController extends Controller
             $requiredTypes
                 ->filter(
                     fn(string $type) =>
-                    $documentsByType
-                        ->get($type)
-                            ?->verification_status
-                    === 'rejected'
+                        $documentsByType
+                            ->get($type)
+                                ?->verification_status
+                        === 'rejected'
                 )
                 ->count();
 
         $kycStatus = match (true) {
             $requiredDocumentCount === 0 =>
-            'complete',
+                'complete',
 
             $verifiedDocumentCount ===
             $requiredDocumentCount =>
-            'complete',
+                'complete',
 
             $uploadedDocumentCount <
             $requiredDocumentCount =>
-            'incomplete',
+                'incomplete',
 
             default =>
-            'pending_verification',
+                'pending_verification',
         };
 
         /*

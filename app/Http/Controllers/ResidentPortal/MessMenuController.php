@@ -36,9 +36,6 @@ class MessMenuController extends Controller
         $currentStay =
             $resident->currentStay;
 
-        $buildingId =
-            $currentStay?->building_id;
-
         $weekStart = filled(
             $validated['week'] ?? null
         )
@@ -59,32 +56,19 @@ class MessMenuController extends Controller
                     $weekEnd->toDateString(),
                 ]
             )
-            ->where(function (
-                $query
-            ) use ($buildingId): void {
-                if ($buildingId) {
-                    $query
-                        ->where(
-                            'building_id',
-                            $buildingId
-                        )
-                        ->orWhereNull(
-                            'building_id'
-                        );
-                } else {
-                    $query->whereNull(
-                        'building_id'
-                    );
-                }
-            })
-            ->orderByRaw(
-                'CASE WHEN building_id IS NULL THEN 2 ELSE 1 END'
-            )
             ->orderBy('menu_date')
-            ->orderBy('meal_type')
+            ->orderByRaw("
+                CASE meal_type
+                WHEN 'breakfast' THEN 1
+                WHEN 'lunch' THEN 2
+                WHEN 'snacks' THEN 3
+                WHEN 'dinner' THEN 4
+                ELSE 5
+                END
+            ")
             ->get()
             ->unique(
-                fn (MessMenu $menu) =>
+                fn(MessMenu $menu) =>
                     $menu->menu_date
                         ->toDateString()
                     . '-'
@@ -92,7 +76,7 @@ class MessMenuController extends Controller
             )
             ->values()
             ->map(
-                fn (MessMenu $menu) => [
+                fn(MessMenu $menu) => [
                     'id' => $menu->id,
 
                     'menu_date' =>
@@ -135,18 +119,18 @@ class MessMenuController extends Controller
 
                 'building' =>
                     $currentStay?->building
-                        ? [
-                            'id' =>
-                                $currentStay
-                                    ->building
-                                    ->id,
+                    ? [
+                        'id' =>
+                            $currentStay
+                                ->building
+                                ->id,
 
-                            'name' =>
-                                $currentStay
-                                    ->building
-                                    ->name,
-                        ]
-                        : null,
+                        'name' =>
+                            $currentStay
+                                ->building
+                                ->name,
+                    ]
+                    : null,
             ]
         );
     }
