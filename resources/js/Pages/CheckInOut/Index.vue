@@ -1798,7 +1798,6 @@ const residentPhotoUrl = (value) => {
                                 checkoutRequestForm.requested_checkout_date
                             "
                             type="date"
-                            :min="checkoutPolicy.today"
                             required
                             class="w-full"
                         />
