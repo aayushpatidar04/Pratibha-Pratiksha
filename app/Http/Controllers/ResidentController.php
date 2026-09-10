@@ -424,6 +424,15 @@ class ResidentController extends Controller
 
     public function destroy(Resident $resident): RedirectResponse
     {
+        Bed::where('resident_id', $resident->id)
+            ->update([
+                'status' => 'vacant',
+                'resident_id' => null,
+            ]);
+
+        ResidentStay::where('resident_id', $resident->id)
+            ->whereNull('actual_check_out_date')
+            ->update(['status' => 'cancelled']);
         $resident->delete();
 
         return back()->with('success', 'Resident deleted successfully.');
@@ -554,8 +563,8 @@ class ResidentController extends Controller
 
             $data = array_map(
                 fn($value) => is_string($value)
-                ? trim($value)
-                : $value,
+                    ? trim($value)
+                    : $value,
                 $data
             );
 
@@ -2805,7 +2814,7 @@ class ResidentController extends Controller
                     $handle,
                     array_map(
                         fn($column) =>
-                        $allowedColumns[$column],
+                            $allowedColumns[$column],
                         $selectedColumns
                     )
                 );
@@ -2854,65 +2863,65 @@ class ResidentController extends Controller
     ): mixed {
         return match ($column) {
             'portal_enabled' =>
-            $resident->portal_enabled ? 'Yes' : 'No',
+                $resident->portal_enabled ? 'Yes' : 'No',
 
             'must_change_password' =>
-            $resident->must_change_password ? 'Yes' : 'No',
+                $resident->must_change_password ? 'Yes' : 'No',
 
             'gender' =>
-            ucfirst((string) $resident->gender),
+                ucfirst((string) $resident->gender),
 
             'status' =>
-            ucfirst((string) $resident->status),
+                ucfirst((string) $resident->status),
 
             'last_login_at',
             'password_changed_at',
             'created_at' =>
-            $resident->{$column}
-            ? \Carbon\Carbon::parse(
                 $resident->{$column}
-            )->format('Y-m-d H:i:s')
-            : '',
+                ? \Carbon\Carbon::parse(
+                    $resident->{$column}
+                )->format('Y-m-d H:i:s')
+                : '',
 
             'building' =>
-            $resident->currentStay?->building?->name ?? '',
+                $resident->currentStay?->building?->name ?? '',
 
             'floor' =>
-            $resident->currentStay?->floor?->name
-            ?? $resident->currentStay?->floor?->floor_number
-            ?? '',
+                $resident->currentStay?->floor?->name
+                ?? $resident->currentStay?->floor?->floor_number
+                ?? '',
 
             'room' =>
-            $resident->currentStay?->room?->room_number ?? '',
+                $resident->currentStay?->room?->room_number ?? '',
 
             'bed' =>
-            $resident->currentStay?->bed?->bed_number
-            ?? $resident->currentStay?->bed?->name
-            ?? '',
+                $resident->currentStay?->bed?->bed_number
+                ?? $resident->currentStay?->bed?->name
+                ?? '',
 
             'check_in_date' =>
-            $resident->currentStay?->check_in_date ?? '',
+                $resident->currentStay?->check_in_date ?? '',
 
             'expected_check_out_date' =>
-            $resident->currentStay?->expected_check_out_date ?? '',
+                $resident->currentStay?->expected_check_out_date ?? '',
 
             'billing_basis' =>
-            ucfirst(
-                (string) (
-                    $resident->currentStay?->billing_basis
-                    ?? $resident->currentStay?->bill_type
-                    ?? ''
-                )
-            ),
+                ucfirst(
+                    (string) (
+                        $resident->currentStay?->billing_basis
+                        ?? $resident->currentStay?->bill_type
+                        ?? ''
+                    )
+                ),
 
             'rent_amount' =>
-            $resident->currentStay?->rent_amount ?? '',
+                $resident->currentStay?->rent_amount ?? '',
 
             'deposit_amount' =>
-            $resident->currentStay?->deposit_amount ?? '',
+                $resident->currentStay?->deposit_amount ?? '',
 
             default =>
-            $resident->{$column} ?? '',
+                $resident->{$column} ?? '',
         };
     }
 

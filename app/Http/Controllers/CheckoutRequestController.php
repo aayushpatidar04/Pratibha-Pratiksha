@@ -264,7 +264,6 @@ class CheckoutRequestController extends Controller
             'requested_checkout_date' => [
                 'required',
                 'date',
-                'after_or_equal:today',
             ],
 
             'reason' => [

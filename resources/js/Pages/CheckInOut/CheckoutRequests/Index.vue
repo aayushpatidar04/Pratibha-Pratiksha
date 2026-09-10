@@ -913,7 +913,6 @@ const submitSecurityDepositRefund = () => {
                     <input
                         v-model="createForm.requested_checkout_date"
                         type="date"
-                        :min="policy.today"
                         required
                         class="mt-1 w-full rounded-xl border-slate-300 text-sm"
                     />
