@@ -137,23 +137,17 @@ class BillingController extends Controller
         */
 
         if ($month = $request->integer('month')) {
-            $query->whereHas(
-                'monthlyConfig',
-                fn($q) => $q->where('month', $month)
-            );
+            $query->where(function ($q) use ($month) {
+                $q->whereHas('monthlyConfig', fn($q) => $q->where('month', $month))
+                    ->orWhereRaw('MONTH(created_at) = ?', [$month]);
+            });
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | Year Filter
-        |--------------------------------------------------------------------------
-        */
-
         if ($year = $request->integer('year')) {
-            $query->whereHas(
-                'monthlyConfig',
-                fn($q) => $q->where('year', $year)
-            );
+            $query->where(function ($q) use ($year) {
+                $q->whereHas('monthlyConfig', fn($q) => $q->where('year', $year))
+                    ->orWhereRaw('YEAR(created_at) = ?', [$year]);
+            });
         }
 
         /*
@@ -176,6 +170,17 @@ class BillingController extends Controller
         foreach ($invoices as $invoice) {
             $invoice->status = $invoice->computed_status;
             $invoice->late_fee_amount = $invoice->effective_late_fee_amount;
+
+            // Every invoice gets a displayable month label:
+            //  • monthly-config invoices → "July 2026 (Monthly Config)"
+            //  • all others  → "August 2026"
+            if ($invoice->monthlyConfig) {
+                $invoice->month_label = $invoice->monthlyConfig->full_label;
+            } else {
+                $invoice->month_label = $invoice->created_at
+                    ? $invoice->created_at->format('F Y')
+                    : null;
+            }
         }
 
         /*

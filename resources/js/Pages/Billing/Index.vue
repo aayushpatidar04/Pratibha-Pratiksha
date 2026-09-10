@@ -701,10 +701,10 @@ const updatePaymentMode = (payment) => {
                                     Deleted
                                 </span>
                                 <p
-                                    v-if="inv.monthly_config"
+                                    v-if="inv.month_label"
                                     class="text-xs text-gray-600"
                                 >
-                                    {{ inv.monthly_config.full_label }}
+                                    {{ inv.month_label }}
                                 </p>
                             </td>
                             <td class="px-4 py-3">
