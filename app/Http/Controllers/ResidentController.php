@@ -161,7 +161,12 @@ class ResidentController extends Controller
             'leaving_30' => (clone $query)->whereHas('currentStay', fn($q) => $q->whereBetween('expected_check_out_date', [now(), now()->addDays(30)]))->count(),
         ];
 
-        $residents = $query->orderByDesc('created_at')->paginate(20)->withQueryString();
+        $residents = $query
+            ->orderBy('first_name')
+            ->orderBy('last_name')
+            ->orderBy('resident_code') // tiebreaker for identical names
+            ->paginate(20)
+            ->withQueryString();
 
         return [
             'residents' => $residents,

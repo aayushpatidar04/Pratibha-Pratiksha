@@ -88,8 +88,18 @@ class RegistrationApplication extends Model
 
         static::creating(function ($application) {
             if (empty($application->application_no)) {
+                $last = static::withTrashed()
+                    ->whereYear('created_at', date('Y'))
+                    ->orderBy('id', 'desc')
+                    ->value('application_no');
+
+                $sequence = 1;
+                if ($last && preg_match('/-(\d+)$/', $last, $matches)) {
+                    $sequence = ((int) $matches[1]) + 1;
+                }
+
                 $application->application_no = 'APP-' . date('Y') . '-' . str_pad(
-                    static::whereYear('created_at', date('Y'))->count() + 1,
+                    $sequence,
                     5,
                     '0',
                     STR_PAD_LEFT
@@ -128,7 +138,8 @@ class RegistrationApplication extends Model
         return $this->belongsTo(Bed::class, 'allotted_bed_id');
     }
 
-    public function invoices(){
+    public function invoices()
+    {
         return $this->hasMany(FeeInvoice::class, 'application_id');
     }
 }
