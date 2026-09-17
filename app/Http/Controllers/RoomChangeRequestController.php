@@ -44,8 +44,25 @@ class RoomChangeRequestController extends Controller
                 'rejected' => RoomChangeRequest::where('status', 'rejected')->count(),
             ],
             'filters' => $request->only('status'),
-            'residents' => Resident::where('status', 'active')->with('currentStay')->orderBy('first_name')->get()
-                ->map(fn($r) => ['id' => $r->id, 'name' => trim("{$r->first_name} {$r->last_name}"), 'resident_code' => $r->resident_code, 'current_stay_id' => $r->currentStay?->id]),
+            'residents' => Resident::where('status', 'active')
+                ->with([
+                    'currentStay.room.floor.building',
+                    'currentStay.bed',
+                ])
+                ->orderBy('first_name')
+                ->get()
+                ->map(fn($r) => [
+                    'id' => $r->id,
+                    'name' => trim("{$r->first_name} {$r->last_name}"),
+                    'resident_code' => $r->resident_code,
+                    'current_stay_id' => $r->currentStay?->id,
+                    // appended data
+                    'room_name' => $r->currentStay?->room?->room_number,
+                    'bed_name' => $r->currentStay?->bed?->bed_number,
+                    'floor_name' => $r->currentStay?->room?->floor?->name,
+                    'building_name' => $r->currentStay?->room?->floor?->building?->name,
+                ]),
+
             'buildings' => Building::orderBy('name')->get(['id', 'name']),
             'floors' => Floor::orderBy('floor_number')->get(['id', 'name', 'building_id']),
             'rooms' => Room::with('beds')->orderBy('room_number')->get(['id', 'room_number', 'building_id', 'floor_id', 'capacity', 'occupied_beds']),

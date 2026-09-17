@@ -324,7 +324,7 @@ const submitReview = () => {
                             :key="r.id"
                             :value="r.id"
                         >
-                            {{ r.name }} ({{ r.resident_code }})
+                            {{ r.name }} ({{ r.resident_code }} - {{ r.building_name }} - {{ r.floor_name }} - {{ r.room_name }} - {{ r.bed_name }})
                         </option>
                     </select>
                 </div>
