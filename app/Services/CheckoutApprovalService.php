@@ -421,12 +421,7 @@ class CheckoutApprovalService
                 'exit_token_generated_at' =>
                     now(),
 
-                'exit_token_expires_at' =>
-                    $checkoutRequest
-                        ->requested_checkout_date
-                        ->copy()
-                        ->endOfDay()
-                        ->addDay(),
+                'exit_token_expires_at' => now()->addDay(),
 
                 'exit_token_generated_by' =>
                     $admin->id,
