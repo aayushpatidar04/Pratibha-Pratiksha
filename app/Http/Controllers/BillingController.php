@@ -947,6 +947,15 @@ class BillingController extends Controller
                 'numeric',
                 'min:0',
             ],
+
+            'fee_type' => 'required|in:hostel_fee,security_deposit,registration_fee,donation,short_stay',
+            'deposit_amount' => 'nullable',
+            'registration_amount' => 'nullable',
+            'short_stay_amount' => 'nullable',
+            'donation_amount' => 'nullable|required_if:fee_type,donation',
+            'donator_name' => 'nullable|string|max:255|required_if:fee_type,donation',
+            'donator_address' => 'nullable|string|max:500|required_if:fee_type,donation',
+            'donator_phone' => 'nullable|string|max:20|required_if:fee_type,donation',
         ]);
 
         /*
@@ -995,72 +1004,93 @@ class BillingController extends Controller
         /*
          * Build invoice items.
          */
+        $feeType = $validated['fee_type'] ?? 'hostel_fee';
         $items = [];
         $totalAmount = 0;
 
-        foreach ([
-            [
-                'rent_amount',
-                'rent',
-                'rent',
-                'Room Rent',
-            ],
-            [
-                'mess_amount',
-                'mess',
-                'mess',
-                'Mess Charges',
-            ],
-            [
-                'other_amount',
-                'other',
-                'custom',
-                $validated['other_title'] ?: 'Other Charges',
-            ],
-        ] as [$field, $type, $amenity, $title]) {
-            if (($validated[$field] ?? 0) > 0) {
+        if ($feeType === 'hostel_fee') {
+            foreach ([
+                ['rent_amount', 'rent', 'rent', 'Room Rent'],
+                ['mess_amount', 'mess', 'mess', 'Mess Charges'],
+                ['other_amount', 'other', 'custom', $validated['other_title'] ?: 'Other Charges'],
+            ] as [$field, $type, $amenity, $title]) {
+                if (($validated[$field] ?? 0) > 0) {
+                    $items[] = [
+                        'item_type' => $type,
+                        'amenity_type' => $amenity,
+                        'title' => $title,
+                        'amount' => $validated[$field],
+                    ];
+                    $totalAmount += $validated[$field];
+                }
+            }
+        } elseif ($feeType === 'security_deposit') {
+            $totalAmount = (float) ($validated['deposit_amount'] ?? 0);
+            if ($totalAmount > 0) {
                 $items[] = [
-                    'item_type' => $type,
-                    'amenity_type' => $amenity,
-                    'title' => $title,
-                    'amount' => $validated[$field],
+                    'item_type' => 'security_deposit',
+                    'amenity_type' => null,
+                    'title' => 'Refundable Security Deposit',
+                    'amount' => $totalAmount,
+                    'is_late_fee' => false,
                 ];
-
-                $totalAmount += $validated[$field];
+            }
+        } elseif ($feeType === 'registration_fee') {
+            $totalAmount = (float) ($validated['registration_amount'] ?? 0);
+            if ($totalAmount > 0) {
+                $items[] = [
+                    'item_type' => 'registration_fee',
+                    'amenity_type' => null,
+                    'title' => 'Registration Fee',
+                    'amount' => $totalAmount,
+                    'is_late_fee' => false,
+                ];
+            }
+        } elseif ($feeType === 'short_stay') {
+            $totalAmount = (float) ($validated['short_stay_amount'] ?? 0);
+            if ($totalAmount > 0) {
+                $items[] = [
+                    'item_type' => 'short_stay',
+                    'amenity_type' => 'accommodation',
+                    'title' => 'Short Stay Accommodation',
+                    'amount' => $totalAmount,
+                    'is_late_fee' => false,
+                ];
+            }
+        } elseif ($feeType === 'donation') {
+            $totalAmount = (float) ($validated['donation_amount'] ?? 0);
+            if ($totalAmount > 0) {
+                $items[] = [
+                    'item_type' => 'donation',
+                    'amenity_type' => null,
+                    'title' => 'Donation / Contribution',
+                    'amount' => $totalAmount,
+                    'is_late_fee' => false,
+                ];
             }
         }
-
         if (empty($items)) {
-            return back()->with(
-                'error',
-                'Please enter at least one amount.'
-            );
+            return back()->with('error', 'Please enter at least one amount.');
         }
 
-        DB::transaction(function () use ($validated, $stayId, $items, $totalAmount, $residentId, $applicationId) {
+        DB::transaction(function () use ($validated, $stayId, $items, $totalAmount, $residentId, $applicationId, $feeType) {
             $invoice = FeeInvoice::create([
                 'resident_id' => $residentId,
                 'application_id' => $applicationId,
                 'stay_id' => $stayId,
-
                 'invoice_number' => $this->generateInvoiceNumber(),
-
-                'fee_type' => 'hostel_fee',
-
+                'fee_type' => $feeType,
                 'amount' => $totalAmount,
                 'paid_amount' => 0,
-
                 'due_date' => $validated['due_date'],
-
                 'late_fee_amount' => 0,
-
-                'late_fee_per_day' => (float) (
-                    $validated['late_fee_per_day'] ?? 0
-                ),
-
+                'late_fee_per_day' => (float) ($validated['late_fee_per_day'] ?? 0),
                 'status' => 'pending',
-
                 'description' => $validated['description'] ?? null,
+
+                'donator_name' => $validated['donator_name'] ?? null,
+                'donator_address' => $validated['donator_address'] ?? null,
+                'donator_phone' => $validated['donator_phone'] ?? null,
             ]);
 
             foreach ($items as $item) {
@@ -1164,6 +1194,35 @@ class BillingController extends Controller
             'deposit_amount' => ['nullable', 'numeric', 'min:0'],
             'registration_amount' => ['nullable', 'numeric', 'min:0'],
             'short_stay_amount' => ['nullable', 'numeric', 'min:0'],
+
+            'donation_amount' => [
+                'nullable',
+                'numeric',
+                'min:0',
+                'required_if:fee_type,donation',
+            ],
+
+            'donator_name' => [
+                'nullable',
+                'string',
+                'max:255',
+                'required_if:fee_type,donation',
+            ],
+
+            'donator_address' => [
+                'nullable',
+                'string',
+                'max:500',
+                'required_if:fee_type,donation',
+            ],
+
+            'donator_phone' => [
+                'nullable',
+                'string',
+                'max:20',
+                'required_if:fee_type,donation',
+            ],
+
             // Common fields
             'due_date' => ['required', 'date'],
             'description' => ['nullable', 'string'],
@@ -1270,6 +1329,18 @@ class BillingController extends Controller
                     'is_late_fee' => false,
                 ];
             }
+        } elseif ($feeType === 'donation') {
+            $totalAmount = (float) ($validated['donation_amount'] ?? 0);
+
+            if ($totalAmount > 0) {
+                $itemsToCreate[] = [
+                    'item_type' => 'donation',
+                    'amenity_type' => null,
+                    'title' => 'Donation / Contribution',
+                    'amount' => $totalAmount,
+                    'is_late_fee' => false,
+                ];
+            }
         }
 
         // ── Guard: amount reduction below already-paid ─────────────────
@@ -1290,6 +1361,11 @@ class BillingController extends Controller
                 'due_date' => $validated['due_date'],
                 'description' => $validated['description'] ?? null,
                 'late_fee_per_day' => (float) ($validated['late_fee_per_day'] ?? 0),
+
+                // Donation / Donator details
+                'donator_name' => $validated['donator_name'] ?? null,
+                'donator_address' => $validated['donator_address'] ?? null,
+                'donator_phone' => $validated['donator_phone'] ?? null,
             ];
 
             if ($canEditAmounts) {
@@ -1547,6 +1623,27 @@ class BillingController extends Controller
         $invoice->late_fee_amount = $invoice->effective_late_fee_amount;
 
         return view('pdf.invoices.hindi-preview', [
+            'invoice' => $invoice,
+        ]);
+    }
+
+    public function previewDonationHindi(FeeInvoice $invoice)
+    {
+        $invoice->load([
+            'resident',
+            'application',
+            'stay.room',
+            'stay.bed',
+            'items',
+            'payments.proofs',
+            'monthlyConfig',
+            'waivedByUser',
+        ]);
+
+        $invoice->status = $invoice->computed_status;
+        $invoice->late_fee_amount = $invoice->effective_late_fee_amount;
+
+        return view('pdf.invoices.donation-hindi', [
             'invoice' => $invoice,
         ]);
     }

@@ -127,6 +127,10 @@ const shortStayInitial = computed(() => {
     const it = findItemByType("short_stay");
     return it ? Number(it.amount ?? 0) : 0;
 });
+const donationInitial = computed(() => {
+    const it = findItemByType("donation");
+    return it ? Number(it.amount ?? 0) : 0;
+});
 
 // ─── Form ────────────────────────────────────────────────────────
 const form = useForm({
@@ -138,6 +142,12 @@ const form = useForm({
     deposit_amount: depositInitial.value,
     registration_amount: registrationInitial.value,
     short_stay_amount: shortStayInitial.value,
+
+    donation_amount: donationInitial.value,
+    donator_name: props.invoice.donator_name ?? "",
+    donator_address: props.invoice.donator_address ?? "",
+    donator_phone: props.invoice.donator_phone ?? "",
+
     due_date: props.invoice.due_date
         ? String(props.invoice.due_date).substring(0, 10)
         : "",
@@ -171,6 +181,7 @@ const titleMap = {
     security_deposit: "Security Deposit",
     registration_fee: "Registration Fee",
     short_stay: "Short Stay",
+    donation: "Donation",
 };
 
 const amountLocked = computed(() => !props.canEditAmounts);
@@ -191,6 +202,9 @@ const total = computed(() => {
     }
     if (feeType.value === "short_stay") {
         return Number(form.short_stay_amount || 0);
+    }
+    if (feeType.value === "donation") {
+        return Number(form.donation_amount || 0);
     }
     return 0;
 });
@@ -485,6 +499,95 @@ const total = computed(() => {
                             :message="form.errors.short_stay_amount"
                             class="mt-1"
                         />
+                    </div>
+
+                    <!-- ═══════════════════════════════════════════════ -->
+                    <!-- DONATION -->
+                    <!-- ═══════════════════════════════════════════════ -->
+                    <div v-if="feeType === 'donation'">
+                        <InputLabel
+                            for="donation_amount"
+                            value="Donation Amount (₹)"
+                        />
+
+                        <TextInput
+                            id="donation_amount"
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            v-model.number="form.donation_amount"
+                            class="mt-1 block w-full"
+                            :disabled="amountLocked"
+                        />
+
+                        <InputError
+                            :message="form.errors.donation_amount"
+                            class="mt-1"
+                        />
+
+                        <!-- Donator Name -->
+                        <InputLabel
+                            for="donator_name"
+                            value="Donator Name"
+                            class="mt-3"
+                        />
+
+                        <TextInput
+                            id="donator_name"
+                            type="text"
+                            v-model="form.donator_name"
+                            class="mt-1 block w-full"
+                            :disabled="fieldsLocked"
+                        />
+
+                        <InputError
+                            :message="form.errors.donator_name"
+                            class="mt-1"
+                        />
+
+                        <!-- Donator Address -->
+                        <InputLabel
+                            for="donator_address"
+                            value="Donator Address"
+                            class="mt-3"
+                        />
+
+                        <TextInput
+                            id="donator_address"
+                            type="text"
+                            v-model="form.donator_address"
+                            class="mt-1 block w-full"
+                            :disabled="fieldsLocked"
+                        />
+
+                        <InputError
+                            :message="form.errors.donator_address"
+                            class="mt-1"
+                        />
+
+                        <!-- Donator Phone -->
+                        <InputLabel
+                            for="donator_phone"
+                            value="Donator Phone"
+                            class="mt-3"
+                        />
+
+                        <TextInput
+                            id="donator_phone"
+                            type="text"
+                            v-model="form.donator_phone"
+                            class="mt-1 block w-full"
+                        />
+
+                        <InputError
+                            :message="form.errors.donator_phone"
+                            class="mt-1"
+                        />
+
+                        <p class="text-xs text-gray-500 mt-2">
+                            Donation / contribution amount. Receipt format will
+                            be different.
+                        </p>
                     </div>
 
                     <!-- ─── Common: Due Date + Late Fee ─── -->

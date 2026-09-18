@@ -110,22 +110,40 @@ const createForm = useForm({
     invoice_for: "resident",
     resident_id: "",
     application_id: "",
+    fee_type: "hostel_fee",
     rent_amount: "",
     mess_amount: "",
     other_amount: "",
     other_title: "",
+    deposit_amount: "",
+    registration_amount: "",
+    short_stay_amount: "",
+    donation_amount: "",
+    donator_name: "",
+    donator_address: "",
+    donator_phone: "",
     due_date: "",
-    description: "",
     late_fee_per_day: "",
+    description: "",
 });
 
-const submitCreate = () =>
+const submitCreate = () => {
     createForm.post("/billing", {
+        data: {
+            ...createForm.data(),
+            fee_type: createForm.fee_type,
+            resident_id: createForm.resident_id?.id ?? createForm.resident_id,
+            application_id:
+                createForm.application_id?.id ?? createForm.application_id,
+        },
         onSuccess: () => {
-            createOpen.value = false;
             createForm.reset();
+            createOpen.value = false;
+            residentSearch.value = "";
+            applicationSearch.value = "";
         },
     });
+};
 
 const payForm = useForm({
     amount: "",
@@ -888,28 +906,50 @@ const updatePaymentMode = (payment) => {
                                         </button>
 
                                         <!-- PDFs -->
-                                        <a
-                                            :href="`/billing/${inv.id}/print/en`"
-                                            target="_blank"
-                                            class="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700"
+                                        <template
+                                            v-if="inv.fee_type !== 'donation'"
                                         >
-                                            <FileText class="h-3.5 w-3.5" />
-                                            EN
-                                        </a>
+                                            <a
+                                                :href="`/billing/${inv.id}/print/en`"
+                                                target="_blank"
+                                                class="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700"
+                                            >
+                                                <FileText class="h-3.5 w-3.5" />
+                                                EN
+                                            </a>
 
-                                        <a
-                                            :href="
-                                                route(
-                                                    'billing.print.hi',
-                                                    inv.id,
-                                                )
-                                            "
-                                            target="_blank"
-                                            class="inline-flex items-center gap-1.5 rounded-lg bg-purple-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-purple-700"
-                                        >
-                                            <Languages class="h-3.5 w-3.5" />
-                                            हिंदी
-                                        </a>
+                                            <a
+                                                :href="
+                                                    route(
+                                                        'billing.print.hi',
+                                                        inv.id,
+                                                    )
+                                                "
+                                                target="_blank"
+                                                class="inline-flex items-center gap-1.5 rounded-lg bg-purple-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-purple-700"
+                                            >
+                                                <Languages
+                                                    class="h-3.5 w-3.5"
+                                                />
+                                                हिंदी
+                                            </a>
+                                        </template>
+
+                                        <template v-else>
+                                            <a
+                                                :href="
+                                                    route(
+                                                        'billing.donation-print.hi',
+                                                        inv.id,
+                                                    )
+                                                "
+                                                target="_blank"
+                                                class="inline-flex items-center gap-1.5 rounded-lg bg-purple-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-purple-700"
+                                            >
+                                                <FileText class="h-3.5 w-3.5" />
+                                                Receipt
+                                            </a>
+                                        </template>
 
                                         <button
                                             v-if="filters.tab === 'current'"
@@ -924,10 +964,11 @@ const updatePaymentMode = (payment) => {
                                                 page.props.auth.user.permissions?.billing?.includes(
                                                     'edit',
                                                 ) ||
-                                                page.props.auth.user.role ===
-                                                    'super_admin'
-                                                &&
-                                                (inv.status != 'paid' && inv.status != 'late_fee_pending')
+                                                (page.props.auth.user.role ===
+                                                    'super_admin' &&
+                                                    inv.status != 'paid' &&
+                                                    inv.status !=
+                                                        'late_fee_pending')
                                             "
                                             :href="`/billing/${inv.id}/edit`"
                                             class="text-indigo-600 hover:text-indigo-900 rounded-lg inline-flex items-center bg-gray-200 px-3 py-1.5"
@@ -1193,39 +1234,156 @@ const updatePaymentMode = (payment) => {
                     <InputError :message="createForm.errors.application_id" />
                 </div>
 
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <InputLabel value="Rent" />
-                        <TextInput
-                            type="number"
-                            v-model="createForm.rent_amount"
-                        />
-                        <InputError :message="createForm.errors.rent_amount" />
+                <div>
+                    <InputLabel value="Fee Type *" />
+                    <select
+                        v-model="createForm.fee_type"
+                        class="w-full rounded-lg border-gray-300 text-sm"
+                        required
+                    >
+                        <option value="hostel_fee">Hostel Fee</option>
+                        <option value="security_deposit">
+                            Security Deposit
+                        </option>
+                        <option value="registration_fee">
+                            Registration Fee
+                        </option>
+                        <option value="short_stay">Short Stay</option>
+                        <option value="donation">Donation</option>
+                    </select>
+                </div>
+
+                <!-- Hostel Fee items (rent, mess, other) -->
+                <div v-if="createForm.fee_type === 'hostel_fee'">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <InputLabel value="Rent" />
+                            <TextInput
+                                type="number"
+                                v-model="createForm.rent_amount"
+                            />
+                            <InputError
+                                :message="createForm.errors.rent_amount"
+                            />
+                        </div>
+                        <div>
+                            <InputLabel value="Mess" />
+                            <TextInput
+                                type="number"
+                                v-model="createForm.mess_amount"
+                            />
+                            <InputError
+                                :message="createForm.errors.mess_amount"
+                            />
+                        </div>
+                        <div>
+                            <InputLabel value="Other Amount" />
+                            <TextInput
+                                type="number"
+                                v-model="createForm.other_amount"
+                            />
+                            <InputError
+                                :message="createForm.errors.other_amount"
+                            />
+                        </div>
                     </div>
                     <div>
-                        <InputLabel value="Mess" />
+                        <InputLabel value="Other Title" />
                         <TextInput
-                            type="number"
-                            v-model="createForm.mess_amount"
+                            v-model="createForm.other_title"
+                            placeholder="Electricity, Fine, etc."
                         />
-                        <InputError :message="createForm.errors.mess_amount" />
-                    </div>
-                    <div>
-                        <InputLabel value="Other Amount" />
-                        <TextInput
-                            type="number"
-                            v-model="createForm.other_amount"
-                        />
-                        <InputError :message="createForm.errors.other_amount" />
+                        <InputError :message="createForm.errors.other_title" />
                     </div>
                 </div>
-                <div>
-                    <InputLabel value="Other Title" />
+
+                <!-- Security Deposit -->
+                <div v-if="createForm.fee_type === 'security_deposit'">
+                    <InputLabel value="Deposit Amount (₹)" />
                     <TextInput
-                        v-model="createForm.other_title"
-                        placeholder="Electricity, Fine, etc."
+                        type="number"
+                        v-model="createForm.deposit_amount"
+                        min="0"
+                        step="0.01"
                     />
-                    <InputError :message="createForm.errors.other_title" />
+                    <p class="text-xs text-gray-500 mt-1">
+                        Refundable security deposit for this stay.
+                    </p>
+                    <InputError :message="createForm.errors.deposit_amount" />
+                </div>
+
+                <!-- Registration Fee -->
+                <div v-if="createForm.fee_type === 'registration_fee'">
+                    <InputLabel value="Registration Fee Amount (₹)" />
+                    <TextInput
+                        type="number"
+                        v-model="createForm.registration_amount"
+                        min="0"
+                        step="0.01"
+                    />
+                    <p class="text-xs text-gray-500 mt-1">
+                        One-time registration fee.
+                    </p>
+                    <InputError
+                        :message="createForm.errors.registration_amount"
+                    />
+                </div>
+
+                <!-- Short Stay -->
+                <div v-if="createForm.fee_type === 'short_stay'">
+                    <InputLabel value="Short Stay Amount (₹)" />
+                    <TextInput
+                        type="number"
+                        v-model="createForm.short_stay_amount"
+                        min="0"
+                        step="0.01"
+                    />
+                    <p class="text-xs text-gray-500 mt-1">
+                        Accommodation charge for the short stay period.
+                    </p>
+                    <InputError
+                        :message="createForm.errors.short_stay_amount"
+                    />
+                </div>
+
+                <!-- Donation -->
+                <div v-if="createForm.fee_type === 'donation'">
+                    <InputLabel value="Donation Amount (₹)" />
+                    <TextInput
+                        type="number"
+                        v-model="createForm.donation_amount"
+                        min="0"
+                        step="0.01"
+                        required
+                    />
+
+                    <!-- Donator Name -->
+                    <InputLabel value="Donator Name" class="mt-3" />
+                    <TextInput
+                        type="text"
+                        v-model="createForm.donator_name"
+                        required
+                    />
+                    <InputError :message="createForm.errors.donator_name" />
+
+                    <!-- Donator Address -->
+                    <InputLabel value="Donator Address" class="mt-3" />
+                    <TextInput
+                        type="text"
+                        v-model="createForm.donator_address"
+                    />
+                    <InputError :message="createForm.errors.donator_address" />
+
+                    <!-- Donator Phone -->
+                    <InputLabel value="Donator Phone" class="mt-3" />
+                    <TextInput type="text" v-model="createForm.donator_phone" />
+                    <InputError :message="createForm.errors.donator_phone" />
+
+                    <p class="text-xs text-gray-500 mt-1">
+                        Donation / contribution amount. Receipt format will be
+                        different.
+                    </p>
+                    <InputError :message="createForm.errors.donation_amount" />
                 </div>
                 <div>
                     <InputLabel value="Due Date *" />

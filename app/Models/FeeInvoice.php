@@ -41,6 +41,10 @@ class FeeInvoice extends Model
         'refunded_at',
         'refund_transaction_id',
         'refund_notes',
+
+        'donator_name',
+        'donator_address',
+        'donator_phone',
     ];
 
     protected function casts(): array

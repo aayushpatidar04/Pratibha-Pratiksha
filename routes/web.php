@@ -208,6 +208,7 @@ Route::middleware(['auth', 'user.active'])->group(function () {
         Route::get('/{invoice}/print/en', [BillingController::class, 'previewEnglish'])->name('billing.print.en')->middleware('permission:billing,view');
         Route::get('/{invoice}/pdf/hi', [BillingController::class, 'exportPdfHindi'])->name('billing.pdf.hi')->middleware('permission:billing,view');
         Route::get('/{invoice}/print/hi', [BillingController::class, 'previewHindi'])->name('billing.print.hi')->middleware('permission:billing,view');
+        Route::get('/{invoice}/donation-print/hi', [BillingController::class, 'previewDonationHindi'])->name('billing.donation-print.hi')->middleware('permission:billing,view');
         Route::get('/payments/{payment}/receipt', [BillingController::class, 'paymentReceipt'])->name('billing.payments.receipt')->middleware('permission:billing,view');
         Route::put('/payments/{payment}/mode', [BillingController::class, 'updatePaymentMode'])->name('billing.payments.update-mode')->middleware('permission:billing,edit');
 

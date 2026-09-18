@@ -100,7 +100,7 @@
          * Internal padding acts as the page margin.
          */
         .receipt-page {
-            width: 105mm;
+            width: 100mm;
             min-height: 148mm;
             margin: 0 auto;
             padding: 0mm 2mm;
