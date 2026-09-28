@@ -134,7 +134,7 @@ const donationInitial = computed(() => {
 
 // ─── Form ────────────────────────────────────────────────────────
 const form = useForm({
-    invoice_for: isForResident.value ? "resident" : "application",
+    invoice_for: isForResident.value ? "resident" : feeType.value === "donation" ? "donation" : "application",
     resident_id: props.invoice.resident_id ?? "",
     application_id: props.invoice.application_id ?? "",
     stay_id: props.invoice.stay_id ?? "",
@@ -144,6 +144,12 @@ const form = useForm({
     short_stay_amount: shortStayInitial.value,
 
     donation_amount: donationInitial.value,
+    donation_items: (props.invoice.items || [])
+        .filter((i) => i.item_type === "donation")
+        .map((i) => ({
+            description: String(i.title ?? ""),
+            amount: Number(i.amount ?? 0),
+        })),
     donator_name: props.invoice.donator_name ?? "",
     donator_address: props.invoice.donator_address ?? "",
     donator_phone: props.invoice.donator_phone ?? "",
@@ -203,8 +209,14 @@ const total = computed(() => {
     if (feeType.value === "short_stay") {
         return Number(form.short_stay_amount || 0);
     }
+    // if (feeType.value === "donation") {
+    //     return Number(form.donation_amount || 0);
+    // }
     if (feeType.value === "donation") {
-        return Number(form.donation_amount || 0);
+        return (form.donation_items || []).reduce(
+            (s, i) => s + Number(i.amount || 0),
+            0,
+        );
     }
     return 0;
 });
@@ -291,6 +303,18 @@ const total = computed(() => {
                                     :disabled="fieldsLocked"
                                 />
                                 <span>Application (Pre-booking)</span>
+                            </label>
+                            <label
+                                v-if="feeType === 'donation'"
+                                class="inline-flex items-center gap-2"
+                            >
+                                <input
+                                    type="radio"
+                                    value="donation"
+                                    v-model="form.invoice_for"
+                                    :disabled="fieldsLocked"
+                                />
+                                <span>No resident (standalone)</span>
                             </label>
                         </div>
                     </div>
@@ -502,92 +526,125 @@ const total = computed(() => {
                     </div>
 
                     <!-- ═══════════════════════════════════════════════ -->
-                    <!-- DONATION -->
+                    <!-- DONATION — multi-line items + donor info -->
                     <!-- ═══════════════════════════════════════════════ -->
                     <div v-if="feeType === 'donation'">
-                        <InputLabel
-                            for="donation_amount"
-                            value="Donation Amount (₹)"
-                        />
+                        <p class="text-sm font-medium text-gray-700 mb-2">
+                            Donation Items
+                        </p>
 
-                        <TextInput
-                            id="donation_amount"
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            v-model.number="form.donation_amount"
-                            class="mt-1 block w-full"
-                            :disabled="amountLocked"
-                        />
+                        <div class="space-y-2">
+                            <div
+                                v-for="(item, index) in form.donation_items"
+                                :key="index"
+                                class="flex flex-wrap items-center gap-2"
+                            >
+                                <TextInput
+                                    v-model="item.description"
+                                    placeholder="Description (e.g. General Donation)"
+                                    class="flex-1 min-w-[180px] text-sm"
+                                    :disabled="amountLocked"
+                                />
+                                <TextInput
+                                    type="number"
+                                    v-model.number="item.amount"
+                                    placeholder="₹ Amount"
+                                    min="0.01"
+                                    step="0.01"
+                                    class="w-28 text-sm"
+                                    :disabled="amountLocked"
+                                />
+                                <button
+                                    v-if="
+                                        !amountLocked &&
+                                        form.donation_items.length > 1
+                                    "
+                                    type="button"
+                                    @click="
+                                        form.donation_items.splice(index, 1)
+                                    "
+                                    class="p-2 text-red-600 hover:bg-red-50 rounded flex-shrink-0"
+                                    title="Remove"
+                                >
+                                    <Trash2 class="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
+
+                        <button
+                            v-if="!amountLocked"
+                            type="button"
+                            @click="
+                                form.donation_items.push({
+                                    description: '',
+                                    amount: 0,
+                                })
+                            "
+                            class="mt-2 text-sm text-blue-600 hover:text-blue-700 font-medium"
+                        >
+                            + Add another line
+                        </button>
 
                         <InputError
                             :message="form.errors.donation_amount"
                             class="mt-1"
                         />
 
-                        <!-- Donator Name -->
-                        <InputLabel
-                            for="donator_name"
-                            value="Donator Name"
-                            class="mt-3"
-                        />
+                        <div class="mt-4 grid grid-cols-1 gap-3">
+                            <div>
+                                <InputLabel
+                                    for="donator_name"
+                                    value="Donator Name"
+                                />
+                                <TextInput
+                                    id="donator_name"
+                                    type="text"
+                                    v-model="form.donator_name"
+                                    class="mt-1 block w-full"
+                                    :disabled="fieldsLocked"
+                                />
+                                <InputError
+                                    :message="form.errors.donator_name"
+                                    class="mt-1"
+                                />
+                            </div>
 
-                        <TextInput
-                            id="donator_name"
-                            type="text"
-                            v-model="form.donator_name"
-                            class="mt-1 block w-full"
-                            :disabled="fieldsLocked"
-                        />
+                            <div>
+                                <InputLabel
+                                    for="donator_address"
+                                    value="Donator Address"
+                                />
+                                <TextInput
+                                    id="donator_address"
+                                    type="text"
+                                    v-model="form.donator_address"
+                                    class="mt-1 block w-full"
+                                    :disabled="fieldsLocked"
+                                />
+                                <InputError
+                                    :message="form.errors.donator_address"
+                                    class="mt-1"
+                                />
+                            </div>
 
-                        <InputError
-                            :message="form.errors.donator_name"
-                            class="mt-1"
-                        />
-
-                        <!-- Donator Address -->
-                        <InputLabel
-                            for="donator_address"
-                            value="Donator Address"
-                            class="mt-3"
-                        />
-
-                        <TextInput
-                            id="donator_address"
-                            type="text"
-                            v-model="form.donator_address"
-                            class="mt-1 block w-full"
-                            :disabled="fieldsLocked"
-                        />
-
-                        <InputError
-                            :message="form.errors.donator_address"
-                            class="mt-1"
-                        />
-
-                        <!-- Donator Phone -->
-                        <InputLabel
-                            for="donator_phone"
-                            value="Donator Phone"
-                            class="mt-3"
-                        />
-
-                        <TextInput
-                            id="donator_phone"
-                            type="text"
-                            v-model="form.donator_phone"
-                            class="mt-1 block w-full"
-                        />
-
-                        <InputError
-                            :message="form.errors.donator_phone"
-                            class="mt-1"
-                        />
-
-                        <p class="text-xs text-gray-500 mt-2">
-                            Donation / contribution amount. Receipt format will
-                            be different.
-                        </p>
+                            <div>
+                                <InputLabel
+                                    for="donator_phone"
+                                    value="Donator Phone"
+                                />
+                                <TextInput
+                                    id="donator_phone"
+                                    type="text"
+                                    v-model="form.donator_phone"
+                                    class="mt-1 block w-full"
+                                    :disabled="fieldsLocked"
+                                />
+                                <InputError
+                                    :message="form.errors.donator_phone"
+                                    class="mt-1"
+                                />
+                            </div>
+                        </div>
                     </div>
 
                     <!-- ─── Common: Due Date + Late Fee ─── -->

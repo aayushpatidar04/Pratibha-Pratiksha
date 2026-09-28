@@ -1239,17 +1239,21 @@ class BillingController extends Controller
 
         $validated = $request->validate([
             'invoice_for' => [
-                'required',
-                Rule::in(['resident', 'application']),
+                'nullable',
+                Rule::in(['resident', 'application', 'donation']),
             ],
+
             'resident_id' => [
                 'nullable',
                 'required_if:invoice_for,resident',
+                'prohibited_if:invoice_for,donation',
                 'exists:residents,id',
             ],
+
             'application_id' => [
                 'nullable',
                 'required_if:invoice_for,application',
+                'prohibited_if:invoice_for,donation',
                 'exists:registration_applications,id',
             ],
             'stay_id' => [
@@ -1267,11 +1271,21 @@ class BillingController extends Controller
             'registration_amount' => ['nullable', 'numeric', 'min:0'],
             'short_stay_amount' => ['nullable', 'numeric', 'min:0'],
 
-            'donation_amount' => [
+            // Donation — multi-item
+            'donation_items' => [
                 'nullable',
+                'array',
+                'min:1',
+            ],
+            'donation_items.*.description' => [
+                'required',
+                'string',
+                'max:255',
+            ],
+            'donation_items.*.amount' => [
+                'required',
                 'numeric',
-                'min:0',
-                'required_if:fee_type,donation',
+                'min:0.01',
             ],
 
             'donator_name' => [
@@ -1301,17 +1315,20 @@ class BillingController extends Controller
             'late_fee_per_day' => ['nullable', 'numeric', 'min:0'],
         ]);
 
-        // ── Resolve owner ─────────────────────────────────────────────
-        $residentId = $validated['invoice_for'] === 'resident'
-            ? $validated['resident_id']
+        $feeType = $invoice->fee_type;
+        $invoiceFor = $validated['invoice_for'] ?? 'resident';
+
+        $residentId = ($invoiceFor === 'resident')
+            ? ($validated['resident_id'] ?? null)
             : null;
 
-        $applicationId = $validated['invoice_for'] === 'application'
-            ? $validated['application_id']
+        $applicationId = ($invoiceFor === 'application')
+            ? ($validated['application_id'] ?? null)
             : null;
 
         $stayId = null;
-        if ($validated['invoice_for'] === 'resident') {
+
+        if ($invoiceFor === 'resident' && $residentId) {
             $stayId = $validated['stay_id'] ?? ResidentStay::where(
                 'resident_id',
                 $residentId
@@ -1321,7 +1338,6 @@ class BillingController extends Controller
         }
 
         // ── Compute new total + items from fee-type-appropriate fields ─
-        $feeType = $invoice->fee_type;
         $totalAmount = 0;
         $itemsToCreate = [];
 
@@ -1402,16 +1418,22 @@ class BillingController extends Controller
                 ];
             }
         } elseif ($feeType === 'donation') {
-            $totalAmount = (float) ($validated['donation_amount'] ?? 0);
+            $donationItems = $validated['donation_items'] ?? [];
 
-            if ($totalAmount > 0) {
-                $itemsToCreate[] = [
-                    'item_type' => 'donation',
-                    'amenity_type' => null,
-                    'title' => 'Donation / Contribution',
-                    'amount' => $totalAmount,
-                    'is_late_fee' => false,
-                ];
+            foreach ($donationItems as $dItem) {
+                $desc = trim((string) ($dItem['description'] ?? ''));
+                $amt  = (float) ($dItem['amount'] ?? 0);
+
+                if ($amt > 0 && $desc !== '') {
+                    $itemsToCreate[] = [
+                        'item_type' => 'donation',
+                        'amenity_type' => null,
+                        'title' => $desc,
+                        'amount' => $amt,
+                        'is_late_fee' => false,
+                    ];
+                    $totalAmount += $amt;
+                }
             }
         }
 
