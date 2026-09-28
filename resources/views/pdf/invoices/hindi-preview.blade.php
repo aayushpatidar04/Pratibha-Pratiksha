@@ -391,6 +391,11 @@
         );
 
         $fileName = $invoice->invoice_number . '-hindi.pdf';
+
+        $refundPayment = $invoice->payments
+            ->where('is_refund', true)
+            ->sortByDesc('payment_date')
+            ->first();
     @endphp
 
     <div class="preview-toolbar">
@@ -704,6 +709,38 @@
                             {{ $payment?->transaction_id ?? '-' }}
                         </td>
                     </tr>
+
+                    @if ($refundPayment)
+                        <tr>
+                            <td colspan="4" style="border-top: 1px dashed #000; padding-top: 3px; margin-top: 3px; font-weight: bold; color: #15803d; text-align: center;">
+                                रिफंड भुगतान विवरण
+                            </td>
+                        </tr>
+                        <tr>
+                            <td >रिफंड माध्यम</td>
+                            <td>
+                                : {{ ucwords(str_replace('_', ' ', $refundPayment->payment_mode)) }}
+                            </td>
+                            <td>रिफंड दिनांक</td>
+                            <td>
+                                : {{ \Carbon\Carbon::parse($refundPayment->payment_date)->format('d-m-Y') }}
+                            </td>
+                        </tr>
+                        <tr>
+                        </tr>
+                        <tr>
+                            <td>रिफंड रसीद क्रमांक</td>
+                            <td>
+                                : {{ $refundPayment->receipt_number ?? '-' }}
+                            </td>
+                            <td>ट्रांजेक्शन आईडी</td>
+                            <td>
+                                : {{ $refundPayment->transaction_id ?: '-' }}
+                            </td>
+                        </tr>
+                        <tr>
+                        </tr>
+                    @endif
                 </table>
             </div>
 

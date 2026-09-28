@@ -1035,26 +1035,24 @@ class BillingController extends Controller
          */
         $feeType = $validated['fee_type'] ?? 'hostel_fee';
         $invoiceFor = $validated['invoice_for'] ?? 'resident';
-        $skipOwner = $feeType === 'donation' || $invoiceFor === 'donation';
 
-        $residentId = $skipOwner
-            ? null
-            : ($invoiceFor === 'resident'
-                ? $validated['resident_id']
-                : null);
+        $residentId = ($invoiceFor === 'resident')
+            ? ($validated['resident_id'] ?? null)
+            : null;
 
-        $applicationId = $skipOwner
-            ? null
-            : ($invoiceFor === 'application'
-                ? $validated['application_id']
-                : null);
+        $applicationId = ($invoiceFor === 'application')
+            ? ($validated['application_id'] ?? null)
+            : null;
 
-        /*
-         * Stay is only relevant for an existing resident.
-         */
+        // Donation may optionally be linked to a resident or application;
+        // it is also allowed to stand alone (no resident/application).
+        $skipOwner = $feeType === 'donation'
+            && blank($residentId)
+            && blank($applicationId);
+
         $stayId = null;
 
-        if (!$skipOwner && $validated['invoice_for'] === 'resident') {
+        if (!$skipOwner && $invoiceFor === 'resident' && $residentId) {
             $stayId = $validated['stay_id'] ?? ResidentStay::where(
                 'resident_id',
                 $residentId

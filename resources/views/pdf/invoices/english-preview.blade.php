@@ -372,6 +372,11 @@
         );
 
         $fileName = $invoice->invoice_number . '-english.pdf';
+
+        $refundPayment = $invoice->payments
+            ->where('is_refund', true)
+            ->sortByDesc('payment_date')
+            ->first();
     @endphp
 
     <div class="preview-toolbar">
@@ -685,6 +690,41 @@
                     </tr>
                 </table>
             </div>
+            
+            @if ($refundPayment)
+                <div class="payment-box" style="margin-top: 4px; border-color: #15803d;">
+                    <table class="payment-table">
+                        <tr>
+                            <td colspan="4" style="text-align: center; font-weight: 700; font-size: 10px; color: #15803d; padding-bottom: 2px;">
+                                REFUND PAYMENT
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="info-label">Refund Mode</td>
+                            <td class="info-value">
+                                {{ ucwords(str_replace('_', ' ', $refundPayment->payment_mode)) }}
+                            </td>
+
+                            <td class="info-label">Refund Date</td>
+                            <td class="info-value">
+                                {{ \Carbon\Carbon::parse($refundPayment->payment_date)->format('d-m-Y') }}
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td class="info-label">Refund Receipt No.</td>
+                            <td class="info-value">
+                                {{ $refundPayment->receipt_number ?? '-' }}
+                            </td>
+
+                            <td class="info-label">Transaction ID</td>
+                            <td class="info-value">
+                                {{ $refundPayment->transaction_id ?: '-' }}
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            @endif
 
             <div class="summary">
                 <table>

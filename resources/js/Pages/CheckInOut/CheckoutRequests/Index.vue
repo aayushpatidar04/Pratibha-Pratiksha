@@ -42,9 +42,7 @@ const props = defineProps({
     policy: Object,
 });
 
-const {
-    can,
-} = usePermissions();
+const { can } = usePermissions();
 
 const search = ref(props.filters.search || "");
 const status = ref(props.filters.status || "");
@@ -397,56 +395,39 @@ const humanize = (value) =>
         .replace(/\b\w/g, (character) => character.toUpperCase());
 
 const refundModalOpen = ref(false);
-
 const refundLoading = ref(false);
-
 const refundSubmitting = ref(false);
-
 const refundRequest = ref(null);
-
 const refundDetails = ref(null);
-
 const refundTransactionId = ref("");
-
 const refundNotes = ref("");
+const refundProofs = ref([]);
 
 const canRefundSecurityDeposit = computed(() =>
-    can(
-        "billing",
-        "refund_security_deposit",
-    ),
+    can("billing", "refund_security_deposit"),
 );
 
 const openRefundModal = async (checkoutRequest) => {
-    refundRequest.value =
-        checkoutRequest;
-
+    refundRequest.value = checkoutRequest;
     refundModalOpen.value = true;
-
     refundLoading.value = true;
-
     refundDetails.value = null;
-
     refundTransactionId.value = "";
-
     refundNotes.value = "";
+    refundProofs.value = [];
 
     try {
-        const response =
-            await axios.get(
-                route(
-                    "checkout-requests.security-deposit.refund-details",
-                    checkoutRequest.id,
-                ),
-            );
-        refundDetails.value =
-            response.data;
+        const response = await axios.get(
+            route(
+                "checkout-requests.security-deposit.refund-details",
+                checkoutRequest.id,
+            ),
+        );
+        refundDetails.value = response.data;
     } catch (error) {
         refundModalOpen.value = false;
-
         alert(
-            error?.response?.data?.message ||
-                "Unable to load refund details.",
+            error?.response?.data?.message || "Unable to load refund details.",
         );
     } finally {
         refundLoading.value = false;
@@ -454,43 +435,42 @@ const openRefundModal = async (checkoutRequest) => {
 };
 
 const submitSecurityDepositRefund = () => {
-    if (!refundRequest.value) {
-        return;
-    }
-
-    if (!refundTransactionId.value.trim()) {
-        return;
-    }
+    if (!refundRequest.value) return;
+    if (!refundTransactionId.value.trim()) return;
 
     refundSubmitting.value = true;
+
+    const formData = new FormData();
+    formData.append("refund_transaction_id", refundTransactionId.value.trim());
+    if (refundNotes.value) {
+        formData.append("refund_notes", refundNotes.value);
+    }
+    refundProofs.value.forEach((file) => {
+        formData.append("proofs[]", file);
+    });
 
     router.post(
         route(
             "checkout-requests.security-deposit.refund",
             refundRequest.value.id,
         ),
-        {
-            refund_transaction_id:
-                refundTransactionId.value.trim(),
-
-            refund_notes:
-                refundNotes.value || null,
-        },
+        formData,
         {
             preserveScroll: true,
-
-            onSuccess: () => {
+            onSuccess: (page) => {
                 refundModalOpen.value = false;
-
                 refundRequest.value = null;
-
                 refundDetails.value = null;
-
                 refundTransactionId.value = "";
-
                 refundNotes.value = "";
-            },
+                refundProofs.value = [];
 
+                // Auto-open refund receipt in a new tab if present
+                const receiptUrl = page.props?.flash?.refund_receipt_url;
+                if (receiptUrl) {
+                    window.open(receiptUrl, "_blank");
+                }
+            },
             onFinish: () => {
                 refundSubmitting.value = false;
             },
@@ -769,13 +749,9 @@ const submitSecurityDepositRefund = () => {
                             <div class="flex flex-wrap gap-2 xl:justify-end">
                                 <Link
                                     :href="
-                                        route(
-                                            'checkout-requests.show',
-                                            {
-                                                checkoutRequest:
-                                                    request.id,
-                                            },
-                                        )
+                                        route('checkout-requests.show', {
+                                            checkoutRequest: request.id,
+                                        })
                                     "
                                     class="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
                                 >
@@ -838,12 +814,15 @@ const submitSecurityDepositRefund = () => {
                                 </button>
 
                                 <button
-                                    v-if="canRefundSecurityDeposit && request.status === 'completed' && request.security_deposit?.refund_status != 'refunded'"
+                                    v-if="
+                                        canRefundSecurityDeposit &&
+                                        request.status === 'completed' &&
+                                        request.security_deposit
+                                            ?.refund_status != 'refunded'
+                                    "
                                     type="button"
                                     class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
-                                    @click="
-                                        openRefundModal(request)
-                                    "
+                                    @click="openRefundModal(request)"
                                 >
                                     <WalletCards class="h-4 w-4" />
 
@@ -1312,60 +1291,43 @@ const submitSecurityDepositRefund = () => {
                 <div
                     class="border-b border-slate-200 bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-5 text-white"
                 >
-                    <div
-                        class="flex items-start justify-between gap-4"
-                    >
+                    <div class="flex items-start justify-between gap-4">
                         <div>
-                            <h2
-                                class="text-xl font-bold"
-                            >
+                            <h2 class="text-xl font-bold">
                                 Security Deposit Refund
                             </h2>
 
-                            <p
-                                class="mt-1 text-sm text-emerald-50"
-                            >
-                                Review the complete deduction
-                                and refund calculation before
-                                confirming.
+                            <p class="mt-1 text-sm text-emerald-50">
+                                Review the complete deduction and refund
+                                calculation before confirming.
                             </p>
                         </div>
 
                         <button
                             type="button"
                             class="rounded-lg p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
-                            @click="
-                                refundModalOpen = false
-                            "
+                            @click="refundModalOpen = false"
                         >
                             <X class="h-5 w-5" />
                         </button>
                     </div>
                 </div>
 
-                <div
-                    class="max-h-[75vh] overflow-y-auto p-6"
-                >
+                <div class="max-h-[75vh] overflow-y-auto p-6">
                     <div
                         v-if="refundLoading"
                         class="flex items-center justify-center py-12"
                     >
-                        <div
-                            class="text-sm font-medium text-slate-500"
-                        >
+                        <div class="text-sm font-medium text-slate-500">
                             Loading refund details...
                         </div>
                     </div>
 
-                    <template
-                        v-else-if="refundDetails"
-                    >
+                    <template v-else-if="refundDetails">
                         <div
                             class="rounded-xl border border-slate-200 bg-slate-50 p-4"
                         >
-                            <div
-                                class="flex items-center justify-between"
-                            >
+                            <div class="flex items-center justify-between">
                                 <div>
                                     <p
                                         class="text-sm font-medium text-slate-500"
@@ -1387,15 +1349,11 @@ const submitSecurityDepositRefund = () => {
                                 <div
                                     class="rounded-xl bg-white px-3 py-2 text-right shadow-sm"
                                 >
-                                    <p
-                                        class="text-xs text-slate-500"
-                                    >
+                                    <p class="text-xs text-slate-500">
                                         Invoice
                                     </p>
 
-                                    <p
-                                        class="text-sm font-bold text-slate-900"
-                                    >
+                                    <p class="text-sm font-bold text-slate-900">
                                         {{
                                             refundDetails.invoice
                                                 ?.invoice_number
@@ -1406,9 +1364,7 @@ const submitSecurityDepositRefund = () => {
                         </div>
 
                         <div class="mt-5">
-                            <h3
-                                class="text-sm font-bold text-slate-900"
-                            >
+                            <h3 class="text-sm font-bold text-slate-900">
                                 Checkout Deductions
                             </h3>
 
@@ -1418,9 +1374,7 @@ const submitSecurityDepositRefund = () => {
                                 <div
                                     class="flex items-center justify-between px-4 py-3"
                                 >
-                                    <span
-                                        class="text-sm text-slate-600"
-                                    >
+                                    <span class="text-sm text-slate-600">
                                         Short Notice Charge
                                     </span>
 
@@ -1438,9 +1392,7 @@ const submitSecurityDepositRefund = () => {
                                 <div
                                     class="flex items-center justify-between px-4 py-3"
                                 >
-                                    <span
-                                        class="text-sm text-slate-600"
-                                    >
+                                    <span class="text-sm text-slate-600">
                                         Asset Damage Charge
                                     </span>
 
@@ -1458,9 +1410,7 @@ const submitSecurityDepositRefund = () => {
                                 <div
                                     class="flex items-center justify-between px-4 py-3"
                                 >
-                                    <span
-                                        class="text-sm text-slate-600"
-                                    >
+                                    <span class="text-sm text-slate-600">
                                         Outstanding Dues
                                     </span>
 
@@ -1478,9 +1428,7 @@ const submitSecurityDepositRefund = () => {
                                 <div
                                     class="flex items-center justify-between px-4 py-3"
                                 >
-                                    <span
-                                        class="text-sm text-slate-600"
-                                    >
+                                    <span class="text-sm text-slate-600">
                                         Other Checkout Charges
                                     </span>
 
@@ -1541,9 +1489,7 @@ const submitSecurityDepositRefund = () => {
                                     </p>
                                 </div>
 
-                                <WalletCards
-                                    class="h-8 w-8 text-emerald-600"
-                                />
+                                <WalletCards class="h-8 w-8 text-emerald-600" />
                             </div>
                         </div>
 
@@ -1553,15 +1499,11 @@ const submitSecurityDepositRefund = () => {
                                     class="mb-1.5 block text-sm font-semibold text-slate-700"
                                 >
                                     Refund Transaction ID
-                                    <span class="text-red-500">
-                                        *
-                                    </span>
+                                    <span class="text-red-500"> * </span>
                                 </label>
 
                                 <input
-                                    v-model="
-                                        refundTransactionId
-                                    "
+                                    v-model="refundTransactionId"
                                     type="text"
                                     maxlength="150"
                                     placeholder="Enter bank / UPI / transaction reference"
@@ -1577,38 +1519,58 @@ const submitSecurityDepositRefund = () => {
                                 </label>
 
                                 <textarea
-                                    v-model="
-                                        refundNotes
-                                    "
+                                    v-model="refundNotes"
                                     rows="3"
                                     maxlength="2000"
                                     placeholder="Optional refund notes..."
                                     class="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
                                 />
                             </div>
+
+                            <div>
+                                <label
+                                    class="mb-1.5 block text-sm font-semibold text-slate-700"
+                                >
+                                    Refund Proof (Optional)
+                                </label>
+
+                                <input
+                                    type="file"
+                                    multiple
+                                    accept="image/*"
+                                    @change="
+                                        (e) =>
+                                            (refundProofs = Array.from(
+                                                e.target.files,
+                                            ))
+                                    "
+                                    class="w-full rounded-xl border border-slate-300 px-4 py-2 text-sm"
+                                />
+
+                                <p
+                                    v-if="refundProofs.length"
+                                    class="mt-1 text-xs text-slate-600"
+                                >
+                                    {{ refundProofs.length }} file(s) attached
+                                </p>
+                            </div>
                         </div>
 
                         <div
                             class="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800"
                         >
-                            <strong>
-                                Please verify before confirming.
-                            </strong>
+                            <strong> Please verify before confirming. </strong>
 
-                            The refund amount is calculated by
-                            the system from the security deposit
-                            and finalized checkout deductions.
+                            The refund amount is calculated by the system from
+                            the security deposit and finalized checkout
+                            deductions.
                         </div>
 
-                        <div
-                            class="mt-6 flex justify-end gap-3"
-                        >
+                        <div class="mt-6 flex justify-end gap-3">
                             <button
                                 type="button"
                                 class="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-                                @click="
-                                    refundModalOpen = false
-                                "
+                                @click="refundModalOpen = false"
                             >
                                 Cancel
                             </button>
@@ -1618,14 +1580,10 @@ const submitSecurityDepositRefund = () => {
                                 :disabled="
                                     refundSubmitting ||
                                     !refundTransactionId.trim() ||
-                                    Number(
-                                        refundDetails.refund_amount,
-                                    ) <= 0
+                                    Number(refundDetails.refund_amount) <= 0
                                 "
                                 class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
-                                @click="
-                                    submitSecurityDepositRefund
-                                "
+                                @click="submitSecurityDepositRefund"
                             >
                                 <Loader2
                                     v-if="refundSubmitting"

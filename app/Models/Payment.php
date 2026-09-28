@@ -22,7 +22,8 @@ class Payment extends Model
         'transaction_id',
         'payment_date',
         'notes',
-        'receipt_number'
+        'receipt_number',
+        'is_refund',
     ];
 
     public $timestamps = false;

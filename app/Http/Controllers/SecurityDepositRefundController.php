@@ -16,57 +16,30 @@ class SecurityDepositRefundController extends Controller
         CheckoutRequest $checkoutRequest,
         SecurityDepositRefundService $refundService
     ): JsonResponse {
-        $details = $refundService->getRefundDetails(
-            $checkoutRequest
-        );
+        $details = $refundService->getRefundDetails($checkoutRequest);
 
         $invoice = $details['invoice'];
 
         return response()->json([
-            'checkout_request_id' =>
-                $checkoutRequest->id,
-
+            'checkout_request_id' => $checkoutRequest->id,
             'invoice' => [
                 'id' => $invoice->id,
-                'invoice_number' =>
-                    $invoice->invoice_number,
-                'amount' =>
-                    (float) $invoice->amount,
-                'refund_status' =>
-                    $invoice->refund_status,
-                'refund_amount' =>
-                    (float) $invoice->refund_amount,
-                'refunded_at' =>
-                    $invoice->refunded_at,
-                'refund_transaction_id' =>
-                    $invoice->refund_transaction_id,
-                'refund_notes' =>
-                    $invoice->refund_notes,
+                'invoice_number' => $invoice->invoice_number,
+                'amount' => (float) $invoice->amount,
+                'refund_status' => $invoice->refund_status,
+                'refund_amount' => (float) $invoice->refund_amount,
+                'refunded_at' => $invoice->refunded_at,
+                'refund_transaction_id' => $invoice->refund_transaction_id,
+                'refund_notes' => $invoice->refund_notes,
             ],
-
-            'security_deposit_amount' =>
-                $details['security_deposit_amount'],
-
-            'short_notice_charge' =>
-                $details['short_notice_charge'],
-
-            'asset_damage_charge' =>
-                $details['asset_damage_charge'],
-
-            'outstanding_dues_deduction' =>
-                $details['outstanding_dues_deduction'],
-
-            'other_checkout_charge' =>
-                $details['other_checkout_charge'],
-
-            'total_deductions' =>
-                $details['total_deductions'],
-
-            'refund_amount' =>
-                $details['refund_amount'],
-
-            'refund_status' =>
-                $details['refund_status'],
+            'security_deposit_amount' => $details['security_deposit_amount'],
+            'short_notice_charge' => $details['short_notice_charge'],
+            'asset_damage_charge' => $details['asset_damage_charge'],
+            'outstanding_dues_deduction' => $details['outstanding_dues_deduction'],
+            'other_checkout_charge' => $details['other_checkout_charge'],
+            'total_deductions' => $details['total_deductions'],
+            'refund_amount' => $details['refund_amount'],
+            'refund_status' => $details['refund_status'],
         ]);
     }
 
@@ -76,28 +49,25 @@ class SecurityDepositRefundController extends Controller
         SecurityDepositRefundService $refundService
     ): RedirectResponse {
         $validated = $request->validate([
-            'refund_transaction_id' => [
-                'required',
-                'string',
-                'max:150',
-            ],
-
-            'refund_notes' => [
-                'nullable',
-                'string',
-                'max:2000',
-            ],
+            'refund_transaction_id' => ['required', 'string', 'max:150'],
+            'refund_notes' => ['nullable', 'string', 'max:2000'],
+            'proofs' => ['nullable', 'array'],
+            'proofs.*' => ['image', 'max:5120'],
         ]);
 
-        $refundService->refund(
+        $invoice = $refundService->refund(
             $checkoutRequest,
             $validated['refund_transaction_id'],
-            $validated['refund_notes'] ?? null
+            $validated['refund_notes'] ?? null,
+            $request->file('proofs') ?? []
         );
 
-        return back()->with(
-            'success',
-            'Security deposit refunded successfully.'
-        );
+        $refundPayment = $invoice->payments->where('is_refund', true)->last();
+
+        if ($refundPayment) {
+            session()->flash('refund_receipt_url', route('billing.payments.receipt', $refundPayment->id));
+        }
+
+        return back()->with('success', 'Security deposit refunded successfully.');
     }
 }

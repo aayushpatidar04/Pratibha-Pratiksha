@@ -322,8 +322,19 @@
             </div>
 
             <div class="receipt-title">
-                Payment Receipt
+                @if ($payment->is_refund)
+                    Refund Receipt
+                @else
+                    Payment Receipt
+                @endif
             </div>
+
+            @if ($payment->is_refund)
+                <div
+                    style="background:#fef3c7;border:1px solid #f59e0b;padding:6px;border-radius:6px;margin:4px 0;font-size:9px;text-align:center;color:#92400e;">
+                    <strong>REFUND PAYMENT</strong> — This receipt confirms a security deposit refund.
+                </div>
+            @endif
 
             <table class="info-table">
                 <tr>
@@ -376,15 +387,29 @@
             </table>
 
             <table class="amount-box">
-                <tr>
-                    <td class="amount-label bold">
-                        Amount Received
-                    </td>
+                @php
+                    $displayAmount = $payment->is_refund ? abs((float) $payment->amount) : (float) $payment->amount;
+                    $amountWordsFormatter = \NumberFormatter::create('en_IN', \NumberFormatter::SPELLOUT);
+                    $amountInWords = ucfirst(
+                        $amountWordsFormatter->format($displayAmount)
+                    );
+                @endphp
 
-                    <td class="amount-value right bold">
-                        ₹{{ number_format((float) $payment->amount, 2) }}
-                    </td>
-                </tr>
+                @if ($payment->is_refund)
+                    <tr>
+                        <td class="amount-label bold">Refunded To Resident</td>
+                        <td class="amount-value right bold">
+                            ₹{{ number_format($displayAmount, 2) }}
+                        </td>
+                    </tr>
+                @else
+                    <tr>
+                        <td class="amount-label bold">Amount Received</td>
+                        <td class="amount-value right bold">
+                            ₹{{ number_format($displayAmount, 2) }}
+                        </td>
+                    </tr>
+                @endif
 
                 <tr>
                     <td class="amount-label bold">

@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Models\CheckoutRequest;
 use App\Models\FeeInvoice;
+use App\Models\Payment;
+use App\Models\PaymentProof;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -18,7 +20,7 @@ class SecurityDepositRefundService
             ->whereNull('deleted_at')
             ->latest('id')
             ->first();
-        
+
         if (!$securityDeposit) {
             throw ValidationException::withMessages([
                 'refund' =>
@@ -100,9 +102,10 @@ class SecurityDepositRefundService
     public function refund(
         CheckoutRequest $checkoutRequest,
         string $transactionId,
-        ?string $refundNotes = null
+        ?string $refundNotes = null,
+        array $proofs = []
     ): FeeInvoice {
-        return DB::transaction(function () use ($checkoutRequest, $transactionId, $refundNotes) {
+        return DB::transaction(function () use ($checkoutRequest, $transactionId, $refundNotes, $proofs) {
             $securityDeposit = FeeInvoice::query()
                 ->where('resident_id', $checkoutRequest->resident_id)
                 ->where('fee_type', 'security_deposit')
@@ -113,56 +116,59 @@ class SecurityDepositRefundService
 
             if (!$securityDeposit) {
                 throw ValidationException::withMessages([
-                    'refund' =>
-                        'No security deposit invoice was found for this stay.',
+                    'refund' => 'No security deposit invoice was found for this stay.',
                 ]);
             }
 
-            if (
-                $securityDeposit->refund_status ===
-                'refunded'
-            ) {
+            if ($securityDeposit->refund_status === 'refunded') {
                 throw ValidationException::withMessages([
-                    'refund' =>
-                        'This security deposit has already been refunded.',
+                    'refund' => 'This security deposit has already been refunded.',
                 ]);
             }
 
-            if (
-                $checkoutRequest->status !==
-                CheckoutRequest::STATUS_COMPLETED
-            ) {
+            if ($checkoutRequest->status !== CheckoutRequest::STATUS_COMPLETED) {
                 throw ValidationException::withMessages([
-                    'refund' =>
-                        'Security deposit can only be refunded after checkout is completed.',
+                    'refund' => 'Security deposit can only be refunded after checkout is completed.',
                 ]);
             }
 
-            $details = $this->getRefundDetails(
-                $checkoutRequest
-            );
+            $details = $this->getRefundDetails($checkoutRequest);
+            $refundAmount = $details['refund_amount'];
 
-            $refundAmount =
-                $details['refund_amount'];
-
-            $securityDeposit->update([
-                'refund_status' =>
-                    'refunded',
-
-                'refund_amount' =>
-                    $refundAmount,
-
-                'refunded_at' =>
-                    now(),
-
-                'refund_transaction_id' =>
-                    $transactionId,
-
-                'refund_notes' =>
-                    $refundNotes,
+            // Create a refund Payment record (negative amount, flagged as refund)
+            $payment = Payment::create([
+                'invoice_id' => $securityDeposit->id,
+                'resident_id' => $securityDeposit->resident_id,
+                'application_id' => $securityDeposit->application_id,
+                'amount' => -abs($refundAmount),
+                'payment_mode' => 'bank_transfer',
+                'transaction_id' => $transactionId,
+                'payment_date' => now()->toDateString(),
+                'notes' => $refundNotes,
+                'receipt_number' => 'RCPT-' . now()->format('Ymd') . '-' . str_pad((string) (Payment::count() + 1), 5, '0', STR_PAD_LEFT),
+                'is_refund' => true,
             ]);
 
-            return $securityDeposit->fresh();
+            // Attach proof uploads
+            foreach ($proofs as $file) {
+                $path = $file->store('payment_proofs', 'public');
+                PaymentProof::create([
+                    'payment_id' => $payment->id,
+                    'file_path' => $path,
+                    'file_type' => $file->getClientOriginalExtension(),
+                    'original_name' => $file->getClientOriginalName(),
+                ]);
+            }
+
+            $securityDeposit->update([
+                'refund_status' => 'refunded',
+                'refund_amount' => $refundAmount,
+                'refunded_at' => now(),
+                'refund_transaction_id' => $transactionId,
+                'refund_notes' => $refundNotes,
+            ]);
+
+            return $securityDeposit->fresh()->load('payments.proofs');
         });
     }
 }
