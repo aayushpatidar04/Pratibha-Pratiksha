@@ -38,7 +38,7 @@
             background: #eef1f5;
             color: #111;
             font-family: "Aparajita", "Nirmala UI", "Mangal", serif;
-            font-size: 13px;
+            font-size: 10px;
             line-height: 1.25;
         }
 
@@ -77,7 +77,7 @@
             padding: 9px 16px;
 
             color: #fff;
-            font-size: 13px;
+            font-size: 10px;
             font-weight: 600;
 
             cursor: pointer;
@@ -106,7 +106,7 @@
 
         .preview-message {
             color: #4b5563;
-            font-size: 12px;
+            font-size: 9px;
         }
 
         /* -------------------------
@@ -172,7 +172,7 @@
         }
 
         .subtitle {
-            font-size: 9px;
+            font-size: 10px;
             font-weight: 700;
             line-height: 1.15;
             margin-top: 0.5mm;
@@ -212,7 +212,7 @@
         .donor-value {
             width: 75%;
             border-bottom: 0.7px solid #222;
-            font-size: 10.5px;
+            font-size: 13.5px;
             padding-left: 1.5mm !important;
             min-height: 5mm;
             overflow-wrap: anywhere;
@@ -255,7 +255,7 @@
         .donation-table th {
             height: 7mm;
             text-align: center;
-            font-size: 10.5px;
+            font-size: 12.5px;
             font-weight: 700;
             padding: 1mm;
         }
@@ -263,7 +263,7 @@
         .donation-table td {
             min-height: 7mm;
             height: 7mm;
-            font-size: 10px;
+            font-size: 12px;
             padding: 1.2mm 1.5mm;
             vertical-align: middle;
             overflow-wrap: anywhere;
@@ -336,14 +336,19 @@
 
         .payment-label {
             width: 22%;
-            font-size: 9.5px;
+            font-size: 10.5px;
             font-weight: 700;
             white-space: nowrap;
         }
 
         .payment-value {
             border-bottom: 0.7px solid #222;
-            font-size: 9.5px;
+            font-size: 10.5px;
+            overflow-wrap: anywhere;
+        }
+
+        .payment-value2 {
+            font-size: 10.5px;
             overflow-wrap: anywhere;
         }
 
@@ -378,7 +383,7 @@
             border: 0;
             padding: 0;
             vertical-align: middle;
-            font-size: 10px;
+            font-size: 9px;
             font-weight: 700;
         }
 
@@ -806,11 +811,11 @@
                         <tr>
 
                             <td class="payment-label">
-                                ट्रांजेक्शन आईडी:
+                                ट्रांजेक्शन आईडी: 
                             </td>
 
-                            <td class="payment-value" colspan="3">
-                                {{ $transactionId }}
+                            <td class="payment-value2" colspan="3">
+                                &nbsp;&nbsp;&nbsp;{{ $transactionId }}
                             </td>
 
                         </tr>
@@ -846,8 +851,7 @@
                         </td>
 
                         <td class="signature">
-                            <br>    
-                            <span class="signature-line"></span>
+                            <br>
                             प्राप्तकर्ता हस्ताक्षर<br>
                             @if ($invoice->status === 'paid')
                                 <img src="/assets/images/PAID.jpeg" style="width: auto; height: 50px;" alt="PAID">
