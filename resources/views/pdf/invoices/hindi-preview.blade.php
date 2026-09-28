@@ -47,7 +47,7 @@
             background: var(--background);
             color: #111;
             font-family: "Aparajita", "Nirmala UI", "Mangal", serif;
-            font-size: 11px;
+            font-size: 14px;
             line-height: 1.3;
         }
 
@@ -75,7 +75,7 @@
             border-radius: 7px;
             padding: 9px 16px;
             color: #fff;
-            font-size: 13px;
+            font-size: 16px;
             font-weight: 600;
             cursor: pointer;
             transition: background-color 0.15s ease;
@@ -104,7 +104,7 @@
 
         .preview-message {
             color: #4b5563;
-            font-size: 12px;
+            font-size: 15px;
         }
 
         .receipt-wrapper {
@@ -139,14 +139,14 @@
         }
 
         .title {
-            font-size: 17px;
+            font-size: 20px;
             font-weight: 700;
             line-height: 1.15;
         }
 
         .subtitle {
             margin-top: 2px;
-            font-size: 10.5px;
+            font-size: 13.5px;
             line-height: 1.35;
             text-align: center;
         }
@@ -156,7 +156,7 @@
             padding: 3px 0;
             border-top: 1px solid var(--border);
             border-bottom: 1px solid var(--border);
-            font-size: 13px;
+            font-size: 16px;
             font-weight: 700;
             text-align: center;
         }
@@ -196,7 +196,7 @@
             border: 1px solid var(--border);
             padding: 2.5px 3px;
             vertical-align: top;
-            font-size: 10.5px;
+            font-size: 13.5px;
         }
 
         .items-table th {
@@ -218,7 +218,7 @@
 
         .muted {
             color: var(--muted);
-            font-size: 9px;
+            font-size: 12px;
         }
 
         .payment-box {
@@ -239,7 +239,7 @@
 
         .summary {
             margin-top: 5px;
-            font-size: 10px;
+            font-size: 13px;
         }
 
         .summary p {
@@ -255,7 +255,7 @@
             border: 0;
             padding: 0;
             vertical-align: bottom;
-            font-size: 9px;
+            font-size: 12px;
         }
 
         .footer-note {
@@ -763,7 +763,7 @@
                     (float) $invoice->late_fee_amount > 0 &&
                     !$invoice->late_fee_waived
                 )
-                <p style="font-size:10px; margin-top:6px;">
+                <p style="font-size:13px; margin-top:6px;">
                     <strong>नोट:</strong>
                     यदि भुगतान
                     {{ optional($invoice->due_date)->format('d-m-Y') }}

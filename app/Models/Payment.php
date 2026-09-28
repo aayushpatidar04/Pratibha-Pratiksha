@@ -37,30 +37,37 @@ class Payment extends Model
 
     protected static function booted(): void
     {
-        static::creating(function (Payment $invoice) {
-            if (blank($invoice->resident_id) && blank($invoice->application_id)) {
+        static::creating(function (Payment $payment) {
+            if (blank($payment->resident_id) && blank($payment->application_id)) {
+                if ($payment->invoice?->fee_type === 'donation') {
+                    return;
+                }
+
                 throw ValidationException::withMessages([
-                    'resident_id' => 'Either resident or application must be associated with the invoice.',
+                    'resident_id' => 'Either resident or application must be associated with the payment.',
                 ]);
             }
         });
 
-        static::updating(function (Payment $invoice) {
-            $residentId = $invoice->resident_id;
-            $applicationId = $invoice->application_id;
+        static::updating(function (Payment $payment) {
+            $residentId = $payment->resident_id;
+            $applicationId = $payment->application_id;
 
-            // Handle attributes being changed in this update
-            if ($invoice->isDirty('resident_id')) {
-                $residentId = $invoice->getAttribute('resident_id');
+            if ($payment->isDirty('resident_id')) {
+                $residentId = $payment->getAttribute('resident_id');
             }
 
-            if ($invoice->isDirty('application_id')) {
-                $applicationId = $invoice->getAttribute('application_id');
+            if ($payment->isDirty('application_id')) {
+                $applicationId = $payment->getAttribute('application_id');
             }
 
             if (blank($residentId) && blank($applicationId)) {
+                if ($payment->invoice?->fee_type === 'donation') {
+                    return;
+                }
+
                 throw ValidationException::withMessages([
-                    'resident_id' => 'Either resident or application must be associated with the invoice.',
+                    'resident_id' => 'Either resident or application must be associated with the payment.',
                 ]);
             }
         });

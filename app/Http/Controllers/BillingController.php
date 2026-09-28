@@ -887,19 +887,21 @@ class BillingController extends Controller
     {
         $validated = $request->validate([
             'invoice_for' => [
-                'required',
-                Rule::in(['resident', 'application']),
+                'nullable',
+                Rule::in(['resident', 'application', 'donation']),
             ],
 
             'resident_id' => [
                 'nullable',
                 'required_if:invoice_for,resident',
+                'prohibited_if:invoice_for,donation',
                 'exists:residents,id',
             ],
 
             'application_id' => [
                 'nullable',
                 'required_if:invoice_for,application',
+                'prohibited_if:invoice_for,donation',
                 'exists:registration_applications,id',
             ],
 
@@ -948,14 +950,73 @@ class BillingController extends Controller
                 'min:0',
             ],
 
-            'fee_type' => 'required|in:hostel_fee,security_deposit,registration_fee,donation,short_stay',
-            'deposit_amount' => 'nullable',
-            'registration_amount' => 'nullable',
-            'short_stay_amount' => 'nullable',
-            'donation_amount' => 'nullable|required_if:fee_type,donation',
-            'donator_name' => 'nullable|string|max:255|required_if:fee_type,donation',
-            'donator_address' => 'nullable|string|max:500|required_if:fee_type,donation',
-            'donator_phone' => 'nullable|string|max:20|required_if:fee_type,donation',
+            'fee_type' => [
+                'required',
+                Rule::in([
+                    'hostel_fee',
+                    'security_deposit',
+                    'registration_fee',
+                    'short_stay',
+                    'donation',
+                ])
+            ],
+
+            'deposit_amount' => [
+                'nullable',
+                'numeric',
+                'min:0.01',
+                'required_if:fee_type,security_deposit',
+            ],
+
+            'registration_amount' => [
+                'nullable',
+                'numeric',
+                'min:0.01',
+                'required_if:fee_type,registration_fee',
+            ],
+
+            'short_stay_amount' => [
+                'nullable',
+                'numeric',
+                'min:0.01',
+                'required_if:fee_type,short_stay',
+            ],
+
+            'donator_name' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'donator_address' => [
+                'nullable',
+                'string',
+                'max:500',
+            ],
+
+            'donator_phone' => [
+                'nullable',
+                'string',
+                'max:20',
+            ],
+
+            'donation_items' => [
+                'nullable',
+                'array',
+                'min:1',
+            ],
+
+            'donation_items.*.description' => [
+                'required',
+                'string',
+                'max:255',
+            ],
+
+            'donation_items.*.amount' => [
+                'required',
+                'numeric',
+                'min:0.01',
+            ],
         ]);
 
         /*
@@ -969,42 +1030,42 @@ class BillingController extends Controller
          *   resident_id = null
          *   application_id = selected application
          */
-        $residentId = $validated['invoice_for'] === 'resident'
-            ? $validated['resident_id']
-            : null;
+        /*
+         * Donation invoices have no resident or application.
+         */
+        $feeType = $validated['fee_type'] ?? 'hostel_fee';
+        $invoiceFor = $validated['invoice_for'] ?? 'resident';
+        $skipOwner = $feeType === 'donation' || $invoiceFor === 'donation';
 
-        $applicationId = $validated['invoice_for'] === 'application'
-            ? $validated['application_id']
-            : null;
+        $residentId = $skipOwner
+            ? null
+            : ($invoiceFor === 'resident'
+                ? $validated['resident_id']
+                : null);
+
+        $applicationId = $skipOwner
+            ? null
+            : ($invoiceFor === 'application'
+                ? $validated['application_id']
+                : null);
 
         /*
          * Stay is only relevant for an existing resident.
-         *
-         * A registration application does not have a resident stay yet,
-         * so no active stay lookup should happen for pre-booking invoices.
          */
         $stayId = null;
 
-        if ($validated['invoice_for'] === 'resident') {
+        if (!$skipOwner && $validated['invoice_for'] === 'resident') {
             $stayId = $validated['stay_id'] ?? ResidentStay::where(
                 'resident_id',
                 $residentId
             )
                 ->whereIn('status', ['active', 'upcoming'])
                 ->value('id');
-
-            if (!$stayId) {
-                return back()->with(
-                    'error',
-                    'No active stay found for this resident.'
-                );
-            }
         }
 
         /*
          * Build invoice items.
          */
-        $feeType = $validated['fee_type'] ?? 'hostel_fee';
         $items = [];
         $totalAmount = 0;
 
@@ -1058,15 +1119,28 @@ class BillingController extends Controller
                 ];
             }
         } elseif ($feeType === 'donation') {
-            $totalAmount = (float) ($validated['donation_amount'] ?? 0);
-            if ($totalAmount > 0) {
-                $items[] = [
-                    'item_type' => 'donation',
-                    'amenity_type' => null,
-                    'title' => 'Donation / Contribution',
-                    'amount' => $totalAmount,
-                    'is_late_fee' => false,
-                ];
+            $donationItems = $validated['donation_items'] ?? [];
+
+            foreach ($donationItems as $dItem) {
+                $desc = trim((string) ($dItem['description'] ?? ''));
+                $amt = (float) ($dItem['amount'] ?? 0);
+
+                if ($amt > 0 && $desc !== '') {
+                    $items[] = [
+                        'item_type' => 'donation',
+                        'amenity_type' => null,
+                        'title' => $desc,
+                        'amount' => $amt,
+                        'is_late_fee' => false,
+                    ];
+                    $totalAmount += $amt;
+                }
+            }
+
+            if ($totalAmount <= 0) {
+                throw ValidationException::withMessages([
+                    'donation_items' => 'Please add at least one donation item with a description and amount.',
+                ]);
             }
         }
         if (empty($items)) {

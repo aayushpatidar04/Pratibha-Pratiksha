@@ -129,7 +129,7 @@
             margin: 1.5mm auto;
             padding: 3mm 3.5mm;
             background: #fff;
-            border: 1px solid #7d3b3b;
+            border: 1.2mm solid #1e3a8a;      /* ← thick dark blue outer border */
             border-radius: 2mm;
             box-shadow: 0 5px 22px rgba(0, 0, 0, 0.15);
             position: relative;
@@ -142,12 +142,12 @@
         .receipt-page::before {
             content: "";
             position: absolute;
-            top: 1.5mm;
-            left: 1.5mm;
-            right: 1.5mm;
-            bottom: 1.5mm;
-            border: 0.7px solid #777;
-            border-radius: 1.5mm;
+            top: 0mm;
+            left: 0mm;
+            right: 0mm;
+            bottom: 0mm;
+            border: 1.2mm solid #15803d;      /* ← thick green inner border */
+            border-radius: 0.8mm;             /* ← outer radius (2mm) minus border (1.2mm) */
             pointer-events: none;
         }
 
@@ -709,26 +709,29 @@
 
                     <tbody>
 
-                        <tr>
+                        @foreach($invoice->items as $item)
 
-                            <td>
-                                {{ $donationDescription }}
-                            </td>
+                            <tr>
 
-                            <td class="amount-cell">
+                                <td>
+                                    {{ $item->title }}
+                                </td>
 
-                                <span class="rupee">
-                                    ₹
-                                </span>
+                                <td class="amount-cell">
 
-                                <span class="amount-value">
-                                    {{ number_format($donationAmount, 2) }}
-                                </span>
+                                    <span class="rupee">
+                                        ₹
+                                    </span>
 
-                            </td>
+                                    <span class="amount-value">
+                                        {{ number_format($item->amount, 2) }}
+                                    </span>
 
-                        </tr>
+                                </td>
 
+                            </tr>
+
+                        @endforeach
 
                         <tr class="total-row">
 
@@ -743,7 +746,7 @@
                                 </span>
 
                                 <span class="amount-value">
-                                    {{ number_format($donationAmount, 2) }}
+                                    {{ number_format($invoice->amount, 2) }}
                                 </span>
 
                             </td>

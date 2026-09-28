@@ -80,6 +80,10 @@ class FeeInvoice extends Model
     {
         static::creating(function (FeeInvoice $invoice) {
             if (blank($invoice->resident_id) && blank($invoice->application_id)) {
+                if ($invoice->fee_type === 'donation') {
+                    return;
+                }
+
                 throw ValidationException::withMessages([
                     'resident_id' => 'Either resident or application must be associated with the invoice.',
                 ]);
@@ -99,6 +103,10 @@ class FeeInvoice extends Model
             }
 
             if (blank($residentId) && blank($applicationId)) {
+                if ($invoice->fee_type === 'donation') {
+                    return;
+                }
+
                 throw ValidationException::withMessages([
                     'resident_id' => 'Either resident or application must be associated with the invoice.',
                 ]);
@@ -157,8 +165,8 @@ class FeeInvoice extends Model
             return (float) $this->payments
                 ->filter(
                     fn($payment) =>
-                    $payment->payment_date
-                    && $payment->payment_date->lte($this->due_date)
+                        $payment->payment_date
+                        && $payment->payment_date->lte($this->due_date)
                 )
                 ->sum('amount');
         }

@@ -118,7 +118,7 @@ const createForm = useForm({
     deposit_amount: "",
     registration_amount: "",
     short_stay_amount: "",
-    donation_amount: "",
+    donation_items: [],
     donator_name: "",
     donator_address: "",
     donator_phone: "",
@@ -128,14 +128,30 @@ const createForm = useForm({
 });
 
 const submitCreate = () => {
+    const data = {
+        ...createForm.data(),
+        fee_type: createForm.fee_type,
+        invoice_for: createForm.invoice_for,
+    };
+
+    if (createForm.invoice_for === "donation") {
+        data.resident_id = null;
+        data.application_id = null;
+    } else {
+        data.resident_id = createForm.resident_id?.id ?? createForm.resident_id;
+        data.application_id =
+            createForm.application_id?.id ?? createForm.application_id;
+    }
+
+    if (createForm.fee_type === "donation") {
+        data.donation_items = (createForm.donation_items || []).filter(
+            (i) => String(i.description || "").trim() && Number(i.amount) > 0,
+        );
+        delete data.donation_amount;
+    }
+
     createForm.post("/billing", {
-        data: {
-            ...createForm.data(),
-            fee_type: createForm.fee_type,
-            resident_id: createForm.resident_id?.id ?? createForm.resident_id,
-            application_id:
-                createForm.application_id?.id ?? createForm.application_id,
-        },
+        data,
         onSuccess: () => {
             createForm.reset();
             createOpen.value = false;
@@ -1169,12 +1185,12 @@ const updatePaymentMode = (payment) => {
                     <select
                         v-model="createForm.invoice_for"
                         class="w-full rounded-lg border-gray-300 text-sm"
-                        required
                     >
                         <option value="resident">Existing Resident</option>
                         <option value="application">
                             Pre-Booking Application
                         </option>
+                        <option value="donation">Donation (no resident)</option>
                     </select>
                 </div>
 
@@ -1253,7 +1269,10 @@ const updatePaymentMode = (payment) => {
                     </select>
                 </div>
 
-                <!-- Hostel Fee items (rent, mess, other) -->
+                <!-- ═══════════════════════════════════════════════ -->
+                <!-- HOSTEL FEE — rent, mess, other -->
+                <!-- ═══════════════════════════════════════════════ -->
+
                 <div v-if="createForm.fee_type === 'hostel_fee'">
                     <div class="grid grid-cols-2 gap-4">
                         <div>
@@ -1297,13 +1316,16 @@ const updatePaymentMode = (payment) => {
                     </div>
                 </div>
 
-                <!-- Security Deposit -->
+                <!-- ═══════════════════════════════════════════════ -->
+                <!-- SECURITY DEPOSIT -->
+                <!-- ═══════════════════════════════════════════════ -->
+
                 <div v-if="createForm.fee_type === 'security_deposit'">
                     <InputLabel value="Deposit Amount (₹)" />
                     <TextInput
                         type="number"
                         v-model="createForm.deposit_amount"
-                        min="0"
+                        min="0.01"
                         step="0.01"
                     />
                     <p class="text-xs text-gray-500 mt-1">
@@ -1312,13 +1334,16 @@ const updatePaymentMode = (payment) => {
                     <InputError :message="createForm.errors.deposit_amount" />
                 </div>
 
-                <!-- Registration Fee -->
+                <!-- ═══════════════════════════════════════════════ -->
+                <!-- REGISTRATION FEE -->
+                <!-- ═══════════════════════════════════════════════ -->
+
                 <div v-if="createForm.fee_type === 'registration_fee'">
                     <InputLabel value="Registration Fee Amount (₹)" />
                     <TextInput
                         type="number"
                         v-model="createForm.registration_amount"
-                        min="0"
+                        min="0.01"
                         step="0.01"
                     />
                     <p class="text-xs text-gray-500 mt-1">
@@ -1329,13 +1354,16 @@ const updatePaymentMode = (payment) => {
                     />
                 </div>
 
-                <!-- Short Stay -->
+                <!-- ═══════════════════════════════════════════════ -->
+                <!-- SHORT STAY -->
+                <!-- ═══════════════════════════════════════════════ -->
+
                 <div v-if="createForm.fee_type === 'short_stay'">
                     <InputLabel value="Short Stay Amount (₹)" />
                     <TextInput
                         type="number"
                         v-model="createForm.short_stay_amount"
-                        min="0"
+                        min="0.01"
                         step="0.01"
                     />
                     <p class="text-xs text-gray-500 mt-1">
@@ -1346,45 +1374,90 @@ const updatePaymentMode = (payment) => {
                     />
                 </div>
 
-                <!-- Donation -->
+                <!-- ═══════════════════════════════════════════════ -->
+                <!-- DONATION — multi-line descriptions + donor info -->
+                <!-- ═══════════════════════════════════════════════ -->
+
                 <div v-if="createForm.fee_type === 'donation'">
-                    <InputLabel value="Donation Amount (₹)" />
-                    <TextInput
-                        type="number"
-                        v-model="createForm.donation_amount"
-                        min="0"
-                        step="0.01"
-                        required
-                    />
-
-                    <!-- Donator Name -->
-                    <InputLabel value="Donator Name" class="mt-3" />
-                    <TextInput
-                        type="text"
-                        v-model="createForm.donator_name"
-                        required
-                    />
-                    <InputError :message="createForm.errors.donator_name" />
-
-                    <!-- Donator Address -->
-                    <InputLabel value="Donator Address" class="mt-3" />
-                    <TextInput
-                        type="text"
-                        v-model="createForm.donator_address"
-                    />
-                    <InputError :message="createForm.errors.donator_address" />
-
-                    <!-- Donator Phone -->
-                    <InputLabel value="Donator Phone" class="mt-3" />
-                    <TextInput type="text" v-model="createForm.donator_phone" />
-                    <InputError :message="createForm.errors.donator_phone" />
-
-                    <p class="text-xs text-gray-500 mt-1">
-                        Donation / contribution amount. Receipt format will be
-                        different.
+                    <p class="text-sm font-medium text-gray-700 mb-2">
+                        Donation Items *
                     </p>
-                    <InputError :message="createForm.errors.donation_amount" />
+
+                    <div class="space-y-2">
+                        <div
+                            v-for="(item, index) in createForm.donation_items"
+                            :key="index"
+                            class="flex items-center gap-2"
+                        >
+                            <TextInput
+                                v-model="item.description"
+                                placeholder="Description (e.g. General Donation, Festival Fund)"
+                                class="flex-1 min-w-[400px] text-sm"
+                            />
+                            <TextInput
+                                type="number"
+                                v-model.number="item.amount"
+                                placeholder="₹ Amount"
+                                min="0.01"
+                                step="0.01"
+                                class="w-28 text-sm"
+                            />
+                            <button
+                                type="button"
+                                @click="
+                                    createForm.donation_items.splice(index, 1)
+                                "
+                                class="p-2 text-red-600 hover:bg-red-50 rounded flex-shrink-0"
+                                title="Remove"
+                            >
+                                <Trash2 class="w-4 h-4" />
+                            </button>
+                        </div>
+                    </div>
+
+                    <button
+                        type="button"
+                        @click="
+                            createForm.donation_items.push({
+                                description: '',
+                                amount: 0,
+                            })
+                        "
+                        class="mt-2 text-sm text-blue-600 hover:text-blue-700 font-medium"
+                    >
+                        + Add another line
+                    </button>
+
+                    <InputError
+                        :message="createForm.errors['donation_items']"
+                        class="mt-1"
+                    />
+
+                    <div class="mt-4 grid grid-cols-1 gap-3">
+                        <div>
+                            <InputLabel value="Donator Name" />
+                            <TextInput
+                                v-model="createForm.donator_name"
+                                placeholder="Optional"
+                            />
+                        </div>
+                        <div>
+                            <InputLabel value="Donator Address" />
+                            <TextInput
+                                v-model="createForm.donator_address"
+                                placeholder="Optional"
+                            />
+                        </div>
+                        <div>
+                            <InputLabel value="Donator Phone" />
+                            <TextInput
+                                v-model="createForm.donator_phone"
+                                placeholder="Optional"
+                            />
+                        </div>
+                    </div>
                 </div>
+
                 <div>
                     <InputLabel value="Due Date *" />
                     <TextInput
