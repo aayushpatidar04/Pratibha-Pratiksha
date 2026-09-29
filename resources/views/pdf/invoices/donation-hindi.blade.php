@@ -204,15 +204,15 @@
 
         .donor-label {
             width: 25%;
-            font-size: 10.5px;
+            font-size: 12px;
             font-weight: 700;
             white-space: nowrap;
         }
 
         .donor-value {
             width: 75%;
-            border-bottom: 0.7px solid #222;
-            font-size: 13.5px;
+            /* border-bottom: 0.7px solid #222; */
+            font-size: 12px;
             padding-left: 1.5mm !important;
             min-height: 5mm;
             overflow-wrap: anywhere;
@@ -236,8 +236,13 @@
 
         .receipt-number .label,
         .receipt-date .label {
-            font-size: 10.5px;
+            font-size: 12px;
             font-weight: 700;
+        }
+
+        .receipt-number .value,
+        .receipt-date .value {
+            font-size: 12px;
         }
 
         .donation-table {
@@ -255,7 +260,7 @@
         .donation-table th {
             height: 7mm;
             text-align: center;
-            font-size: 12.5px;
+            font-size: 11px;
             font-weight: 700;
             padding: 1mm;
         }
@@ -263,7 +268,7 @@
         .donation-table td {
             min-height: 7mm;
             height: 7mm;
-            font-size: 12px;
+            font-size: 11px;
             padding: 1.2mm 1.5mm;
             vertical-align: middle;
             overflow-wrap: anywhere;
@@ -335,15 +340,15 @@
         }
 
         .payment-label {
-            width: 22%;
-            font-size: 10.5px;
+            width: 25%;
+            font-size: 12px;
             font-weight: 700;
             white-space: nowrap;
         }
 
         .payment-value {
-            border-bottom: 0.7px solid #222;
-            font-size: 10.5px;
+            /* border-bottom: 0.7px solid #222; */
+            font-size: 12px;
             overflow-wrap: anywhere;
         }
 
@@ -359,7 +364,7 @@
         }
 
         .remarks-label {
-            font-size: 11px;
+            font-size: 12px;
             font-weight: 700;
             white-space: nowrap;
         }
@@ -369,7 +374,7 @@
             margin-left: 2mm;
             border-bottom: 0.7px solid #222;
             min-height: 5mm;
-            font-size: 11px;
+            font-size: 12px;
             overflow-wrap: anywhere;
         }
 
@@ -636,7 +641,7 @@
                             रसीद क्रमांक:
                         </span>
 
-                        <span>
+                        <span class="value">
                             {{ $receiptNumber }}
                         </span>
 
@@ -648,7 +653,7 @@
                             दिनांक:
                         </span>
 
-                        <span>
+                        <span class="value">
                             {{ $receiptDate }}
                         </span>
 
