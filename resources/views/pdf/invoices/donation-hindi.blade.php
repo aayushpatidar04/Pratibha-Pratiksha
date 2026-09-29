@@ -359,7 +359,7 @@
         }
 
         .remarks-label {
-            font-size: 10px;
+            font-size: 11px;
             font-weight: 700;
             white-space: nowrap;
         }
@@ -369,7 +369,7 @@
             margin-left: 2mm;
             border-bottom: 0.7px solid #222;
             min-height: 5mm;
-            font-size: 9.5px;
+            font-size: 11px;
             overflow-wrap: anywhere;
         }
 
