@@ -770,9 +770,9 @@
                         </td>
                         <td>
                             @if($invoice->fee_type === 'security_deposit' && $invoice->refund_status === 'refunded')
-                                <img src="/assets/images/REFUNDED.jpeg" style="width: 50px; height: 50px;" alt="REFUNDED">
+                                <img src="/assets/images/REFUNDED.jpg" style="width: auto; height: 50px;" alt="REFUNDED">
                             @elseif ($invoice->status === 'paid')
-                                <img src="/assets/images/PAID.jpeg" style="width: auto; height: 50px;" alt="PAID">
+                                <img src="/assets/images/PAID.jpg" style="width: auto; height: 50px;" alt="PAID">
                             @endif
                         </td>
                     </tr>

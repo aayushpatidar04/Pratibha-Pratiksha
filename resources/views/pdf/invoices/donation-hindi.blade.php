@@ -844,7 +844,7 @@
                             <br>
                             प्राप्तकर्ता हस्ताक्षर<br>
                             @if ($invoice->status === 'paid')
-                                <img src="/assets/images/PAID.jpeg" style="width: auto; height: 50px;" alt="PAID">
+                                <img src="/assets/images/PAID.jpg" style="width: auto; height: 50px;" alt="PAID">
                             @endif
                         </td>
 
