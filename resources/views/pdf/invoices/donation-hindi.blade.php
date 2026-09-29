@@ -207,11 +207,12 @@
             font-size: 12px;
             font-weight: 700;
             white-space: nowrap;
+            padding-bottom: 3px;
         }
 
         .donor-value {
             width: 75%;
-            /* border-bottom: 0.7px solid #222; */
+            border-bottom: 0.7px solid #222;
             font-size: 12px;
             padding-left: 1.5mm !important;
             min-height: 5mm;
