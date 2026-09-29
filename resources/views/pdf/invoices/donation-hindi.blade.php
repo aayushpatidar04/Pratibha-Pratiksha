@@ -283,7 +283,7 @@
         }
 
         .amount-value {
-            float: right;
+            text-align: center;
             font-weight: 700;
         }
 
@@ -476,21 +476,21 @@
          */
         $donorName =
             data_get($invoice, 'donator_name')
-            ?? '-';
+            ?? '';
 
         /*
          * Mobile
          */
         $mobile =
             data_get($invoice, 'donator_phone')
-            ?? '-';
+            ?? '';
 
         /*
          * Address
          */
         $address =
             data_get($invoice, 'donator_address')
-            ?? '-';
+            ?? '';
 
         /*
          * Receipt number
@@ -501,7 +501,7 @@
         $receiptNumber =
             $invoice->invoice_number
             ?? $payment?->receipt_number
-            ?? '-';
+            ?? '';
 
         /*
          * Receipt date
@@ -546,13 +546,13 @@
                 $paymentModeLabels[$payment->payment_mode]
                 ?? ucwords(str_replace('_', ' ', $payment->payment_mode))
             )
-            : '-';
+            : '';
 
         $paymentDate = $payment?->payment_date
             ? \Carbon\Carbon::parse($payment->payment_date)->format('d-m-Y')
-            : '-';
+            : '';
 
-        $transactionId = $payment?->transaction_id ?? '-';
+        $transactionId = $payment?->transaction_id ?? '';
 
         /*
          * Amount in words
@@ -723,13 +723,8 @@
                                 </td>
 
                                 <td class="amount-cell">
-
-                                    <span class="rupee">
-                                        ₹
-                                    </span>
-
                                     <span class="amount-value">
-                                        {{ number_format($item->amount, 2) }}
+                                        ₹ {{ number_format($item->amount, 2) }}
                                     </span>
 
                                 </td>
@@ -745,13 +740,8 @@
                             </td>
 
                             <td class="amount-cell">
-
-                                <span class="rupee">
-                                    ₹
-                                </span>
-
                                 <span class="amount-value">
-                                    {{ number_format($invoice->amount, 2) }}
+                                    ₹ {{ number_format($invoice->amount, 2) }}
                                 </span>
 
                             </td>
@@ -834,7 +824,7 @@
                     </div>
 
                     <div class="remarks-value">
-                        {{ data_get($invoice, 'remarks') ?? '-' }}
+                        {{ data_get($invoice, 'description') ?? '' }}
                     </div>
 
                 </div>
