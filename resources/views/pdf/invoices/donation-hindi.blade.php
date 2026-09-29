@@ -204,7 +204,7 @@
 
         .donor-label {
             width: 25%;
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 700;
             white-space: nowrap;
         }
@@ -212,7 +212,7 @@
         .donor-value {
             width: 75%;
             /* border-bottom: 0.7px solid #222; */
-            font-size: 13px;
+            font-size: 12px;
             padding-left: 1.5mm !important;
             min-height: 5mm;
             overflow-wrap: anywhere;
@@ -236,13 +236,13 @@
 
         .receipt-number .label,
         .receipt-date .label {
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 700;
         }
 
         .receipt-number .value,
         .receipt-date .value {
-            font-size: 13px;
+            font-size: 12px;
         }
 
         .donation-table {
@@ -341,14 +341,14 @@
 
         .payment-label {
             width: 25%;
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 700;
             white-space: nowrap;
         }
 
         .payment-value {
             /* border-bottom: 0.7px solid #222; */
-            font-size: 13px;
+            font-size: 12px;
             overflow-wrap: anywhere;
         }
 
@@ -364,7 +364,7 @@
         }
 
         .remarks-label {
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 700;
             white-space: nowrap;
             padding-bottom: 3px;
@@ -375,7 +375,7 @@
             margin-left: 2mm;
             border-bottom: 0.7px solid #222;
             min-height: 5mm;
-            font-size: 13px;
+            font-size: 12px;
             overflow-wrap: anywhere;
         }
 
