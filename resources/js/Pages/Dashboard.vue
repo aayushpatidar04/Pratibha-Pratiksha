@@ -415,38 +415,42 @@ const activityColor = (color) => {
                             v-if="latestComplaints?.length"
                             v-for="complaint in latestComplaints"
                             :key="complaint.id"
-                            class="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:border-gray-200 transition-colors"
                         >
-                            <div class="flex items-center gap-3 min-w-0">
-                                <div
-                                    class="h-8 w-8 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0"
-                                >
-                                    <MessageSquareWarning
-                                        class="h-4 w-4 text-gray-700"
-                                    />
-                                </div>
-                                <div class="min-w-0">
-                                    <p
-                                        class="text-sm font-medium text-gray-900 truncate"
-                                    >
-                                        {{ complaint.category }}
-                                    </p>
-                                    <p class="text-xs text-gray-700">
-                                        {{ complaint.residentName }}
-                                    </p>
-                                    <p
-                                        class="text-xs text-gray-600 mt-0.5 line-clamp-1"
-                                    >
-                                        {{ complaint.description }}
-                                    </p>
-                                </div>
-                            </div>
-                            <span
-                                class="px-2 py-1 rounded-full text-[10px] font-medium uppercase tracking-wide flex-shrink-0 ml-2"
-                                :class="statusColors[complaint.status]"
+                            <a
+                                :href="route('complaints.index', { status: complaint.status })"
+                                class="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:border-blue-200 hover:bg-blue-50/50 transition-colors"
                             >
-                                {{ complaint.status.replace("_", " ") }}
-                            </span>
+                                <div class="flex items-center gap-3 min-w-0">
+                                    <div
+                                        class="h-8 w-8 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0"
+                                    >
+                                        <MessageSquareWarning
+                                            class="h-4 w-4 text-gray-700"
+                                        />
+                                    </div>
+                                    <div class="min-w-0">
+                                        <p
+                                            class="text-sm font-medium text-gray-900 truncate"
+                                        >
+                                            {{ complaint.category }}
+                                        </p>
+                                        <p class="text-xs text-gray-700">
+                                            {{ complaint.residentName }}
+                                        </p>
+                                        <p
+                                            class="text-xs text-gray-600 mt-0.5 line-clamp-1"
+                                        >
+                                            {{ complaint.description }}
+                                        </p>
+                                    </div>
+                                </div>
+                                <span
+                                    class="px-2 py-1 rounded-full text-[10px] font-medium uppercase tracking-wide flex-shrink-0 ml-2"
+                                    :class="statusColors[complaint.status]"
+                                >
+                                    {{ complaint.status.replace("_", " ") }}
+                                </span>
+                            </a>
                         </div>
                         <div
                             v-else
@@ -470,7 +474,7 @@ const activityColor = (color) => {
                             Checkout Requests
                         </h2>
                         <a
-                            href="checkout-requests"
+                            :href="route('checkout-requests.index')"
                             class="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-0.5"
                         >
                             See All <ChevronRight class="w-3 h-3" />
@@ -481,40 +485,44 @@ const activityColor = (color) => {
                             v-if="latestCheckouts?.length"
                             v-for="checkout in latestCheckouts"
                             :key="checkout.id"
-                            class="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:border-gray-200 transition-colors"
                         >
-                            <div class="flex items-center gap-3 min-w-0">
-                                <div
-                                    class="h-8 w-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0"
-                                >
-                                    <LogOut
-                                        class="h-4 w-4 text-amber-600"
-                                    />
-                                </div>
-                                <div class="min-w-0">
-                                    <p
-                                        class="text-sm font-medium text-gray-900 truncate"
-                                    >
-                                        {{ checkout.residentName }}
-                                    </p>
-                                    <p class="text-xs text-gray-600">
-                                        Checkout request
-                                    </p>
-                                    <p
-                                        class="text-xs text-gray-600 mt-0.5"
-                                    >
-                                        {{ formatDate(checkout.createdAt) }}
-                                    </p>
-                                </div>
-                            </div>
-                            <span
-                                class="px-2 py-1 rounded-full text-[10px] font-medium uppercase tracking-wide flex-shrink-0 ml-2"
-                                :class="statusColors[checkout.status]"
+                            <a
+                                :href="route('checkout-requests.show', { id: checkout.id })"
+                                class="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:border-amber-200 hover:bg-amber-50/50 transition-colors"
                             >
-                                {{
-                                    checkout.status.replace(/_/g, " ")
-                                }}
-                            </span>
+                                <div class="flex items-center gap-3 min-w-0">
+                                    <div
+                                        class="h-8 w-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0"
+                                    >
+                                        <LogOut
+                                            class="h-4 w-4 text-amber-600"
+                                        />
+                                    </div>
+                                    <div class="min-w-0">
+                                        <p
+                                            class="text-sm font-medium text-gray-900 truncate"
+                                        >
+                                            {{ checkout.residentName }}
+                                        </p>
+                                        <p class="text-xs text-gray-600">
+                                            Checkout request
+                                        </p>
+                                        <p
+                                            class="text-xs text-gray-600 mt-0.5"
+                                        >
+                                            {{ formatDate(checkout.createdAt) }}
+                                        </p>
+                                    </div>
+                                </div>
+                                <span
+                                    class="px-2 py-1 rounded-full text-[10px] font-medium uppercase tracking-wide flex-shrink-0 ml-2"
+                                    :class="statusColors[checkout.status]"
+                                >
+                                    {{
+                                        checkout.status.replace(/_/g, " ")
+                                    }}
+                                </span>
+                            </a>
                         </div>
                         <div
                             v-else
@@ -541,7 +549,7 @@ const activityColor = (color) => {
                             Leave Requests
                         </h2>
                         <a
-                            href="support/leaves"
+                            :href="route('leaves.index')"
                             class="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-0.5"
                         >
                             See All <ChevronRight class="w-3 h-3" />
@@ -552,44 +560,48 @@ const activityColor = (color) => {
                             v-if="latestLeaves?.length"
                             v-for="leave in latestLeaves"
                             :key="leave.id"
-                            class="flex items-start gap-3 p-3 rounded-lg border border-gray-100 hover:border-gray-200 transition-colors"
                         >
-                            <div
-                                class="h-8 w-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0"
+                            <a
+                                :href="route('leaves.index', { final_status: leave.status })"
+                                class="flex items-start gap-3 p-3 rounded-lg border border-gray-100 hover:border-purple-200 hover:bg-purple-50/50 transition-colors"
                             >
-                                <Users
-                                    class="h-4 w-4 text-purple-600"
-                                />
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <div class="flex items-center justify-between">
-                                    <p
-                                        class="text-sm font-medium text-gray-900 truncate"
-                                    >
-                                        {{ leave.residentName }}
-                                    </p>
-                                    <span
-                                        class="px-2 py-0.5 rounded-full text-[10px] font-medium uppercase flex-shrink-0 ml-2"
-                                        :class="statusColors[leave.status]"
-                                    >
-                                        {{ leave.status.replace("_", " ") }}
-                                    </span>
-                                </div>
-                                <p
-                                    class="text-xs text-gray-700 mt-0.5 line-clamp-1"
-                                >
-                                    {{ leave.reason }}
-                                </p>
                                 <div
-                                    class="flex items-center gap-1 mt-1.5 text-xs text-gray-600"
+                                    class="h-8 w-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0"
                                 >
-                                    <Clock class="w-3 h-3" />
-                                    <span
-                                        >{{ formatDate(leave.fromDate) }} -
-                                        {{ formatDate(leave.toDate) }}</span
-                                    >
+                                    <Users
+                                        class="h-4 w-4 text-purple-600"
+                                    />
                                 </div>
-                            </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center justify-between">
+                                        <p
+                                            class="text-sm font-medium text-gray-900 truncate"
+                                        >
+                                            {{ leave.residentName }}
+                                        </p>
+                                        <span
+                                            class="px-2 py-0.5 rounded-full text-[10px] font-medium uppercase flex-shrink-0 ml-2"
+                                            :class="statusColors[leave.status]"
+                                        >
+                                            {{ leave.status.replace("_", " ") }}
+                                        </span>
+                                    </div>
+                                    <p
+                                        class="text-xs text-gray-700 mt-0.5 line-clamp-1"
+                                    >
+                                        {{ leave.reason }}
+                                    </p>
+                                    <div
+                                        class="flex items-center gap-1 mt-1.5 text-xs text-gray-600"
+                                    >
+                                        <Clock class="w-3 h-3" />
+                                        <span
+                                            >{{ formatDate(leave.fromDate) }} -
+                                            {{ formatDate(leave.toDate) }}</span
+                                        >
+                                    </div>
+                                </div>
+                            </a>
                         </div>
                         <div
                             v-else
@@ -615,7 +627,7 @@ const activityColor = (color) => {
                             Room Change Requests
                         </h2>
                         <a
-                            href="residents/room-change-requests"
+                            :href="route('room-change-requests.index')"
                             class="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-0.5"
                         >
                             See All <ChevronRight class="w-3 h-3" />
@@ -626,38 +638,42 @@ const activityColor = (color) => {
                             v-if="latestRoomChanges?.length"
                             v-for="change in latestRoomChanges"
                             :key="change.id"
-                            class="flex items-start gap-3 p-3 rounded-lg border border-gray-100 hover:border-gray-200 transition-colors"
                         >
-                            <div
-                                class="h-8 w-8 rounded-lg bg-indigo-100 flex items-center justify-center flex-shrink-0"
+                            <a
+                                :href="route('room-change-requests.index', { status: change.status })"
+                                class="flex items-start gap-3 p-3 rounded-lg border border-gray-100 hover:border-indigo-200 hover:bg-indigo-50/50 transition-colors"
                             >
-                                <ClipboardList
-                                    class="h-4 w-4 text-indigo-600"
-                                />
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <p
-                                    class="text-sm font-medium text-gray-900 truncate"
+                                <div
+                                    class="h-8 w-8 rounded-lg bg-indigo-100 flex items-center justify-center flex-shrink-0"
                                 >
-                                    {{ change.residentName }}
-                                </p>
-                                <p
-                                    class="text-xs text-gray-700 mt-0.5 line-clamp-1"
+                                    <ClipboardList
+                                        class="h-4 w-4 text-indigo-600"
+                                    />
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p
+                                        class="text-sm font-medium text-gray-900 truncate"
+                                    >
+                                        {{ change.residentName }}
+                                    </p>
+                                    <p
+                                        class="text-xs text-gray-700 mt-0.5 line-clamp-1"
+                                    >
+                                        {{ change.reason }}
+                                    </p>
+                                    <p
+                                        class="text-xs text-gray-600 mt-0.5"
+                                    >
+                                        {{ formatDate(change.createdAt) }}
+                                    </p>
+                                </div>
+                                <span
+                                    class="px-2 py-0.5 rounded-full text-[10px] font-medium uppercase flex-shrink-0 ml-2"
+                                    :class="statusColors[change.status]"
                                 >
-                                    {{ change.reason }}
-                                </p>
-                                <p
-                                    class="text-xs text-gray-600 mt-0.5"
-                                >
-                                    {{ formatDate(change.createdAt) }}
-                                </p>
-                            </div>
-                            <span
-                                class="px-2 py-0.5 rounded-full text-[10px] font-medium uppercase flex-shrink-0 ml-2"
-                                :class="statusColors[change.status]"
-                            >
-                                {{ change.status }}
-                            </span>
+                                    {{ change.status }}
+                                </span>
+                            </a>
                         </div>
                         <div
                             v-else
@@ -692,46 +708,50 @@ const activityColor = (color) => {
                             v-if="latestNotices?.length"
                             v-for="notice in latestNotices"
                             :key="notice.id"
-                            class="flex items-start gap-3 p-3 rounded-lg border border-gray-100 hover:border-gray-200 transition-colors"
                         >
-                            <div
-                                class="h-8 w-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0"
+                            <a
+                                :href="route('notices.index', { status: 'published' })"
+                                class="flex items-start gap-3 p-3 rounded-lg border border-gray-100 hover:border-blue-200 hover:bg-blue-50/50 transition-colors"
                             >
-                                <Inbox
-                                    class="h-4 w-4 text-blue-600"
-                                />
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <div class="flex items-center gap-1">
-                                    <p
-                                        class="text-sm font-medium text-gray-900 truncate"
-                                    >
-                                        {{ notice.title }}
-                                    </p>
-                                    <span
-                                        v-if="notice.requiresAck"
-                                        class="px-1.5 py-0.5 rounded text-[9px] font-medium bg-amber-100 text-amber-700"
-                                    >
-                                        ACK
-                                    </span>
+                                <div
+                                    class="h-8 w-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0"
+                                >
+                                    <Inbox
+                                        class="h-4 w-4 text-blue-600"
+                                    />
                                 </div>
-                                <p
-                                    class="text-xs text-gray-700 capitalize mt-0.5"
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center gap-1">
+                                        <p
+                                            class="text-sm font-medium text-gray-900 truncate"
+                                        >
+                                            {{ notice.title }}
+                                        </p>
+                                        <span
+                                            v-if="notice.requiresAck"
+                                            class="px-1.5 py-0.5 rounded text-[9px] font-medium bg-amber-100 text-amber-700"
+                                        >
+                                            ACK
+                                        </span>
+                                    </div>
+                                    <p
+                                        class="text-xs text-gray-700 capitalize mt-0.5"
+                                    >
+                                        {{ notice.category }}
+                                    </p>
+                                    <p
+                                        class="text-xs text-gray-600 mt-0.5"
+                                    >
+                                        {{ formatDate(notice.publishedAt) }}
+                                    </p>
+                                </div>
+                                <span
+                                    class="px-2 py-0.5 rounded-full text-[10px] font-medium uppercase flex-shrink-0 ml-2"
+                                    :class="statusColors[notice.priority] || 'bg-gray-100 text-gray-700'"
                                 >
-                                    {{ notice.category }}
-                                </p>
-                                <p
-                                    class="text-xs text-gray-600 mt-0.5"
-                                >
-                                    {{ formatDate(notice.publishedAt) }}
-                                </p>
-                            </div>
-                            <span
-                                class="px-2 py-0.5 rounded-full text-[10px] font-medium uppercase flex-shrink-0 ml-2"
-                                :class="statusColors[notice.priority] || 'bg-gray-100 text-gray-700'"
-                            >
-                                {{ notice.priority }}
-                            </span>
+                                    {{ notice.priority }}
+                                </span>
+                            </a>
                         </div>
                         <div
                             v-else
@@ -766,38 +786,42 @@ const activityColor = (color) => {
                             v-if="latestEmergencies?.length"
                             v-for="alert in latestEmergencies"
                             :key="alert.id"
-                            class="flex items-start gap-3 p-3 rounded-lg border border-red-100 bg-red-50/30 hover:border-red-200 transition-colors"
                         >
-                            <div
-                                class="h-8 w-8 rounded-lg bg-red-100 flex items-center justify-center flex-shrink-0"
+                            <a
+                                href="support/emergency"
+                                class="flex items-start gap-3 p-3 rounded-lg border border-red-100 bg-red-50/30 hover:border-red-200 hover:bg-red-50 transition-colors"
                             >
-                                <Siren
-                                    class="h-4 w-4 text-red-600"
-                                />
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <p
-                                    class="text-sm font-medium text-gray-900 truncate"
+                                <div
+                                    class="h-8 w-8 rounded-lg bg-red-100 flex items-center justify-center flex-shrink-0"
                                 >
-                                    {{ alert.residentName }}
-                                </p>
-                                <p
-                                    class="text-xs text-gray-700 mt-0.5 line-clamp-1"
+                                    <Siren
+                                        class="h-4 w-4 text-red-600"
+                                    />
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p
+                                        class="text-sm font-medium text-gray-900 truncate"
+                                    >
+                                        {{ alert.residentName }}
+                                    </p>
+                                    <p
+                                        class="text-xs text-gray-700 mt-0.5 line-clamp-1"
+                                    >
+                                        {{ alert.alertType }}: {{ alert.description }}
+                                    </p>
+                                    <p
+                                        class="text-xs text-gray-600 mt-0.5"
+                                    >
+                                        {{ formatDate(alert.createdAt) }}
+                                    </p>
+                                </div>
+                                <span
+                                    class="px-2 py-0.5 rounded-full text-[10px] font-medium uppercase flex-shrink-0 ml-2"
+                                    :class="statusColors[alert.status]"
                                 >
-                                    {{ alert.alertType }}: {{ alert.description }}
-                                </p>
-                                <p
-                                    class="text-xs text-gray-600 mt-0.5"
-                                >
-                                    {{ formatDate(alert.createdAt) }}
-                                </p>
-                            </div>
-                            <span
-                                class="px-2 py-0.5 rounded-full text-[10px] font-medium uppercase flex-shrink-0 ml-2"
-                                :class="statusColors[alert.status]"
-                            >
-                                {{ alert.status }}
-                            </span>
+                                    {{ alert.status }}
+                                </span>
+                            </a>
                         </div>
                         <div
                             v-else
@@ -832,43 +856,47 @@ const activityColor = (color) => {
                             v-if="latestApplications?.length"
                             v-for="app in latestApplications"
                             :key="app.id"
-                            class="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:border-gray-200 transition-colors"
                         >
-                            <div class="flex items-center gap-3 min-w-0">
-                                <div
-                                    class="h-8 w-8 rounded-lg bg-teal-100 flex items-center justify-center flex-shrink-0"
-                                >
-                                    <UserCheck
-                                        class="h-4 w-4 text-teal-600"
-                                    />
-                                </div>
-                                <div class="min-w-0">
-                                    <p
-                                        class="text-sm font-medium text-gray-900 truncate"
+                            <a
+                                :href="route('admin.registrations.show', app.id)"
+                                class="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:border-teal-200 hover:bg-teal-50/50 transition-colors"
+                            >
+                                <div class="flex items-center gap-3 min-w-0">
+                                    <div
+                                        class="h-8 w-8 rounded-lg bg-teal-100 flex items-center justify-center flex-shrink-0"
                                     >
-                                        {{ app.studentName }}
-                                    </p>
-                                    <p
-                                        class="text-xs text-gray-600"
-                                    >
-                                        {{ app.applicationNo }}
-                                    </p>
+                                        <UserCheck
+                                            class="h-4 w-4 text-teal-600"
+                                        />
+                                    </div>
+                                    <div class="min-w-0">
+                                        <p
+                                            class="text-sm font-medium text-gray-900 truncate"
+                                        >
+                                            {{ app.studentName }}
+                                        </p>
+                                        <p
+                                            class="text-xs text-gray-600"
+                                        >
+                                            {{ app.applicationNo }}
+                                        </p>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="flex flex-col items-end gap-1 flex-shrink-0">
-                                <span
-                                    class="px-2 py-0.5 rounded-full text-[10px] font-medium"
-                                    :class="statusColors[app.status] || 'bg-gray-100 text-gray-700'"
-                                >
-                                    {{ app.status }}
-                                </span>
-                                <span
-                                    v-if="app.paymentStatus === 'pending'"
-                                    class="text-[10px] text-amber-600 font-medium"
-                                >
-                                    Payment pending
-                                </span>
-                            </div>
+                                <div class="flex flex-col items-end gap-1 flex-shrink-0">
+                                    <span
+                                        class="px-2 py-0.5 rounded-full text-[10px] font-medium"
+                                        :class="statusColors[app.status] || 'bg-gray-100 text-gray-700'"
+                                    >
+                                        {{ app.status }}
+                                    </span>
+                                    <span
+                                        v-if="app.paymentStatus === 'pending'"
+                                        class="text-[10px] text-amber-600 font-medium"
+                                    >
+                                        Payment pending
+                                    </span>
+                                </div>
+                            </a>
                         </div>
                         <div
                             v-else

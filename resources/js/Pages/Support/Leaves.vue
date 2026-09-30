@@ -124,6 +124,7 @@ const destroy = (l) => {
             >
                 <option value="all">All Status</option>
                 <option value="pending">Pending</option>
+                <option value="parent_approval_pending">Parent Approval Pending</option>
                 <option value="approved">Approved</option>
                 <option value="rejected">Rejected</option>
                 <option value="cancelled">Cancelled</option>
