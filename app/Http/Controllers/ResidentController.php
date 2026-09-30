@@ -2575,6 +2575,7 @@ class ResidentController extends Controller
             'gender' => 'Gender',
             'date_of_birth' => 'Date of Birth',
             'blood_group' => 'Blood Group',
+            'aadhar_number' => 'Aadhar Number',
 
             'email' => 'Email',
             'phone' => 'Phone',

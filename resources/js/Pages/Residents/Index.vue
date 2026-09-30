@@ -806,7 +806,11 @@ const exportColumns = [
         label: "Blood Group",
         group: "Basic",
     },
-
+    {
+        key: "aadhar_number",
+        label: "Aadhar Number",
+        group: "Basic",
+    },
     {
         key: "email",
         label: "Email",
@@ -982,6 +986,7 @@ const selectedExportColumns = ref([
     "first_name",
     "last_name",
     "gender",
+    "aadhar_number",
     "phone",
     "whatsapp_number",
     "email",
