@@ -389,8 +389,8 @@
         .footer td {
             border: 0;
             padding: 0;
-            vertical-align: middle;
-            font-size: 9px;
+            vertical-align: top;
+            font-size: 12;
             font-weight: 700;
         }
 
@@ -848,7 +848,6 @@
                         </td>
 
                         <td class="signature">
-                            <br>
                             प्राप्तकर्ता हस्ताक्षर<br>
                             @if ($invoice->status === 'paid')
                                 <img src="/assets/images/PAID.jpg" style="width: auto; height: 50px;" alt="PAID">
