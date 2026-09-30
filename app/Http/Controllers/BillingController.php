@@ -1003,7 +1003,7 @@ class BillingController extends Controller
             'donation_items' => [
                 'nullable',
                 'array',
-                'min:1',
+                'min:0',
             ],
 
             'donation_items.*.description' => [

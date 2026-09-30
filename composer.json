@@ -17,6 +17,7 @@
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^3.0",
         "phpoffice/phpspreadsheet": "^5.9",
+        "pusher/pusher-php-server": "^7.3",
         "razorpay/razorpay": "^2.9",
         "simplesoftwareio/simple-qrcode": "^4.2",
         "tightenco/ziggy": "^2.0"

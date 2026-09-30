@@ -60,7 +60,7 @@ class User extends Authenticatable
             static::availableModules()
         )
             ->mapWithKeys(
-                fn (array $module): array => [
+                fn(array $module): array => [
                     $module['key'] => [],
                 ]
             )
@@ -116,5 +116,45 @@ class User extends Authenticatable
         }
 
         return true;
+    }
+
+    /**
+     * Get user's notifications (via recipients)
+     */
+    public function notifications()
+    {
+        return $this->belongsToMany(
+            Notification::class,
+            'notification_recipients',
+            'user_id',
+            'notification_id'
+        )->withPivot('read_at', 'archived_at', 'deleted_at')
+            ->withTimestamps();
+    }
+
+    /**
+     * Get unread notifications count
+     */
+    public function getUnreadNotificationCount()
+    {
+        return NotificationRecipient::where('user_id', $this->id)
+            ->unread()
+            ->count();
+    }
+
+    /**
+     * Get unread notifications
+     */
+    public function getUnreadNotifications($limit = 20)
+    {
+        return Notification::select('notifications.*')
+            ->join('notification_recipients', 'notifications.id', '=', 'notification_recipients.notification_id')
+            ->where('notification_recipients.user_id', $this->id)
+            ->whereNull('notification_recipients.read_at')
+            ->whereNull('notification_recipients.archived_at')
+            ->whereNull('notification_recipients.deleted_at')
+            ->orderByDesc('notification_recipients.created_at')
+            ->limit($limit)
+            ->get();
     }
 }
