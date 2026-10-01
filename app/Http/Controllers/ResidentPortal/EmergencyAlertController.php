@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\EmergencyAlert;
 use App\Models\EmergencyAlertUpdate;
 use App\Models\Resident;
+use App\Services\NotificationService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -59,7 +60,7 @@ class EmergencyAlertController extends Controller
             ])
             ->when(
                 $filters['status'] !== 'all',
-                fn (Builder $query) =>
+                fn(Builder $query) =>
                     $query->where(
                         'status',
                         $filters['status']
@@ -67,7 +68,7 @@ class EmergencyAlertController extends Controller
             )
             ->when(
                 $filters['category'] !== 'all',
-                fn (Builder $query) =>
+                fn(Builder $query) =>
                     $query->where(
                         'category',
                         $filters['category']
@@ -77,7 +78,7 @@ class EmergencyAlertController extends Controller
             ->paginate(12)
             ->withQueryString()
             ->through(
-                fn (EmergencyAlert $alert) =>
+                fn(EmergencyAlert $alert) =>
                     $this->transformAlert($alert)
             );
 
@@ -141,7 +142,8 @@ class EmergencyAlertController extends Controller
     }
 
     public function store(
-        Request $request
+        Request $request,
+        NotificationService $notificationService
     ): RedirectResponse {
         /** @var Resident|null $resident */
         $resident = Auth::guard('resident')->user();
@@ -190,11 +192,7 @@ class EmergencyAlertController extends Controller
         $stay = $resident->currentStay;
 
         $alert = DB::transaction(
-            function () use (
-                $resident,
-                $stay,
-                $validated
-            ): EmergencyAlert {
+            function () use ($resident, $stay, $validated): EmergencyAlert {
                 $alert = EmergencyAlert::create([
                     'resident_id' =>
                         $resident->id,
@@ -213,10 +211,10 @@ class EmergencyAlertController extends Controller
 
                     'location' =>
                         filled($validated['location'] ?? null)
-                            ? trim($validated['location'])
-                            : $this->defaultLocation(
-                                $stay
-                            ),
+                        ? trim($validated['location'])
+                        : $this->defaultLocation(
+                            $stay
+                        ),
 
                     'status' => 'active',
                 ]);
@@ -242,14 +240,27 @@ class EmergencyAlertController extends Controller
             }
         );
 
-        /*
-         * Add your existing push notification,
-         * WhatsApp gateway or staff notification job here.
-         *
-         * Example:
-         *
-         * EmergencyAlertRaised::dispatch($alert);
-         */
+        $notificationService->send(
+            [
+                'title' => 'Emergency Alert: ' . $alert->category_label,
+                'body' => "{$resident->full_name} raised an emergency alert — {$alert->category}.",
+                'type' => 'emergency_alert_raised',
+                'payload' => [
+                    'alert_id' => $alert->id,
+                    'residentName' => $resident->full_name,
+                    'category' => $alert->category,
+                    'category_label' => $alert->category_label,
+                    'description' => $alert->description,
+                    'location' => $alert->location,
+                    'status' => $alert->status,
+                    'createdAt' => $alert->created_at?->toDateString(),
+                ],
+                'action_url' => '/support/emergency',
+                'action_label' => 'Respond to Alert',
+            ],
+            $notificationService->recipientsForModule('emergency'),
+            $alert // polymorphic actionable
+        );
 
         return redirect()
             ->route(
@@ -302,7 +313,7 @@ class EmergencyAlertController extends Controller
 
         abort_unless(
             (int) $alert->resident_id ===
-                (int) $resident->id,
+            (int) $resident->id,
             403
         );
 
@@ -325,13 +336,13 @@ class EmergencyAlertController extends Controller
         return collect([
             $stay->building?->name,
             $stay->room?->room_number
-                ? 'Room ' .
-                    $stay->room->room_number
-                : null,
+            ? 'Room ' .
+            $stay->room->room_number
+            : null,
             $stay->bed?->bed_number
-                ? 'Bed ' .
-                    $stay->bed->bed_number
-                : null,
+            ? 'Bed ' .
+            $stay->bed->bed_number
+            : null,
         ])
             ->filter()
             ->implode(' · ');
@@ -406,11 +417,11 @@ class EmergencyAlertController extends Controller
 
             'updates' =>
                 $alert->relationLoaded('updates')
-                    ? $alert->updates
-                        ->map(
-                            fn (
-                                EmergencyAlertUpdate $update
-                            ) => [
+                ? $alert->updates
+                    ->map(
+                        fn(
+                        EmergencyAlertUpdate $update
+                    ) => [
                                 'id' =>
                                     $update->id,
 
@@ -433,9 +444,9 @@ class EmergencyAlertController extends Controller
                                 'created_at' =>
                                     $update->created_at,
                             ]
-                        )
-                        ->values()
-                    : [],
+                    )
+                    ->values()
+                : [],
 
             'created_at' =>
                 $alert->created_at,

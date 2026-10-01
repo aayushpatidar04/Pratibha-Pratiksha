@@ -57,7 +57,13 @@ const liveCheckouts = ref([...(props.latestCheckouts ?? [])]);
 const pendingCheckoutsCount = ref(props.stats?.checkouts?.pending ?? 0);
 
 const liveRoomChanges = ref([...(props.latestRoomChanges ?? [])]);
-const pendingRoomChangesCount = ref(props.stats?.RoomChanges?.pending ?? 0);
+const pendingRoomChangesCount = ref(props.stats?.roomChanges?.pending ?? 0);
+
+const liveEmergencies = ref([...(props.latestEmergencies ?? [])]);
+const pendingEmergenciesCount = ref(props.stats?.emergencies?.active ?? 0);
+
+const liveApplications = ref([...(props.latestApplications ?? [])]);
+const pendingApplicationsCount = ref(props.stats?.applications?.pending ?? 0);
 
 const handleRealtimeNotification = (event) => {
     const notification = event?.detail;
@@ -73,16 +79,12 @@ const handleRealtimeNotification = (event) => {
     // -----------------------------------------
 
     if (notification.type === "leave_request_created") {
-        const leaveId =
-            p.leave_id ??
-            notification.id ??
-            Date.now();
+        const leaveId = p.leave_id ?? notification.id ?? Date.now();
 
         // Prevent duplicate entries
         if (
             !liveLeaves.value.some(
-                (leave) =>
-                    Number(leave.id) === Number(leaveId)
+                (leave) => Number(leave.id) === Number(leaveId),
             )
         ) {
             liveLeaves.value.unshift({
@@ -91,13 +93,10 @@ const handleRealtimeNotification = (event) => {
                 reason: p.reason ?? "",
                 fromDate: p.fromDate ?? null,
                 toDate: p.toDate ?? null,
-                status:
-                    p.status ??
-                    "parent_approval_pending",
+                status: p.status ?? "parent_approval_pending",
             });
 
-            liveLeaves.value =
-                liveLeaves.value.slice(0, 5);
+            liveLeaves.value = liveLeaves.value.slice(0, 5);
 
             pendingLeavesCount.value += 1;
         }
@@ -109,17 +108,12 @@ const handleRealtimeNotification = (event) => {
     // New Complaint
     // -----------------------------------------
     if (notification.type === "complaint_submitted") {
-        const complaintId =
-            p.complaint_id ??
-            notification.id ??
-            Date.now();
+        const complaintId = p.complaint_id ?? notification.id ?? Date.now();
 
         // Prevent duplicate entries
         if (
             !liveComplaints.value.some(
-                (complaint) =>
-                    Number(complaint.id) ===
-                    Number(complaintId)
+                (complaint) => Number(complaint.id) === Number(complaintId),
             )
         ) {
             liveComplaints.value.unshift({
@@ -131,8 +125,7 @@ const handleRealtimeNotification = (event) => {
                 status: p.status ?? "open",
             });
 
-            liveComplaints.value =
-                liveComplaints.value.slice(0, 5);
+            liveComplaints.value = liveComplaints.value.slice(0, 5);
 
             pendingComplaintsCount.value += 1;
         }
@@ -146,8 +139,7 @@ const handleRealtimeNotification = (event) => {
         // Prevent duplicate entries
         if (
             !liveCheckouts.value.some(
-                (checkout) =>
-                    Number(checkout.id) === Number(checkoutId)
+                (checkout) => Number(checkout.id) === Number(checkoutId),
             )
         ) {
             liveCheckouts.value.unshift({
@@ -155,12 +147,10 @@ const handleRealtimeNotification = (event) => {
                 residentName: p.residentName ?? "Resident",
                 reason: p.reason ?? "",
                 checkoutDate: p.checkoutDate ?? null,
-                status:
-                    p.status ?? "pending",
+                status: p.status ?? "pending",
             });
 
-            liveCheckouts.value =
-                liveCheckouts.value.slice(0, 5);
+            liveCheckouts.value = liveCheckouts.value.slice(0, 5);
 
             pendingCheckoutsCount.value += 1;
         }
@@ -174,8 +164,7 @@ const handleRealtimeNotification = (event) => {
         // Prevent duplicate entries
         if (
             !liveRoomChanges.value.some(
-                (roomChange) =>
-                    Number(roomChange.id) === Number(roomChangeId)
+                (roomChange) => Number(roomChange.id) === Number(roomChangeId),
             )
         ) {
             liveRoomChanges.value.unshift({
@@ -186,10 +175,63 @@ const handleRealtimeNotification = (event) => {
                 createdAt: p.createdAt ?? null,
             });
 
-            liveRoomChanges.value =
-                liveRoomChanges.value.slice(0, 5);
+            liveRoomChanges.value = liveRoomChanges.value.slice(0, 5);
 
             pendingRoomChangesCount.value += 1;
+        }
+
+        return;
+    }
+
+    if (notification.type === "emergency_alert_raised") {
+        const alertId = p.alert_id ?? notification.id ?? Date.now();
+
+        if (
+            !liveEmergencies.value.some(
+                (alert) => Number(alert.id) === Number(alertId),
+            )
+        ) {
+            liveEmergencies.value.unshift({
+                id: alertId,
+                residentName: p.residentName ?? "Resident",
+                category: p.category ?? "Emergency",
+                description: p.description ?? "",
+                location: p.location ?? "",
+                status: p.status ?? "active",
+                createdAt: p.createdAt ?? null,
+            });
+
+            liveEmergencies.value = liveEmergencies.value.slice(0, 5);
+
+            pendingEmergenciesCount.value += 1;
+        }
+
+        return;
+    }
+
+    if (notification.type === "registration_created") {
+        const appId = p.application_id ?? notification.id ?? Date.now();
+
+        if (
+            !liveApplications.value.some(
+                (app) => Number(app.id) === Number(appId)
+            )
+        ) {
+            liveApplications.value.unshift({
+                id: appId,
+                applicationNo: p.application_no ?? '-',
+                studentName: p.studentName ?? "Student",
+                roomType: p.room_type ?? '-',
+                paymentMethod: p.payment_method ?? '-',
+                status: p.status ?? "pending",
+                paymentStatus: p.payment_status ?? "pending",
+                createdAt: p.createdAt ?? null,
+            });
+
+            liveApplications.value =
+                liveApplications.value.slice(0, 5);
+
+            pendingApplicationsCount.value += 1;
         }
 
         return;
@@ -199,21 +241,16 @@ const handleRealtimeNotification = (event) => {
 onMounted(() => {
     window.addEventListener(
         "app-notification-received",
-        handleRealtimeNotification
+        handleRealtimeNotification,
     );
 
-    window.addEventListener(
-        "app-notification-received",
-        (event) => {
-            
-        }
-    );
+    window.addEventListener("app-notification-received", (event) => {});
 });
 
 onBeforeUnmount(() => {
     window.removeEventListener(
         "app-notification-received",
-        handleRealtimeNotification
+        handleRealtimeNotification,
     );
 });
 
@@ -263,7 +300,7 @@ const cards = [
     },
     {
         label: "Open Complaints",
-        value: () => props.stats.complaints.open,
+        value: () => pendingComplaintsCount.value,
         sub: () => `${props.stats.complaints.resolved} resolved`,
         icon: MessageSquareWarning,
         color: "red",
@@ -277,14 +314,14 @@ const cards = [
     },
     {
         label: "Pending Checkouts",
-        value: () => props.stats.checkouts.pending,
+        value: () => pendingCheckoutsCount.value,
         sub: () => `${props.stats.checkouts.readyForExit} ready for exit`,
         icon: LogOut,
         color: "amber",
     },
     {
         label: "Room Changes",
-        value: () => props.stats.roomChanges.pending,
+        value: () => pendingRoomChangesCount.value,
         sub: () => `${props.stats.roomChanges.approved} approved`,
         icon: ClipboardList,
         color: "indigo",
@@ -301,7 +338,7 @@ const cards = [
     },
     {
         label: "Emergency Alerts",
-        value: () => props.stats.emergencies.active,
+        value: () => pendingEmergenciesCount.value,
         sub: () =>
             props.stats.emergencies.escalated > 0
                 ? props.stats.emergencies.escalated + " escalated"
@@ -311,7 +348,7 @@ const cards = [
     },
     {
         label: "Applications",
-        value: () => props.stats.applications.pending,
+        value: () => pendingApplicationsCount.value,
         sub: () => `${props.stats.applications.approved} approved`,
         icon: UserCheck,
         color: "teal",
@@ -608,7 +645,10 @@ const activityColor = (color) => {
                                         <p
                                             class="text-sm font-medium text-gray-900 truncate"
                                         >
-                                            {{ complaint.category ?? complaint.complaintType }}
+                                            {{
+                                                complaint.category ??
+                                                complaint.complaintType
+                                            }}
                                         </p>
                                         <p class="text-xs text-gray-700">
                                             {{ complaint.residentName }}
@@ -616,7 +656,10 @@ const activityColor = (color) => {
                                         <p
                                             class="text-xs text-gray-600 mt-0.5 line-clamp-1"
                                         >
-                                            {{ complaint.description ?? complaint.reason }}
+                                            {{
+                                                complaint.description ??
+                                                complaint.reason
+                                            }}
                                         </p>
                                     </div>
                                 </div>
@@ -966,8 +1009,8 @@ const activityColor = (color) => {
                     </div>
                     <div class="space-y-3">
                         <div
-                            v-if="latestEmergencies?.length"
-                            v-for="alert in latestEmergencies"
+                            v-if="liveEmergencies?.length"
+                            v-for="alert in liveEmergencies"
                             :key="alert.id"
                         >
                             <a
@@ -980,16 +1023,26 @@ const activityColor = (color) => {
                                     <Siren class="h-4 w-4 text-red-600" />
                                 </div>
                                 <div class="flex-1 min-w-0">
-                                    <p
+                                                                        <p
                                         class="text-sm font-medium text-gray-900 truncate"
                                     >
                                         {{ alert.residentName }}
                                     </p>
                                     <p
+                                        class="text-xs font-medium text-red-600 mt-0.5"
+                                    >
+                                        {{ alert.category_label }}
+                                    </p>
+                                    <p
                                         class="text-xs text-gray-700 mt-0.5 line-clamp-1"
                                     >
-                                        {{ alert.alertType }}:
                                         {{ alert.description }}
+                                    </p>
+                                    <p
+                                        v-if="alert.location"
+                                        class="text-xs text-gray-500 mt-0.5"
+                                    >
+                                        {{ alert.location }}
                                     </p>
                                     <p class="text-xs text-gray-600 mt-0.5">
                                         {{ formatDate(alert.createdAt) }}
@@ -1033,8 +1086,8 @@ const activityColor = (color) => {
                     </div>
                     <div class="space-y-3">
                         <div
-                            v-if="latestApplications?.length"
-                            v-for="app in latestApplications"
+                            v-if="liveApplications?.length"
+                            v-for="app in liveApplications"
                             :key="app.id"
                         >
                             <a

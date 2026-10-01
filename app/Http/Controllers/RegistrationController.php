@@ -13,6 +13,7 @@ use App\Models\Resident;
 use App\Models\ResidentStay;
 use App\Models\Room;
 use App\Models\Vehicle;
+use App\Services\NotificationService;
 use App\Services\RoomAllotmentService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -63,7 +64,7 @@ class RegistrationController extends Controller
     /**
      * Store registration application
      */
-    public function store(Request $request)
+    public function store(Request $request, NotificationService $notificationService)
     {
         $validated = $request->validate([
             'student_name' => 'required|string|max:255',
@@ -133,6 +134,7 @@ class RegistrationController extends Controller
         }
 
         $application = RegistrationApplication::create($validated);
+        $this->notifyAdminsOfNewRegistration($application, $notificationService);
 
         // If cash payment, mark as pending admin approval
         if (in_array($validated['payment_method'], ['cash', 'upi'], true)) {
@@ -610,5 +612,42 @@ class RegistrationController extends Controller
         }
 
         return 'INV-' . now()->format('Ym') . '-' . str_pad((string) $nextNumber, 5, '0', STR_PAD_LEFT);
+    }
+
+    private function notifyAdminsOfNewRegistration(
+        RegistrationApplication $application,
+        NotificationService $notificationService
+    ): void {
+        $paymentMethod = $application->payment_method;
+
+        $title = 'New Registration: ' . $application->student_name;
+
+        $body = match ($paymentMethod) {
+            'cash' => "New registration application from {$application->student_name} (Cash — awaiting payment verification).",
+            'upi' => "New registration application from {$application->student_name} (UPI payment proof submitted — awaiting verification).",
+            default => "New registration application from {$application->student_name} (Online payment verified).",
+        };
+
+        $notificationService->send(
+            [
+                'title' => $title,
+                'body' => $body,
+                'type' => 'registration_created',
+                'payload' => [
+                    'application_id' => $application->id,
+                    'application_no' => $application->application_no,
+                    'studentName' => $application->student_name,
+                    'room_type' => $application->room_type,
+                    'payment_method' => $paymentMethod,
+                    'payment_status' => $application->payment_status,
+                    'status' => $application->status,
+                    'createdAt' => $application->created_at?->toDateString(),
+                ],
+                'action_url' => '/registrations/' . $application->id,
+                'action_label' => 'View Application',
+            ],
+            $notificationService->recipientsForModule('registrations'),
+            $application // polymorphic actionable
+        );
     }
 }

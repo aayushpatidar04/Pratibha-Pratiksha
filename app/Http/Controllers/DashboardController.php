@@ -268,7 +268,8 @@ class DashboardController extends Controller
                 'residentName' => $e->resident
                     ? trim($e->resident->first_name . ' ' . $e->resident->last_name)
                     : '-',
-                'alertType' => $e->alert_type ?? 'Emergency',
+                'category' => $e->category,
+                'category_label' => $e->category_label,
                 'description' => $e->description ?? '',
                 'status' => $e->status,
                 'createdAt' => $e->created_at,
