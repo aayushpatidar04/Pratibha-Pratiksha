@@ -1,13 +1,14 @@
 <script setup>
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import Modal from "@/Components/Modal.vue";
+import LeaveDetail from "@/Components/LeaveDetail.vue";
 import InputLabel from "@/Components/InputLabel.vue";
 import TextInput from "@/Components/TextInput.vue";
 import PrimaryButton from "@/Components/PrimaryButton.vue";
 import Badge from "@/Components/Badge.vue";
 import { Head, useForm, router, Link } from "@inertiajs/vue3";
 import { ref, reactive } from "vue";
-import { CalendarDays, Plus, Check, X, Trash2 } from "lucide-vue-next";
+import { CalendarDays, Plus, Check, X, Eye, Trash2 } from "lucide-vue-next";
 
 const props = defineProps({
     leaves: Object,
@@ -41,6 +42,49 @@ const applyFilters = () =>
     );
 
 const createOpen = ref(false);
+
+const viewOpen = ref(false);
+const selectedLeave = ref(null);
+
+const openView = (leave) => {
+    selectedLeave.value = leave;
+    viewOpen.value = true;
+};
+
+const closeView = () => {
+    viewOpen.value = false;
+    selectedLeave.value = null;
+};
+
+const formatDateTime = (date) => {
+    if (!date) return "-";
+
+    return new Date(date).toLocaleString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+    });
+};
+
+const formatStatus = (status) => {
+    if (!status) return "-";
+
+    return status
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (char) => char.toUpperCase());
+};
+
+const residentName = (resident) => {
+    if (!resident) return "-";
+
+    return (
+        [resident.first_name, resident.last_name].filter(Boolean).join(" ") ||
+        "-"
+    );
+};
+
 const createForm = useForm({
     resident_id: "",
     leave_type: "home_leave",
@@ -124,7 +168,9 @@ const destroy = (l) => {
             >
                 <option value="all">All Status</option>
                 <option value="pending">Pending</option>
-                <option value="parent_approval_pending">Parent Approval Pending</option>
+                <option value="parent_approval_pending">
+                    Parent Approval Pending
+                </option>
                 <option value="approved">Approved</option>
                 <option value="rejected">Rejected</option>
                 <option value="cancelled">Cancelled</option>
@@ -162,6 +208,16 @@ const destroy = (l) => {
                                 }}</Badge>
                             </td>
                             <td class="px-4 py-3 text-right space-x-1">
+                                <!-- View -->
+                                <button
+                                    type="button"
+                                    class="h-8 w-8 inline-flex items-center justify-center rounded-lg hover:bg-blue-50"
+                                    title="View details"
+                                    @click="openView(l)"
+                                >
+                                    <Eye class="h-4 w-4 text-blue-600" />
+                                </button>
+
                                 <template v-if="l.final_status === 'pending'">
                                     <button
                                         class="h-8 w-8 inline-flex items-center justify-center rounded-lg hover:bg-green-50"
@@ -299,6 +355,207 @@ const destroy = (l) => {
                     >
                 </div>
             </form>
+        </Modal>
+
+        <Modal :show="viewOpen" @close="closeView">
+            <div v-if="selectedLeave" class="p-6 max-h-[85vh] overflow-y-auto">
+                <!-- Header -->
+                <div class="flex items-start justify-between gap-4 mb-6">
+                    <div>
+                        <h2 class="text-xl font-semibold text-gray-900">
+                            Leave Request Details
+                        </h2>
+
+                        <p class="mt-1 text-sm text-gray-500">
+                            Request #{{ selectedLeave.id }}
+                        </p>
+                    </div>
+
+                    <button
+                        type="button"
+                        class="h-9 w-9 rounded-lg hover:bg-gray-100 flex items-center justify-center"
+                        @click="closeView"
+                    >
+                        <X class="h-5 w-5 text-gray-500" />
+                    </button>
+                </div>
+
+                <!-- Resident / Final Status -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <LeaveDetail label="Resident">
+                        {{ residentName(selectedLeave.resident) }}
+                    </LeaveDetail>
+
+                    <LeaveDetail label="Final Status">
+                        <Badge
+                            :color="
+                                statusColor[selectedLeave.final_status] ||
+                                'gray'
+                            "
+                        >
+                            {{
+                                selectedLeave.final_status_label ||
+                                formatStatus(selectedLeave.final_status)
+                            }}
+                        </Badge>
+                    </LeaveDetail>
+                </div>
+
+                <!-- Leave Details -->
+                <div class="mt-6">
+                    <h3 class="text-sm font-semibold text-gray-900 mb-3">
+                        Leave Details
+                    </h3>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <LeaveDetail label="Leave Type">
+                            {{
+                                selectedLeave.leave_type_label ||
+                                formatStatus(selectedLeave.leave_type)
+                            }}
+                        </LeaveDetail>
+
+                        <LeaveDetail label="Total Days">
+                            {{ selectedLeave.total_days ?? "-" }}
+                        </LeaveDetail>
+
+                        <LeaveDetail label="From Date">
+                            {{ selectedLeave.from_date || "-" }}
+                        </LeaveDetail>
+
+                        <LeaveDetail label="To Date">
+                            {{ selectedLeave.to_date || "-" }}
+                        </LeaveDetail>
+
+                        <LeaveDetail label="Destination" :full="true">
+                            {{ selectedLeave.destination || "-" }}
+                        </LeaveDetail>
+
+                        <LeaveDetail label="Reason" :full="true">
+                            {{ selectedLeave.reason || "-" }}
+                        </LeaveDetail>
+
+                        <LeaveDetail label="Gate Pass Code">
+                            {{ selectedLeave.gate_pass_code || "-" }}
+                        </LeaveDetail>
+                    </div>
+                </div>
+
+                <!-- Parent Approval -->
+                <div class="mt-6">
+                    <h3 class="text-sm font-semibold text-gray-900 mb-3">
+                        Parent Approval
+                    </h3>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <LeaveDetail label="Status">
+                            {{
+                                formatStatus(
+                                    selectedLeave.parent_approval_status,
+                                )
+                            }}
+                        </LeaveDetail>
+
+                        <LeaveDetail label="Approval Sent">
+                            {{
+                                formatDateTime(
+                                    selectedLeave.parent_approval_sent_at,
+                                )
+                            }}
+                        </LeaveDetail>
+
+                        <LeaveDetail label="Parent Responded">
+                            {{
+                                formatDateTime(
+                                    selectedLeave.parent_responded_at,
+                                )
+                            }}
+                        </LeaveDetail>
+
+                        <LeaveDetail label="Parent Remarks" :full="true">
+                            {{ selectedLeave.parent_remarks || "-" }}
+                        </LeaveDetail>
+                    </div>
+                </div>
+
+                <!-- Admin Approval -->
+                <div class="mt-6">
+                    <h3 class="text-sm font-semibold text-gray-900 mb-3">
+                        Admin Approval
+                    </h3>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <LeaveDetail label="Admin Status">
+                            {{
+                                formatStatus(
+                                    selectedLeave.admin_approval_status,
+                                )
+                            }}
+                        </LeaveDetail>
+
+                        <LeaveDetail label="Approved By">
+                            {{ selectedLeave.approved_by || "-" }}
+                        </LeaveDetail>
+
+                        <LeaveDetail label="Approved At">
+                            {{ formatDateTime(selectedLeave.approved_at) }}
+                        </LeaveDetail>
+
+                        <LeaveDetail label="Admin Remarks" :full="true">
+                            {{ selectedLeave.admin_remarks || "-" }}
+                        </LeaveDetail>
+                    </div>
+                </div>
+
+                <!-- Cancellation -->
+                <div class="mt-6">
+                    <h3 class="text-sm font-semibold text-gray-900 mb-3">
+                        Cancellation
+                    </h3>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <LeaveDetail label="Cancelled At">
+                            {{ formatDateTime(selectedLeave.cancelled_at) }}
+                        </LeaveDetail>
+
+                        <LeaveDetail label="Cancelled By">
+                            {{
+                                residentName(
+                                    selectedLeave.cancelled_by_resident,
+                                )
+                            }}
+                        </LeaveDetail>
+                    </div>
+                </div>
+
+                <!-- Audit -->
+                <div class="mt-6 pt-5 border-t border-gray-100">
+                    <h3 class="text-sm font-semibold text-gray-900 mb-3">
+                        Record Information
+                    </h3>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <LeaveDetail label="Created At">
+                            {{ formatDateTime(selectedLeave.created_at) }}
+                        </LeaveDetail>
+
+                        <LeaveDetail label="Last Updated">
+                            {{ formatDateTime(selectedLeave.updated_at) }}
+                        </LeaveDetail>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="flex justify-end pt-6">
+                    <button
+                        type="button"
+                        class="px-4 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50"
+                        @click="closeView"
+                    >
+                        Close
+                    </button>
+                </div>
+            </div>
         </Modal>
     </AuthenticatedLayout>
 </template>

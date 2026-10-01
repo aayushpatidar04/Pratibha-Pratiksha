@@ -1,6 +1,9 @@
 <script setup>
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
-import { Head } from "@inertiajs/vue3";
+import { Head, usePage } from "@inertiajs/vue3";
+
+import { ref, onMounted, onBeforeUnmount } from "vue";
+
 import {
     Building2,
     BedDouble,
@@ -42,6 +45,176 @@ const props = defineProps({
     latestEmergencies: Array,
     latestApplications: Array,
     misReports: Array,
+});
+
+const liveLeaves = ref([...(props.latestLeaves ?? [])]);
+const pendingLeavesCount = ref(props.stats?.leaves?.pending ?? 0);
+
+const liveComplaints = ref([...(props.latestComplaints ?? [])]);
+const pendingComplaintsCount = ref(props.stats?.complaints?.open ?? 0);
+
+const liveCheckouts = ref([...(props.latestCheckouts ?? [])]);
+const pendingCheckoutsCount = ref(props.stats?.checkouts?.pending ?? 0);
+
+const liveRoomChanges = ref([...(props.latestRoomChanges ?? [])]);
+const pendingRoomChangesCount = ref(props.stats?.RoomChanges?.pending ?? 0);
+
+const handleRealtimeNotification = (event) => {
+    const notification = event?.detail;
+
+    if (!notification?.type) {
+        return;
+    }
+
+    const p = notification.payload ?? {};
+
+    // -----------------------------------------
+    // New Leave Request
+    // -----------------------------------------
+
+    if (notification.type === "leave_request_created") {
+        const leaveId =
+            p.leave_id ??
+            notification.id ??
+            Date.now();
+
+        // Prevent duplicate entries
+        if (
+            !liveLeaves.value.some(
+                (leave) =>
+                    Number(leave.id) === Number(leaveId)
+            )
+        ) {
+            liveLeaves.value.unshift({
+                id: leaveId,
+                residentName: p.residentName ?? "Resident",
+                reason: p.reason ?? "",
+                fromDate: p.fromDate ?? null,
+                toDate: p.toDate ?? null,
+                status:
+                    p.status ??
+                    "parent_approval_pending",
+            });
+
+            liveLeaves.value =
+                liveLeaves.value.slice(0, 5);
+
+            pendingLeavesCount.value += 1;
+        }
+
+        return;
+    }
+
+    // -----------------------------------------
+    // New Complaint
+    // -----------------------------------------
+    if (notification.type === "complaint_submitted") {
+        const complaintId =
+            p.complaint_id ??
+            notification.id ??
+            Date.now();
+
+        // Prevent duplicate entries
+        if (
+            !liveComplaints.value.some(
+                (complaint) =>
+                    Number(complaint.id) ===
+                    Number(complaintId)
+            )
+        ) {
+            liveComplaints.value.unshift({
+                id: complaintId,
+                residentName: p.residentName ?? "Resident",
+                complaintType: p.complaintType ?? "Complaint",
+                reason: p.reason ?? "",
+                createdAt: p.createdAt ?? null,
+                status: p.status ?? "open",
+            });
+
+            liveComplaints.value =
+                liveComplaints.value.slice(0, 5);
+
+            pendingComplaintsCount.value += 1;
+        }
+
+        return;
+    }
+
+    if (notification.type === "checkout_request_created") {
+        const checkoutId = p.checkout_id ?? notification.id ?? Date.now();
+
+        // Prevent duplicate entries
+        if (
+            !liveCheckouts.value.some(
+                (checkout) =>
+                    Number(checkout.id) === Number(checkoutId)
+            )
+        ) {
+            liveCheckouts.value.unshift({
+                id: checkoutId,
+                residentName: p.residentName ?? "Resident",
+                reason: p.reason ?? "",
+                checkoutDate: p.checkoutDate ?? null,
+                status:
+                    p.status ?? "pending",
+            });
+
+            liveCheckouts.value =
+                liveCheckouts.value.slice(0, 5);
+
+            pendingCheckoutsCount.value += 1;
+        }
+
+        return;
+    }
+
+    if (notification.type === "room_change_request_created") {
+        const roomChangeId = p.room_change_id ?? notification.id ?? Date.now();
+
+        // Prevent duplicate entries
+        if (
+            !liveRoomChanges.value.some(
+                (roomChange) =>
+                    Number(roomChange.id) === Number(roomChangeId)
+            )
+        ) {
+            liveRoomChanges.value.unshift({
+                id: roomChangeId,
+                residentName: p.residentName ?? "Resident",
+                reason: p.reason ?? "",
+                status: p.status ?? "pending",
+                createdAt: p.createdAt ?? null,
+            });
+
+            liveRoomChanges.value =
+                liveRoomChanges.value.slice(0, 5);
+
+            pendingRoomChangesCount.value += 1;
+        }
+
+        return;
+    }
+};
+
+onMounted(() => {
+    window.addEventListener(
+        "app-notification-received",
+        handleRealtimeNotification
+    );
+
+    window.addEventListener(
+        "app-notification-received",
+        (event) => {
+            
+        }
+    );
+});
+
+onBeforeUnmount(() => {
+    window.removeEventListener(
+        "app-notification-received",
+        handleRealtimeNotification
+    );
 });
 
 const occupancyRate = () => {
@@ -97,7 +270,7 @@ const cards = [
     },
     {
         label: "Pending Leaves",
-        value: () => props.stats.leaves.pending,
+        value: () => pendingLeavesCount.value,
         sub: () => `${props.stats.leaves.approved} approved`,
         icon: CalendarDays,
         color: "purple",
@@ -286,8 +459,7 @@ const activityColor = (color) => {
                                     class="w-full bg-blue-500 rounded-t"
                                     :style="{
                                         height:
-                                            (m.occupied / maxTrend()) *
-                                            100 +
+                                            (m.occupied / maxTrend()) * 100 +
                                             '%',
                                     }"
                                 />
@@ -412,12 +584,16 @@ const activityColor = (color) => {
                     </div>
                     <div class="space-y-3">
                         <div
-                            v-if="latestComplaints?.length"
-                            v-for="complaint in latestComplaints"
+                            v-if="liveComplaints.length"
+                            v-for="complaint in liveComplaints"
                             :key="complaint.id"
                         >
                             <a
-                                :href="route('complaints.index', { status: complaint.status })"
+                                :href="
+                                    route('complaints.index', {
+                                        status: complaint.status,
+                                    })
+                                "
                                 class="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:border-blue-200 hover:bg-blue-50/50 transition-colors"
                             >
                                 <div class="flex items-center gap-3 min-w-0">
@@ -432,7 +608,7 @@ const activityColor = (color) => {
                                         <p
                                             class="text-sm font-medium text-gray-900 truncate"
                                         >
-                                            {{ complaint.category }}
+                                            {{ complaint.category ?? complaint.complaintType }}
                                         </p>
                                         <p class="text-xs text-gray-700">
                                             {{ complaint.residentName }}
@@ -440,7 +616,7 @@ const activityColor = (color) => {
                                         <p
                                             class="text-xs text-gray-600 mt-0.5 line-clamp-1"
                                         >
-                                            {{ complaint.description }}
+                                            {{ complaint.description ?? complaint.reason }}
                                         </p>
                                     </div>
                                 </div>
@@ -482,12 +658,16 @@ const activityColor = (color) => {
                     </div>
                     <div class="space-y-3">
                         <div
-                            v-if="latestCheckouts?.length"
-                            v-for="checkout in latestCheckouts"
+                            v-if="liveCheckouts?.length"
+                            v-for="checkout in liveCheckouts"
                             :key="checkout.id"
                         >
                             <a
-                                :href="route('checkout-requests.show', { id: checkout.id })"
+                                :href="
+                                    route('checkout-requests.show', {
+                                        id: checkout.id,
+                                    })
+                                "
                                 class="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:border-amber-200 hover:bg-amber-50/50 transition-colors"
                             >
                                 <div class="flex items-center gap-3 min-w-0">
@@ -507,9 +687,7 @@ const activityColor = (color) => {
                                         <p class="text-xs text-gray-600">
                                             Checkout request
                                         </p>
-                                        <p
-                                            class="text-xs text-gray-600 mt-0.5"
-                                        >
+                                        <p class="text-xs text-gray-600 mt-0.5">
                                             {{ formatDate(checkout.createdAt) }}
                                         </p>
                                     </div>
@@ -518,9 +696,7 @@ const activityColor = (color) => {
                                     class="px-2 py-1 rounded-full text-[10px] font-medium uppercase tracking-wide flex-shrink-0 ml-2"
                                     :class="statusColors[checkout.status]"
                                 >
-                                    {{
-                                        checkout.status.replace(/_/g, " ")
-                                    }}
+                                    {{ checkout.status.replace(/_/g, " ") }}
                                 </span>
                             </a>
                         </div>
@@ -557,23 +733,27 @@ const activityColor = (color) => {
                     </div>
                     <div class="space-y-3">
                         <div
-                            v-if="latestLeaves?.length"
-                            v-for="leave in latestLeaves"
+                            v-if="liveLeaves.length"
+                            v-for="leave in liveLeaves"
                             :key="leave.id"
                         >
                             <a
-                                :href="route('leaves.index', { final_status: leave.status })"
+                                :href="
+                                    route('leaves.index', {
+                                        final_status: leave.status,
+                                    })
+                                "
                                 class="flex items-start gap-3 p-3 rounded-lg border border-gray-100 hover:border-purple-200 hover:bg-purple-50/50 transition-colors"
                             >
                                 <div
                                     class="h-8 w-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0"
                                 >
-                                    <Users
-                                        class="h-4 w-4 text-purple-600"
-                                    />
+                                    <Users class="h-4 w-4 text-purple-600" />
                                 </div>
                                 <div class="flex-1 min-w-0">
-                                    <div class="flex items-center justify-between">
+                                    <div
+                                        class="flex items-center justify-between"
+                                    >
                                         <p
                                             class="text-sm font-medium text-gray-900 truncate"
                                         >
@@ -621,9 +801,7 @@ const activityColor = (color) => {
                         <h2
                             class="text-sm font-semibold text-gray-900 flex items-center gap-2"
                         >
-                            <ClipboardList
-                                class="w-4 h-4 text-indigo-500"
-                            />
+                            <ClipboardList class="w-4 h-4 text-indigo-500" />
                             Room Change Requests
                         </h2>
                         <a
@@ -635,12 +813,16 @@ const activityColor = (color) => {
                     </div>
                     <div class="space-y-3">
                         <div
-                            v-if="latestRoomChanges?.length"
-                            v-for="change in latestRoomChanges"
+                            v-if="liveRoomChanges?.length"
+                            v-for="change in liveRoomChanges"
                             :key="change.id"
                         >
                             <a
-                                :href="route('room-change-requests.index', { status: change.status })"
+                                :href="
+                                    route('room-change-requests.index', {
+                                        status: change.status,
+                                    })
+                                "
                                 class="flex items-start gap-3 p-3 rounded-lg border border-gray-100 hover:border-indigo-200 hover:bg-indigo-50/50 transition-colors"
                             >
                                 <div
@@ -661,9 +843,7 @@ const activityColor = (color) => {
                                     >
                                         {{ change.reason }}
                                     </p>
-                                    <p
-                                        class="text-xs text-gray-600 mt-0.5"
-                                    >
+                                    <p class="text-xs text-gray-600 mt-0.5">
                                         {{ formatDate(change.createdAt) }}
                                     </p>
                                 </div>
@@ -710,15 +890,17 @@ const activityColor = (color) => {
                             :key="notice.id"
                         >
                             <a
-                                :href="route('notices.index', { status: 'published' })"
+                                :href="
+                                    route('notices.index', {
+                                        status: 'published',
+                                    })
+                                "
                                 class="flex items-start gap-3 p-3 rounded-lg border border-gray-100 hover:border-blue-200 hover:bg-blue-50/50 transition-colors"
                             >
                                 <div
                                     class="h-8 w-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0"
                                 >
-                                    <Inbox
-                                        class="h-4 w-4 text-blue-600"
-                                    />
+                                    <Inbox class="h-4 w-4 text-blue-600" />
                                 </div>
                                 <div class="flex-1 min-w-0">
                                     <div class="flex items-center gap-1">
@@ -739,15 +921,16 @@ const activityColor = (color) => {
                                     >
                                         {{ notice.category }}
                                     </p>
-                                    <p
-                                        class="text-xs text-gray-600 mt-0.5"
-                                    >
+                                    <p class="text-xs text-gray-600 mt-0.5">
                                         {{ formatDate(notice.publishedAt) }}
                                     </p>
                                 </div>
                                 <span
                                     class="px-2 py-0.5 rounded-full text-[10px] font-medium uppercase flex-shrink-0 ml-2"
-                                    :class="statusColors[notice.priority] || 'bg-gray-100 text-gray-700'"
+                                    :class="
+                                        statusColors[notice.priority] ||
+                                        'bg-gray-100 text-gray-700'
+                                    "
                                 >
                                     {{ notice.priority }}
                                 </span>
@@ -762,7 +945,7 @@ const activityColor = (color) => {
                         </div>
                     </div>
                 </div>
-            
+
                 <!-- Emergency Alerts -->
                 <div
                     class="bg-white rounded-xl border border-gray-100 shadow-sm p-5"
@@ -794,9 +977,7 @@ const activityColor = (color) => {
                                 <div
                                     class="h-8 w-8 rounded-lg bg-red-100 flex items-center justify-center flex-shrink-0"
                                 >
-                                    <Siren
-                                        class="h-4 w-4 text-red-600"
-                                    />
+                                    <Siren class="h-4 w-4 text-red-600" />
                                 </div>
                                 <div class="flex-1 min-w-0">
                                     <p
@@ -807,11 +988,10 @@ const activityColor = (color) => {
                                     <p
                                         class="text-xs text-gray-700 mt-0.5 line-clamp-1"
                                     >
-                                        {{ alert.alertType }}: {{ alert.description }}
+                                        {{ alert.alertType }}:
+                                        {{ alert.description }}
                                     </p>
-                                    <p
-                                        class="text-xs text-gray-600 mt-0.5"
-                                    >
+                                    <p class="text-xs text-gray-600 mt-0.5">
                                         {{ formatDate(alert.createdAt) }}
                                     </p>
                                 </div>
@@ -858,7 +1038,9 @@ const activityColor = (color) => {
                             :key="app.id"
                         >
                             <a
-                                :href="route('admin.registrations.show', app.id)"
+                                :href="
+                                    route('admin.registrations.show', app.id)
+                                "
                                 class="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:border-teal-200 hover:bg-teal-50/50 transition-colors"
                             >
                                 <div class="flex items-center gap-3 min-w-0">
@@ -875,17 +1057,20 @@ const activityColor = (color) => {
                                         >
                                             {{ app.studentName }}
                                         </p>
-                                        <p
-                                            class="text-xs text-gray-600"
-                                        >
+                                        <p class="text-xs text-gray-600">
                                             {{ app.applicationNo }}
                                         </p>
                                     </div>
                                 </div>
-                                <div class="flex flex-col items-end gap-1 flex-shrink-0">
+                                <div
+                                    class="flex flex-col items-end gap-1 flex-shrink-0"
+                                >
                                     <span
                                         class="px-2 py-0.5 rounded-full text-[10px] font-medium"
-                                        :class="statusColors[app.status] || 'bg-gray-100 text-gray-700'"
+                                        :class="
+                                            statusColors[app.status] ||
+                                            'bg-gray-100 text-gray-700'
+                                        "
                                     >
                                         {{ app.status }}
                                     </span>
@@ -974,14 +1159,10 @@ const activityColor = (color) => {
                             <div
                                 class="h-8 w-8 rounded-lg bg-blue-100 flex items-center justify-center"
                             >
-                                <FileText
-                                    class="h-4 w-4 text-blue-600"
-                                />
+                                <FileText class="h-4 w-4 text-blue-600" />
                             </div>
                             <div>
-                                <p
-                                    class="text-sm font-medium text-gray-900"
-                                >
+                                <p class="text-sm font-medium text-gray-900">
                                     {{ report.label }}
                                 </p>
                                 <p class="text-xs text-gray-600">

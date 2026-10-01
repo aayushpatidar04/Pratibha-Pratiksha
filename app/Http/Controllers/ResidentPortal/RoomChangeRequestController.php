@@ -8,6 +8,7 @@ use App\Models\Floor;
 use App\Models\Resident;
 use App\Models\Room;
 use App\Models\RoomChangeRequest;
+use App\Services\NotificationService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -249,7 +250,8 @@ class RoomChangeRequestController extends Controller
     }
 
     public function store(
-        Request $request
+        Request $request,
+        NotificationService $notificationService
     ): RedirectResponse {
         /** @var Resident|null $resident */
         $resident = Auth::guard('resident')->user();
@@ -386,6 +388,25 @@ class RoomChangeRequestController extends Controller
                         $resident->id,
                 ]);
             }
+        );
+
+        $notificationService->send(
+            [
+                'title' => 'New Room Change Request',
+                'body' => "{$resident->full_name} applied for a room change",
+                'type' => 'room_change_request_created',
+                'payload' => [
+                    'room_change_id' => $changeRequest->id,
+                    'residentName' => $resident->full_name,
+                    'reason' => $changeRequest->reason,
+                    'status' => $changeRequest->status,
+                    'createdAt' => $changeRequest->created_at?->toDateString(),
+                ],
+                'action_url' => '/residents/room-change-requests?status=' . $changeRequest->status,
+                'action_label' => 'Review Room Change Request',
+            ],
+            $notificationService->recipientsForModule('room_change_requests'),
+            $changeRequest // polymorphic actionable
         );
 
         return redirect()

@@ -176,10 +176,35 @@ const genderColor = { male: "blue", female: "pink", other: "purple" };
 // ------------------------------------------------------------------
 const openActionsFor = ref(null);
 
-const toggleActions = (id, event) => {
-    event.stopPropagation();
+const dropdownPosition = ref({
+    top: "0px",
+    left: "0px",
+});
 
-    openActionsFor.value = openActionsFor.value === id ? null : id;
+const MENU_HEIGHT = 400; // max-h-[400px]
+
+const toggleActions = (id, event) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+
+    let top;
+
+    if (spaceBelow < MENU_HEIGHT && spaceAbove > spaceBelow) {
+        // Open upward
+        top = rect.top - MENU_HEIGHT;
+    } else {
+        // Open downward
+        top = rect.bottom + 8;
+    }
+
+    dropdownPosition.value = {
+        top: `${Math.max(10, top)}px`,
+        left: `${rect.right - 288}px`,
+    };
+
+    openActionsFor.value = id;
 };
 
 const closeActions = () => {
@@ -1590,171 +1615,188 @@ const exportResidents = () => {
                                         class="h-4 w-4 text-gray-700"
                                     />
                                 </button>
-                                <div
-                                    v-if="openActionsFor === r.id"
-                                    class="absolute right-2 top-15 z-50 w-72 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl ring-1 ring-black/5 max-h-[400px] overflow-y-auto"
-                                >
+                                <Teleport to="body">
                                     <div
-                                        class="border-t border-gray-200 my-1"
-                                    ></div>
-                                    <div
-                                        class="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide bg-gray-100 text-gray-600"
+                                        v-if="openActionsFor === r.id"
+                                        :style="{
+                                            top: dropdownPosition.top,
+                                            left: dropdownPosition.left,
+                                            maxHeight: 'calc(100vh - 40px)',
+                                        }"
+                                        class="fixed z-[9999] w-72 overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-2xl"
                                     >
-                                        Profile
+                                        <div
+                                            class="border-t border-gray-200 my-1"
+                                        ></div>
+                                        <div
+                                            class="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide bg-gray-100 text-gray-600"
+                                        >
+                                            Profile
+                                        </div>
+                                        <div
+                                            class="border-t border-gray-200 my-1"
+                                        ></div>
+                                        <button
+                                            class="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50"
+                                            @click="openView(r)"
+                                        >
+                                            <Eye class="h-3.5 w-3.5" /> View
+                                            Details
+                                        </button>
+                                        <button
+                                            class="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50"
+                                            @click="openEdit(r)"
+                                        >
+                                            <Pencil class="h-3.5 w-3.5" /> Edit
+                                            Details
+                                        </button>
+                                        <Link
+                                            :href="`/residents/academic-details?search=${encodeURIComponent(r.first_name)}`"
+                                            class="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50"
+                                            ><GraduationCap
+                                                class="h-3.5 w-3.5"
+                                            />
+                                            Edit Academic Details</Link
+                                        >
+                                        <Link
+                                            href="/residents/vehicles"
+                                            class="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50"
+                                            ><Bike class="h-3.5 w-3.5" />
+                                            Vehicle Info</Link
+                                        >
+                                        <button
+                                            type="button"
+                                            class="flex w-full items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50"
+                                            @click="printResidentProfile(r)"
+                                        >
+                                            <Printer class="h-3.5 w-3.5" />
+                                            Print Resident Details
+                                        </button>
+                                        <div
+                                            class="border-t border-gray-200 my-1"
+                                        ></div>
+                                        <div
+                                            class="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide bg-gray-100 text-gray-600"
+                                        >
+                                            Accommodation
+                                        </div>
+                                        <div
+                                            class="border-t border-gray-200 my-1"
+                                        ></div>
+                                        <button
+                                            type="button"
+                                            class="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50"
+                                            @click="openStayDates(r)"
+                                        >
+                                            <Calendar class="h-3.5 w-3.5" />
+                                            Edit Stay Dates
+                                        </button>
+                                        <Link
+                                            href="/residents/room-change-requests"
+                                            class="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50"
+                                            ><ArrowRightLeft
+                                                class="h-3.5 w-3.5"
+                                            />
+                                            Room Change Request</Link
+                                        >
+                                        <Link
+                                            href="/checkinout"
+                                            class="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50"
+                                            ><LogOutIcon class="h-3.5 w-3.5" />
+                                            Check-Out</Link
+                                        >
+                                        <div
+                                            class="border-t border-gray-200 my-1"
+                                        ></div>
+                                        <div
+                                            class="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide bg-gray-100 text-gray-600"
+                                        >
+                                            Movement
+                                        </div>
+                                        <div
+                                            class="border-t border-gray-200 my-1"
+                                        ></div>
+                                        <Link
+                                            href="#"
+                                            class="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50"
+                                        >
+                                            <ScanLine
+                                                class="h-3.5 w-3.5"
+                                            />Entry/Exit
+                                        </Link>
+                                        <Link
+                                            href="#"
+                                            class="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50"
+                                        >
+                                            <PlaneTakeoff
+                                                class="h-3.5 w-3.5"
+                                            />Leave History
+                                        </Link>
+                                        <Link
+                                            href="#"
+                                            class="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50"
+                                        >
+                                            <Footprints
+                                                class="h-3.5 w-3.5"
+                                            />Day Out
+                                        </Link>
+                                        <div
+                                            class="border-t border-gray-200 my-1"
+                                        ></div>
+                                        <div
+                                            class="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide bg-gray-100 text-gray-600"
+                                        >
+                                            Records
+                                        </div>
+                                        <div
+                                            class="border-t border-gray-200 my-1"
+                                        ></div>
+                                        <Link
+                                            :href="
+                                                route(
+                                                    'billing.resident.history',
+                                                    {
+                                                        resident: r.id,
+                                                    },
+                                                )
+                                            "
+                                            class="px-3 py-2 text-xs rounded-lg flex items-center gap-1.5 text-gray-600 hover:bg-gray-50"
+                                        >
+                                            <ReceiptText class="h-4 w-4" /> Bill
+                                            History
+                                        </Link>
+                                        <Link
+                                            :href="
+                                                route(
+                                                    'residents.amenity-override.edit',
+                                                    { resident: r.id },
+                                                )
+                                            "
+                                            class="px-3 py-2 text-xs rounded-lg flex items-center gap-1.5 text-gray-600 hover:bg-gray-50"
+                                        >
+                                            <Users class="h-4 w-4" /> Resident
+                                            Overrides
+                                        </Link>
+                                        <div
+                                            class="border-t border-gray-200 my-1"
+                                        ></div>
+                                        <div
+                                            class="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide bg-gray-100 text-gray-600"
+                                        >
+                                            Documents
+                                        </div>
+                                        <div
+                                            class="border-t border-gray-200 my-1"
+                                        ></div>
+                                        <button
+                                            class="w-full flex items-center gap-2 px-3 py-2 text-xs text-red-600 hover:bg-red-50"
+                                            @click="destroy(r)"
+                                        >
+                                            <Trash2 class="h-3.5 w-3.5" />
+                                            Delete
+                                        </button>
                                     </div>
-                                    <div
-                                        class="border-t border-gray-200 my-1"
-                                    ></div>
-                                    <button
-                                        class="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50"
-                                        @click="openView(r)"
-                                    >
-                                        <Eye class="h-3.5 w-3.5" /> View Details
-                                    </button>
-                                    <button
-                                        class="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50"
-                                        @click="openEdit(r)"
-                                    >
-                                        <Pencil class="h-3.5 w-3.5" /> Edit
-                                        Details
-                                    </button>
-                                    <Link
-                                        :href="`/residents/academic-details?search=${encodeURIComponent(r.first_name)}`"
-                                        class="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50"
-                                        ><GraduationCap class="h-3.5 w-3.5" />
-                                        Edit Academic Details</Link
-                                    >
-                                    <Link
-                                        href="/residents/vehicles"
-                                        class="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50"
-                                        ><Bike class="h-3.5 w-3.5" /> Vehicle
-                                        Info</Link
-                                    >
-                                    <button
-                                        type="button"
-                                        class="flex w-full items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50"
-                                        @click="printResidentProfile(r)"
-                                    >
-                                        <Printer class="h-3.5 w-3.5" />
-                                        Print Resident Details
-                                    </button>
-                                    <div
-                                        class="border-t border-gray-200 my-1"
-                                    ></div>
-                                    <div
-                                        class="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide bg-gray-100 text-gray-600"
-                                    >
-                                        Accommodation
-                                    </div>
-                                    <div
-                                        class="border-t border-gray-200 my-1"
-                                    ></div>
-                                    <button
-                                        type="button"
-                                        class="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50"
-                                        @click="openStayDates(r)"
-                                    >
-                                        <Calendar class="h-3.5 w-3.5" />
-                                        Edit Stay Dates
-                                    </button>
-                                    <Link
-                                        href="/residents/room-change-requests"
-                                        class="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50"
-                                        ><ArrowRightLeft class="h-3.5 w-3.5" />
-                                        Room Change Request</Link
-                                    >
-                                    <Link
-                                        href="/checkinout"
-                                        class="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50"
-                                        ><LogOutIcon class="h-3.5 w-3.5" />
-                                        Check-Out</Link
-                                    >
-                                    <div
-                                        class="border-t border-gray-200 my-1"
-                                    ></div>
-                                    <div
-                                        class="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide bg-gray-100 text-gray-600"
-                                    >
-                                        Movement
-                                    </div>
-                                    <div
-                                        class="border-t border-gray-200 my-1"
-                                    ></div>
-                                    <Link
-                                        href="#"
-                                        class="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50"
-                                    >
-                                        <ScanLine
-                                            class="h-3.5 w-3.5"
-                                        />Entry/Exit
-                                    </Link>
-                                    <Link
-                                        href="#"
-                                        class="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50"
-                                    >
-                                        <PlaneTakeoff
-                                            class="h-3.5 w-3.5"
-                                        />Leave History
-                                    </Link>
-                                    <Link
-                                        href="#"
-                                        class="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50"
-                                    >
-                                        <Footprints class="h-3.5 w-3.5" />Day
-                                        Out
-                                    </Link>
-                                    <div
-                                        class="border-t border-gray-200 my-1"
-                                    ></div>
-                                    <div
-                                        class="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide bg-gray-100 text-gray-600"
-                                    >
-                                        Records
-                                    </div>
-                                    <div
-                                        class="border-t border-gray-200 my-1"
-                                    ></div>
-                                    <Link
-                                        :href="
-                                            route('billing.resident.history', {
-                                                resident: r.id,
-                                            })
-                                        "
-                                        class="px-3 py-2 text-xs rounded-lg flex items-center gap-1.5 text-gray-600 hover:bg-gray-50"
-                                    >
-                                        <ReceiptText class="h-4 w-4" /> Bill
-                                        History
-                                    </Link>
-                                    <Link
-                                        :href="
-                                            route(
-                                                'residents.amenity-override.edit',
-                                                { resident: r.id },
-                                            )
-                                        "
-                                        class="px-3 py-2 text-xs rounded-lg flex items-center gap-1.5 text-gray-600 hover:bg-gray-50"
-                                    >
-                                        <Users class="h-4 w-4" /> Resident
-                                        Overrides
-                                    </Link>
-                                    <div
-                                        class="border-t border-gray-200 my-1"
-                                    ></div>
-                                    <div
-                                        class="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide bg-gray-100 text-gray-600"
-                                    >
-                                        Documents
-                                    </div>
-                                    <div
-                                        class="border-t border-gray-200 my-1"
-                                    ></div>
-                                    <button
-                                        class="w-full flex items-center gap-2 px-3 py-2 text-xs text-red-600 hover:bg-red-50"
-                                        @click="destroy(r)"
-                                    >
-                                        <Trash2 class="h-3.5 w-3.5" /> Delete
-                                    </button>
-                                </div>
+                                </Teleport>
                             </td>
                         </tr>
                         <tr v-if="!studentWise.residents.data.length">

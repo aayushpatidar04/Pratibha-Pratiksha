@@ -2884,7 +2884,7 @@ class ResidentController extends Controller
             'password_changed_at',
             'created_at' =>
                 $resident->{$column}
-                ? \Carbon\Carbon::parse(
+                ? Carbon::parse(
                     $resident->{$column}
                 )->format('Y-m-d H:i:s')
                 : '',

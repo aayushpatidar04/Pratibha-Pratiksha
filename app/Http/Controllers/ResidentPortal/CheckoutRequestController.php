@@ -8,6 +8,7 @@ use App\Models\FeeInvoice;
 use App\Models\Resident;
 use App\Models\ResidentStay;
 use App\Services\CheckoutRequestHistoryService;
+use App\Services\NotificationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -55,7 +56,7 @@ class CheckoutRequestController extends Controller
             ->latest('id')
             ->get()
             ->map(
-                fn (CheckoutRequest $checkoutRequest) =>
+                fn(CheckoutRequest $checkoutRequest) =>
                     $this->transformRequest(
                         $checkoutRequest
                     )
@@ -63,7 +64,7 @@ class CheckoutRequestController extends Controller
             ->values();
 
         $activeRequest = $requests->first(
-            fn (array $item) =>
+            fn(array $item) =>
                 !in_array(
                     $item['status'],
                     [
@@ -107,7 +108,7 @@ class CheckoutRequestController extends Controller
                         'expected_check_out_date' =>
                             $currentStay
                                 ->expected_check_out_date
-                                ?->toDateString(),
+                                    ?->toDateString(),
 
                         'billing_basis' =>
                             $currentStay->billing_basis,
@@ -147,7 +148,8 @@ class CheckoutRequestController extends Controller
     }
 
     public function store(
-        Request $request
+        Request $request,
+        NotificationService $notificationService
     ): RedirectResponse {
         /** @var Resident|null $resident */
         $resident = Auth::guard('resident')->user();
@@ -254,19 +256,8 @@ class CheckoutRequestController extends Controller
                 $resident
             );
 
-        DB::transaction(function () use (
-            $resident,
-            $stay,
-            $validated,
-            $requestedDate,
-            $requiredNoticeDays,
-            $actualNoticeDays,
-            $isShortNotice,
-            $warningAccepted,
-            $outstandingAmount
-        ): void {
-            $checkoutRequest =
-                CheckoutRequest::create([
+        $checkoutRequest = DB::transaction(function () use ($resident, $stay, $validated, $requestedDate, $requiredNoticeDays, $actualNoticeDays, $isShortNotice, $warningAccepted, $outstandingAmount) {
+            $checkoutRequest = CheckoutRequest::create([
                     'resident_id' =>
                         $resident->id,
 
@@ -301,8 +292,8 @@ class CheckoutRequestController extends Controller
                     'warning_accepted_at' =>
                         $isShortNotice
                         && $warningAccepted
-                            ? now()
-                            : null,
+                        ? now()
+                        : null,
 
                     'reason' =>
                         trim(
@@ -314,10 +305,10 @@ class CheckoutRequestController extends Controller
                             $validated['resident_notes']
                             ?? null
                         )
-                            ? trim(
-                                $validated['resident_notes']
-                            )
-                            : null,
+                        ? trim(
+                            $validated['resident_notes']
+                        )
+                        : null,
 
                     'status' =>
                         CheckoutRequest::STATUS_PENDING,
@@ -330,8 +321,8 @@ class CheckoutRequestController extends Controller
 
                     'dues_clearance_status' =>
                         $outstandingAmount > 0
-                            ? 'dues_pending'
-                            : 'clear',
+                        ? 'dues_pending'
+                        : 'clear',
 
                     'outstanding_amount_at_request' =>
                         $outstandingAmount,
@@ -339,22 +330,22 @@ class CheckoutRequestController extends Controller
 
             CheckoutRequestHistoryService::record(
                 checkoutRequest:
-                    $checkoutRequest,
+                $checkoutRequest,
 
                 action:
-                    'request_created',
+                'request_created',
 
                 fromStatus:
-                    null,
+                null,
 
                 toStatus:
-                    CheckoutRequest::STATUS_PENDING,
+                CheckoutRequest::STATUS_PENDING,
 
                 actor:
-                    $resident,
+                $resident,
 
                 notes:
-                    'Checkout request submitted by resident.',
+                'Checkout request submitted by resident.',
 
                 metadata: [
                     'requested_checkout_date' =>
@@ -380,22 +371,22 @@ class CheckoutRequestController extends Controller
             ) {
                 CheckoutRequestHistoryService::record(
                     checkoutRequest:
-                        $checkoutRequest,
+                    $checkoutRequest,
 
                     action:
-                        'warning_accepted',
+                    'warning_accepted',
 
                     fromStatus:
-                        CheckoutRequest::STATUS_PENDING,
+                    CheckoutRequest::STATUS_PENDING,
 
                     toStatus:
-                        CheckoutRequest::STATUS_PENDING,
+                    CheckoutRequest::STATUS_PENDING,
 
                     actor:
-                        $resident,
+                    $resident,
 
                     notes:
-                        'Resident accepted the short-notice checkout policy.',
+                    'Resident accepted the short-notice checkout policy.',
 
                     metadata: [
                         'actual_notice_days' =>
@@ -406,13 +397,36 @@ class CheckoutRequestController extends Controller
                     ]
                 );
             }
+
+            return $checkoutRequest;
         });
+
+        $notificationService->send(
+            [
+                'title' => 'New Checkout Request',
+                'body' => "{$resident->full_name} applied for checkout" .
+                    " ({$checkoutRequest->requested_checkout_date->format('d M')}).",
+                'type' => 'checkout_request_created',
+                'payload' => [
+                    'checkout_id' => $checkoutRequest->id,
+                    'residentName' => $resident->full_name,
+                    'reason' => $checkoutRequest->reason,
+                    'checkoutDate' => $checkoutRequest->requested_checkout_date?->toDateString(),
+                    'status' => $checkoutRequest->status,
+                    'createdAt' => $checkoutRequest->created_at?->toDateString(),
+                ],
+                'action_url' => '/checkout-requests/' . $checkoutRequest->id,
+                'action_label' => 'Review Checkout Request',
+            ],
+            $notificationService->recipientsForModule('checkout_requests'),
+            $checkoutRequest // polymorphic actionable
+        );
 
         return back()->with(
             'success',
             $isShortNotice
-                ? 'Checkout request submitted with a short-notice policy acknowledgement.'
-                : 'Checkout request submitted successfully.'
+            ? 'Checkout request submitted with a short-notice policy acknowledgement.'
+            : 'Checkout request submitted successfully.'
         );
     }
 
@@ -427,7 +441,7 @@ class CheckoutRequestController extends Controller
 
         abort_unless(
             (int) $checkoutRequest->resident_id
-                === (int) $resident->id,
+            === (int) $resident->id,
             403
         );
 
@@ -449,11 +463,7 @@ class CheckoutRequestController extends Controller
             ],
         ]);
 
-        DB::transaction(function () use (
-            $checkoutRequest,
-            $resident,
-            $validated
-        ): void {
+        DB::transaction(function () use ($checkoutRequest, $resident, $validated): void {
             $fromStatus =
                 $checkoutRequest->status;
 
@@ -480,26 +490,26 @@ class CheckoutRequestController extends Controller
 
             CheckoutRequestHistoryService::record(
                 checkoutRequest:
-                    $checkoutRequest,
+                $checkoutRequest,
 
                 action:
-                    'request_cancelled',
+                'request_cancelled',
 
                 fromStatus:
-                    $fromStatus,
+                $fromStatus,
 
                 toStatus:
-                    CheckoutRequest::STATUS_CANCELLED,
+                CheckoutRequest::STATUS_CANCELLED,
 
                 actor:
-                    $resident,
+                $resident,
 
                 notes:
-                    trim(
-                        $validated[
-                            'cancellation_reason'
-                        ]
-                    )
+                trim(
+                    $validated[
+                        'cancellation_reason'
+                    ]
+                )
             );
         });
 
@@ -523,7 +533,7 @@ class CheckoutRequestController extends Controller
             'requested_checkout_date' =>
                 $checkoutRequest
                     ->requested_checkout_date
-                    ?->toDateString(),
+                        ?->toDateString(),
 
             'requested_at' =>
                 $checkoutRequest->requested_at,
@@ -585,23 +595,23 @@ class CheckoutRequestController extends Controller
             'assigned_warden' =>
                 $checkoutRequest
                     ->assignedWarden
-                    ? [
-                        'id' =>
-                            $checkoutRequest
-                                ->assignedWarden
-                                ->id,
+                ? [
+                    'id' =>
+                        $checkoutRequest
+                            ->assignedWarden
+                            ->id,
 
-                        'name' =>
-                            $checkoutRequest
-                                ->assignedWarden
-                                ->name,
+                    'name' =>
+                        $checkoutRequest
+                            ->assignedWarden
+                            ->name,
 
-                        'email' =>
-                            $checkoutRequest
-                                ->assignedWarden
-                                ->email,
-                    ]
-                    : null,
+                    'email' =>
+                        $checkoutRequest
+                            ->assignedWarden
+                            ->email,
+                ]
+                : null,
 
             'warden_review_status' =>
                 $checkoutRequest
@@ -677,35 +687,35 @@ class CheckoutRequestController extends Controller
                     $checkoutRequest
                         ->stay
                         ?->building
-                        ?->name,
+                            ?->name,
 
                 'floor_name' =>
                     $checkoutRequest
                         ->stay
                         ?->floor
-                        ?->name
+                            ?->name
                     ?? $checkoutRequest
                         ->stay
                         ?->floor
-                        ?->floor_number,
+                            ?->floor_number,
 
                 'room_number' =>
                     $checkoutRequest
                         ->stay
                         ?->room
-                        ?->room_number,
+                            ?->room_number,
 
                 'bed_number' =>
                     $checkoutRequest
                         ->stay
                         ?->bed
-                        ?->bed_number,
+                            ?->bed_number,
 
                 'check_in_date' =>
                     $checkoutRequest
                         ->stay
                         ?->check_in_date
-                        ?->toDateString(),
+                            ?->toDateString(),
             ],
 
             'histories' =>
@@ -714,7 +724,7 @@ class CheckoutRequestController extends Controller
                     ->sortBy('created_at')
                     ->values()
                     ->map(
-                        fn ($history) => [
+                        fn($history) => [
                             'id' =>
                                 $history->id,
 
@@ -774,7 +784,7 @@ class CheckoutRequestController extends Controller
 
             'amount' =>
                 $invoices->sum(
-                    fn (FeeInvoice $invoice) =>
+                    fn(FeeInvoice $invoice) =>
                         max(
                             0,
                             (float) $invoice->amount
@@ -791,8 +801,8 @@ class CheckoutRequestController extends Controller
         return round(
             (float) $this
                 ->outstandingSummary($resident)[
-                    'amount'
-                ],
+                'amount'
+            ],
             2
         );
     }
@@ -808,7 +818,7 @@ class CheckoutRequestController extends Controller
 
         abort_unless(
             (int) $checkoutRequest->resident_id
-                === (int) $resident->id,
+            === (int) $resident->id,
             403,
             'This exit pass does not belong to you.'
         );
@@ -840,7 +850,7 @@ class CheckoutRequestController extends Controller
 
             'finalApprover:id,name',
 
-            'histories' => fn ($query) =>
+            'histories' => fn($query) =>
                 $query
                     ->oldest('created_at')
                     ->oldest('id'),
@@ -859,7 +869,7 @@ class CheckoutRequestController extends Controller
                     'requested_checkout_date' =>
                         $checkoutRequest
                             ->requested_checkout_date
-                            ?->toDateString(),
+                                ?->toDateString(),
 
                     'requested_at' =>
                         $checkoutRequest->requested_at,
@@ -909,18 +919,18 @@ class CheckoutRequestController extends Controller
                     'final_approver' =>
                         $checkoutRequest
                             ->finalApprover
-                            ? [
-                                'id' =>
-                                    $checkoutRequest
-                                        ->finalApprover
-                                        ->id,
+                        ? [
+                            'id' =>
+                                $checkoutRequest
+                                    ->finalApprover
+                                    ->id,
 
-                                'name' =>
-                                    $checkoutRequest
-                                        ->finalApprover
-                                        ->name,
-                            ]
-                            : null,
+                            'name' =>
+                                $checkoutRequest
+                                    ->finalApprover
+                                    ->name,
+                        ]
+                        : null,
 
                     'resident' => [
                         'id' =>
@@ -960,41 +970,41 @@ class CheckoutRequestController extends Controller
                             $checkoutRequest
                                 ->stay
                                 ?->building
-                                ?->name,
+                                    ?->name,
 
                         'floor' =>
                             $checkoutRequest
                                 ->stay
                                 ?->floor
-                                ?->name
+                                    ?->name
                             ?? $checkoutRequest
                                 ->stay
                                 ?->floor
-                                ?->floor_number,
+                                    ?->floor_number,
 
                         'room' =>
                             $checkoutRequest
                                 ->stay
                                 ?->room
-                                ?->room_number,
+                                    ?->room_number,
 
                         'bed' =>
                             $checkoutRequest
                                 ->stay
                                 ?->bed
-                                ?->bed_number,
+                                    ?->bed_number,
 
                         'check_in_date' =>
                             $checkoutRequest
                                 ->stay
                                 ?->check_in_date
-                                ?->toDateString(),
+                                    ?->toDateString(),
 
                         'expected_check_out_date' =>
                             $checkoutRequest
                                 ->stay
                                 ?->expected_check_out_date
-                                ?->toDateString(),
+                                    ?->toDateString(),
 
                         'status' =>
                             $checkoutRequest
@@ -1005,7 +1015,7 @@ class CheckoutRequestController extends Controller
                         $checkoutRequest
                             ->histories
                             ->map(
-                                fn ($history) => [
+                                fn($history) => [
                                     'id' =>
                                         $history->id,
 

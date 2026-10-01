@@ -9,7 +9,14 @@ import DangerButton from "@/Components/DangerButton.vue";
 import Badge from "@/Components/Badge.vue";
 import { Head, useForm, router, Link } from "@inertiajs/vue3";
 import { ref, reactive, computed } from "vue";
-import { ArrowRightLeft, Plus, Check, X, ArrowLeft } from "lucide-vue-next";
+import {
+    ArrowRightLeft,
+    Plus,
+    Check,
+    X,
+    ArrowLeft,
+    Eye,
+} from "lucide-vue-next";
 
 const props = defineProps({
     requests: Object,
@@ -69,6 +76,59 @@ const submitCreate = () =>
             createForm.reset();
         },
     });
+
+// --- View request ---
+const viewOpen = ref(false);
+const viewing = ref(null);
+
+const openView = (request) => {
+    viewing.value = request;
+    viewOpen.value = true;
+};
+
+const closeView = () => {
+    viewOpen.value = false;
+    viewing.value = null;
+};
+
+const formatDate = (date) => {
+    if (!date) return "—";
+
+    return new Date(date).toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+    });
+};
+
+const formatDateTime = (date) => {
+    if (!date) return "—";
+
+    return new Date(date).toLocaleString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+    });
+};
+
+const formatStatus = (status) => {
+    if (!status) return "—";
+
+    return status
+        .replaceAll("_", " ")
+        .replace(/\b\w/g, (char) => char.toUpperCase());
+};
+
+const residentName = (resident) => {
+    if (!resident) return "—";
+
+    return (
+        [resident.first_name, resident.last_name].filter(Boolean).join(" ") ||
+        "—"
+    );
+};
 
 // --- Approve / reject ---
 const reviewOpen = ref(false);
@@ -251,6 +311,15 @@ const submitReview = () => {
                                 }}</Badge>
                             </td>
                             <td class="px-4 py-3 text-right space-x-1">
+                                <!-- View -->
+                                <button
+                                    type="button"
+                                    class="h-8 w-8 inline-flex items-center justify-center rounded-lg hover:bg-blue-50"
+                                    title="View request"
+                                    @click="openView(r)"
+                                >
+                                    <Eye class="h-3.5 w-3.5 text-blue-600" />
+                                </button>
                                 <template v-if="r.status === 'pending'">
                                     <button
                                         class="h-8 w-8 inline-flex items-center justify-center rounded-lg hover:bg-green-50"
@@ -324,7 +393,9 @@ const submitReview = () => {
                             :key="r.id"
                             :value="r.id"
                         >
-                            {{ r.name }} ({{ r.resident_code }} - {{ r.building_name }} - {{ r.floor_name }} - {{ r.room_name }} - {{ r.bed_name }})
+                            {{ r.name }} ({{ r.resident_code }} -
+                            {{ r.building_name }} - {{ r.floor_name }} -
+                            {{ r.room_name }} - {{ r.bed_name }})
                         </option>
                     </select>
                 </div>
@@ -716,6 +787,441 @@ const submitReview = () => {
                     </DangerButton>
                 </div>
             </form>
+        </Modal>
+
+        <!-- View room change request -->
+        <Modal :show="viewOpen" @close="closeView" maxWidth="2xl">
+            <div
+                v-if="viewing"
+                class="flex max-h-[90vh] flex-col overflow-hidden"
+            >
+                <!-- Header -->
+                <div class="shrink-0 border-b border-gray-100 px-6 py-4">
+                    <div class="flex items-start justify-between gap-4">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <div
+                                    class="h-9 w-9 rounded-lg bg-blue-50 flex items-center justify-center"
+                                >
+                                    <ArrowRightLeft
+                                        class="h-4 w-4 text-blue-600"
+                                    />
+                                </div>
+
+                                <div>
+                                    <h2
+                                        class="text-lg font-semibold text-gray-900"
+                                    >
+                                        Room Change Request
+                                    </h2>
+
+                                    <p class="text-xs text-gray-500 mt-0.5">
+                                        Request #{{ viewing.id }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <Badge :color="statusColor[viewing.status] || 'gray'">
+                            {{
+                                viewing.status_label ||
+                                formatStatus(viewing.status)
+                            }}
+                        </Badge>
+                    </div>
+                </div>
+
+                <!-- Content -->
+                <div class="min-h-0 flex-1 overflow-y-auto px-6 py-5 space-y-5">
+                    <!-- Resident -->
+                    <div
+                        class="rounded-xl border border-gray-200 bg-gray-50 p-4"
+                    >
+                        <h3 class="text-sm font-semibold text-gray-900 mb-3">
+                            Resident
+                        </h3>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <p class="text-xs text-gray-500">Name</p>
+                                <p
+                                    class="mt-1 text-sm font-medium text-gray-900"
+                                >
+                                    {{ residentName(viewing.resident) }}
+                                </p>
+                            </div>
+
+                            <div>
+                                <p class="text-xs text-gray-500">Resident ID</p>
+                                <p
+                                    class="mt-1 text-sm font-medium text-gray-900"
+                                >
+                                    {{ viewing.resident?.resident_code || "—" }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Current / Requested room -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <!-- Current -->
+                        <div class="rounded-xl border border-gray-200 p-4">
+                            <p
+                                class="text-xs font-medium uppercase tracking-wide text-gray-500"
+                            >
+                                Current Room
+                            </p>
+
+                            <p class="mt-2 text-sm font-semibold text-gray-900">
+                                {{
+                                    viewing.current_stay?.building?.name || "—"
+                                }}
+                            </p>
+
+                            <p class="mt-1 text-sm text-gray-700">
+                                Room
+                                {{
+                                    viewing.current_stay?.room?.room_number ||
+                                    "—"
+                                }}
+                                <span class="text-gray-400">·</span>
+                                Bed
+                                {{
+                                    viewing.current_stay?.bed?.bed_number || "—"
+                                }}
+                            </p>
+
+                            <p class="mt-2 text-xs text-gray-600">
+                                Current rent:
+                                <span class="font-medium text-gray-900">
+                                    ₹{{
+                                        Number(
+                                            viewing.current_stay?.rent_amount ||
+                                                0,
+                                        ).toLocaleString("en-IN")
+                                    }}
+                                </span>
+                            </p>
+                        </div>
+
+                        <!-- Requested -->
+                        <div
+                            class="rounded-xl border border-blue-100 bg-blue-50/50 p-4"
+                        >
+                            <p
+                                class="text-xs font-medium uppercase tracking-wide text-blue-600"
+                            >
+                                Requested Room
+                            </p>
+
+                            <template v-if="viewing.requested_room">
+                                <p
+                                    class="mt-2 text-sm font-semibold text-gray-900"
+                                >
+                                    {{
+                                        viewing.requested_building?.name || "—"
+                                    }}
+                                </p>
+
+                                <p class="mt-1 text-sm text-gray-700">
+                                    Room
+                                    {{
+                                        viewing.requested_room?.room_number ||
+                                        "—"
+                                    }}
+                                    <span class="text-gray-400">·</span>
+                                    Bed
+                                    {{
+                                        viewing.requested_bed?.bed_number ||
+                                        "Not specified"
+                                    }}
+                                </p>
+
+                                <p class="mt-2 text-xs text-gray-600">
+                                    Standard room rent:
+                                    <span class="font-medium text-gray-900">
+                                        ₹{{
+                                            Number(
+                                                viewing.requested_room
+                                                    ?.monthly_rent_per_bed || 0,
+                                            ).toLocaleString("en-IN")
+                                        }}
+                                    </span>
+                                </p>
+                            </template>
+
+                            <p v-else class="mt-2 text-sm text-gray-500">
+                                No specific room was selected.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Reason -->
+                    <div class="rounded-xl border border-gray-200 p-4">
+                        <h3 class="text-sm font-semibold text-gray-900">
+                            Reason for Room Change
+                        </h3>
+
+                        <p
+                            class="mt-2 text-sm text-gray-700 whitespace-pre-wrap"
+                        >
+                            {{ viewing.reason || "No reason provided." }}
+                        </p>
+                    </div>
+
+                    <!-- Request information -->
+                    <div class="rounded-xl border border-gray-200 p-4">
+                        <h3 class="text-sm font-semibold text-gray-900 mb-3">
+                            Request Information
+                        </h3>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <p class="text-xs text-gray-500">Status</p>
+                                <p
+                                    class="mt-1 text-sm font-medium text-gray-900"
+                                >
+                                    {{
+                                        viewing.status_label ||
+                                        formatStatus(viewing.status)
+                                    }}
+                                </p>
+                            </div>
+
+                            <div>
+                                <p class="text-xs text-gray-500">
+                                    Request Source
+                                </p>
+                                <p
+                                    class="mt-1 text-sm font-medium text-gray-900"
+                                >
+                                    {{
+                                        viewing.request_source
+                                            ? formatStatus(
+                                                  viewing.request_source,
+                                              )
+                                            : "—"
+                                    }}
+                                </p>
+                            </div>
+
+                            <div>
+                                <p class="text-xs text-gray-500">
+                                    Requested By
+                                </p>
+                                <p
+                                    class="mt-1 text-sm font-medium text-gray-900"
+                                >
+                                    {{
+                                        viewing.requested_by_user?.name ||
+                                        residentName(
+                                            viewing.requested_by_resident,
+                                        ) ||
+                                        "—"
+                                    }}
+                                </p>
+                            </div>
+
+                            <div>
+                                <p class="text-xs text-gray-500">Created At</p>
+                                <p
+                                    class="mt-1 text-sm font-medium text-gray-900"
+                                >
+                                    {{ formatDateTime(viewing.created_at) }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Approval / transfer details -->
+                    <div
+                        v-if="
+                            viewing.status === 'approved' ||
+                            viewing.effective_from ||
+                            viewing.new_billing_basis ||
+                            viewing.new_rent_amount ||
+                            viewing.new_daily_rate
+                        "
+                        class="rounded-xl border border-green-100 bg-green-50/50 p-4"
+                    >
+                        <h3 class="text-sm font-semibold text-gray-900 mb-3">
+                            Transfer Details
+                        </h3>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <p class="text-xs text-gray-500">
+                                    Effective From
+                                </p>
+                                <p
+                                    class="mt-1 text-sm font-medium text-gray-900"
+                                >
+                                    {{ formatDate(viewing.effective_from) }}
+                                </p>
+                            </div>
+
+                            <div>
+                                <p class="text-xs text-gray-500">
+                                    Billing Basis
+                                </p>
+                                <p
+                                    class="mt-1 text-sm font-medium text-gray-900"
+                                >
+                                    {{
+                                        viewing.new_billing_basis
+                                            ? formatStatus(
+                                                  viewing.new_billing_basis,
+                                              )
+                                            : "—"
+                                    }}
+                                </p>
+                            </div>
+
+                            <div v-if="viewing.new_billing_basis === 'monthly'">
+                                <p class="text-xs text-gray-500">
+                                    New Monthly Rent
+                                </p>
+                                <p
+                                    class="mt-1 text-sm font-medium text-gray-900"
+                                >
+                                    ₹{{
+                                        Number(
+                                            viewing.new_rent_amount || 0,
+                                        ).toLocaleString("en-IN")
+                                    }}
+                                </p>
+                            </div>
+
+                            <div v-if="viewing.new_billing_basis === 'daily'">
+                                <p class="text-xs text-gray-500">
+                                    New Daily Rate
+                                </p>
+                                <p
+                                    class="mt-1 text-sm font-medium text-gray-900"
+                                >
+                                    ₹{{
+                                        Number(
+                                            viewing.new_daily_rate || 0,
+                                        ).toLocaleString("en-IN")
+                                    }}
+                                </p>
+                            </div>
+
+                            <div v-if="viewing.new_expected_check_out_date">
+                                <p class="text-xs text-gray-500">
+                                    Expected Check-out
+                                </p>
+                                <p
+                                    class="mt-1 text-sm font-medium text-gray-900"
+                                >
+                                    {{
+                                        formatDate(
+                                            viewing.new_expected_check_out_date,
+                                        )
+                                    }}
+                                </p>
+                            </div>
+
+                            <div v-if="viewing.new_stay_id">
+                                <p class="text-xs text-gray-500">New Stay ID</p>
+                                <p
+                                    class="mt-1 text-sm font-medium text-gray-900"
+                                >
+                                    #{{ viewing.new_stay_id }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Admin review -->
+                    <div
+                        v-if="
+                            viewing.reviewed_at ||
+                            viewing.reviewed_by ||
+                            viewing.admin_notes
+                        "
+                        class="rounded-xl border border-gray-200 p-4"
+                    >
+                        <h3 class="text-sm font-semibold text-gray-900 mb-3">
+                            Admin Review
+                        </h3>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <p class="text-xs text-gray-500">Reviewed By</p>
+                                <p
+                                    class="mt-1 text-sm font-medium text-gray-900"
+                                >
+                                    {{
+                                        viewing.reviewed_by?.name ||
+                                        viewing.reviewed_by ||
+                                        "—"
+                                    }}
+                                </p>
+                            </div>
+
+                            <div>
+                                <p class="text-xs text-gray-500">Reviewed At</p>
+                                <p
+                                    class="mt-1 text-sm font-medium text-gray-900"
+                                >
+                                    {{ formatDateTime(viewing.reviewed_at) }}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div v-if="viewing.admin_notes" class="mt-4">
+                            <p class="text-xs text-gray-500">Admin Notes</p>
+
+                            <p
+                                class="mt-1 text-sm text-gray-700 whitespace-pre-wrap"
+                            >
+                                {{ viewing.admin_notes }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Cancellation -->
+                    <div
+                        v-if="viewing.cancelled_at"
+                        class="rounded-xl border border-red-100 bg-red-50/50 p-4"
+                    >
+                        <h3 class="text-sm font-semibold text-red-800">
+                            Cancellation
+                        </h3>
+
+                        <p class="mt-2 text-sm text-red-700">
+                            Cancelled at
+                            {{ formatDateTime(viewing.cancelled_at) }}
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div
+                    class="flex shrink-0 justify-end gap-2 border-t border-gray-100 bg-white px-6 py-4"
+                >
+                    <button
+                        type="button"
+                        class="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                        @click="closeView"
+                    >
+                        Close
+                    </button>
+
+                    <PrimaryButton
+                        v-if="viewing.status === 'pending'"
+                        type="button"
+                        @click="
+                            closeView();
+                            openReview(viewing, 'approve');
+                        "
+                    >
+                        <Check class="h-4 w-4" />
+                        Review Request
+                    </PrimaryButton>
+                </div>
+            </div>
         </Modal>
     </AuthenticatedLayout>
 </template>

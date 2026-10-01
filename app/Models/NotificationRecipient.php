@@ -46,8 +46,7 @@ class NotificationRecipient extends Model
     public function scopeUnread($query)
     {
         return $query->whereNull('read_at')
-            ->whereNull('archived_at')
-            ->whereNull('deleted_at');
+            ->whereNull('archived_at');
     }
  
     /**

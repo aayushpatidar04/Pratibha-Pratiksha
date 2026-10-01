@@ -19,6 +19,7 @@ use App\Http\Controllers\KycController;
 use App\Http\Controllers\LeaveRequestController;
 use App\Http\Controllers\MessMenuController;
 use App\Http\Controllers\NoticeController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ParentLeaveApprovalController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RazorpayController;
@@ -291,6 +292,10 @@ Route::middleware(['auth', 'user.active'])->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('/notifications/{notificationRecipient}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
 });
 
 Route::prefix('register')->name('register.')->group(function () {

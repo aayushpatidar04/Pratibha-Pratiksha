@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Complaint;
 use App\Models\ComplaintUpdate;
 use App\Models\Resident;
+use App\Services\NotificationService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -177,11 +178,11 @@ class ComplaintController extends Controller
         );
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, NotificationService $notificationService): RedirectResponse
     {
         /** @var Resident|null $resident */
         $resident = Auth::guard('resident')->user();
-
+        
         abort_unless($resident, 401);
 
         $validated = $request->validate([
@@ -261,6 +262,26 @@ class ComplaintController extends Controller
 
             return $complaint;
         });
+
+        $notificationService->send(
+            [
+                'title' => 'New Complaint',
+                'body' => "{$resident->full_name} submitted a new complaint.",
+                'type' => 'complaint_submitted',
+                'payload' => [
+                    'complaint_id' => $complaint->id,
+                    'residentName' => $resident->full_name,
+                    'complaintType' => $complaint->category,
+                    'reason' => $complaint->description,
+                    'created_at' => $complaint->created_at?->toDateString(),
+                    'status' => $complaint->status,
+                ],
+                'action_url' => '/support/complaints?final_status=' . $complaint->status,
+                'action_label' => 'Review Complaint',
+            ],
+            $notificationService->recipientsForModule('complaints'),
+            $complaint // polymorphic actionable
+        );
 
         return redirect()
             ->route(

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\LeaveRequest;
 use App\Models\Resident;
 use App\Services\LeaveParentApprovalService;
+use App\Services\NotificationService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -64,23 +65,25 @@ class LeaveController extends Controller
 
         $leaves = (clone $baseQuery)
             ->with([
+                'resident:id,first_name,last_name',
                 'approvedBy:id,name',
+                'cancelledByResident:id,first_name,last_name',
             ])
             ->when(
                 $filters['status'] !== 'all',
                 fn(Builder $query) =>
-                $query->where(
-                    'final_status',
-                    $filters['status']
-                )
+                    $query->where(
+                        'final_status',
+                        $filters['status']
+                    )
             )
             ->when(
                 $filters['leave_type'] !== '',
                 fn(Builder $query) =>
-                $query->where(
-                    'leave_type',
-                    $filters['leave_type']
-                )
+                    $query->where(
+                        'leave_type',
+                        $filters['leave_type']
+                    )
             )
             ->when(
                 $filters['search'] !== '',
@@ -110,11 +113,11 @@ class LeaveController extends Controller
                 }
             )
             ->latest('created_at')
-            ->paginate(12)
+            ->paginate(15)
             ->withQueryString()
             ->through(
                 fn(LeaveRequest $leave) =>
-                $this->transformLeave($leave)
+                    $this->transformLeave($leave)
             );
 
         $stats = [
@@ -173,7 +176,8 @@ class LeaveController extends Controller
 
     public function store(
         Request $request,
-        LeaveParentApprovalService $approvalService
+        LeaveParentApprovalService $approvalService,
+        NotificationService $notificationService
     ): RedirectResponse {
         /** @var Resident|null $resident */
         $resident = Auth::guard(
@@ -276,6 +280,29 @@ class LeaveController extends Controller
 
         $sent = $approvalService->send($leave);
 
+        $notificationService->send(
+            [
+                'title' => 'New Leave Request',
+                'body' => "{$resident->full_name} applied for " .
+                    str_replace('_', ' ', $leave->leave_type) .
+                    " ({$leave->from_date->format('d M')} – {$leave->to_date->format('d M Y')}).",
+                'type' => 'leave_request_created',
+                'payload' => [
+                    'leave_id' => $leave->id,
+                    'residentName' => $resident->full_name,
+                    'leaveType' => $leave->leave_type,
+                    'reason' => $leave->reason,
+                    'fromDate' => $leave->from_date?->toDateString(),
+                    'toDate' => $leave->to_date?->toDateString(),
+                    'status' => $leave->final_status,
+                ],
+                'action_url' => '/support/leaves?final_status=' . $leave->final_status,
+                'action_label' => 'Review Leave',
+            ],
+            $notificationService->recipientsForModule('leaves'),
+            $leave // polymorphic actionable
+        );
+
         return back()->with(
             'success',
             $sent
@@ -364,74 +391,62 @@ class LeaveController extends Controller
         return $leave;
     }
 
-    protected function transformLeave(
-        LeaveRequest $leave
-    ): array {
+    protected function transformLeave(LeaveRequest $leave): array
+    {
         return [
             'id' => $leave->id,
 
-            'leave_type' =>
-                $leave->leave_type,
+            // Resident
+            'resident' => $leave->resident ? [
+                'id' => $leave->resident->id,
+                'first_name' => $leave->resident->first_name,
+                'last_name' => $leave->resident->last_name,
+            ] : null,
 
-            'leave_type_label' =>
-                $leave->leave_type_label,
+            // Leave details
+            'leave_type' => $leave->leave_type,
+            'leave_type_label' => $leave->leave_type_label,
 
-            'from_date' =>
-                $leave->from_date,
+            'from_date' => $leave->from_date,
+            'to_date' => $leave->to_date,
+            'total_days' => $leave->total_days,
 
-            'to_date' =>
-                $leave->to_date,
+            'reason' => $leave->reason,
+            'destination' => $leave->destination,
 
-            'total_days' =>
-                $leave->total_days,
+            // Parent approval
+            'parent_approval_status' => $leave->parent_approval_status,
+            'parent_approval_sent_at' => $leave->parent_approval_sent_at,
+            'parent_responded_at' => $leave->parent_responded_at,
+            'parent_remarks' => $leave->parent_remarks,
 
-            'reason' =>
-                $leave->reason,
+            // Admin approval
+            'admin_approval_status' => $leave->admin_approval_status,
+            'admin_remarks' => $leave->admin_remarks,
 
-            'destination' =>
-                $leave->destination,
+            // Final status
+            'final_status' => $leave->final_status,
+            'final_status_label' => $leave->final_status_label,
 
-            'parent_approval_status' =>
-                $leave->parent_approval_status,
+            // Gate pass
+            'gate_pass_code' => $leave->gate_pass_code,
 
-            'parent_approval_sent_at' =>
-                $leave->parent_approval_sent_at,
+            // Approval
+            'approved_at' => $leave->approved_at,
+            'approved_by' => $leave->approvedBy?->name,
 
-            'parent_responded_at' =>
-                $leave->parent_responded_at,
+            // Cancellation
+            'cancelled_at' => $leave->cancelled_at,
+            'cancelled_by_resident' => $leave->cancelledByResident ? [
+                'id' => $leave->cancelledByResident->id,
+                'first_name' => $leave->cancelledByResident->first_name,
+                'last_name' => $leave->cancelledByResident->last_name,
+            ] : null,
 
-            'parent_remarks' =>
-                $leave->parent_remarks,
-
-            'admin_approval_status' =>
-                $leave->admin_approval_status,
-
-            'admin_remarks' =>
-                $leave->admin_remarks,
-
-            'final_status' =>
-                $leave->final_status,
-
-            'final_status_label' =>
-                $leave->final_status_label,
-
-            'gate_pass_code' =>
-                $leave->gate_pass_code,
-
-            'approved_at' =>
-                $leave->approved_at,
-
-            'approved_by' =>
-                $leave->approvedBy?->name,
-
-            'cancelled_at' =>
-                $leave->cancelled_at,
-
-            'can_cancel' =>
-                $leave->can_cancel,
-
-            'created_at' =>
-                $leave->created_at,
+            // Other
+            'can_cancel' => $leave->can_cancel,
+            'created_at' => $leave->created_at,
+            'updated_at' => $leave->updated_at,
         ];
     }
 }

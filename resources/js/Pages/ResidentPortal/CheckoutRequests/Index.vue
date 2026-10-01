@@ -420,9 +420,7 @@ const historyIcon = (action) => {
             </section>
 
             <div
-                v-if="
-                    activeRequest.status === 'completed'
-                "
+                v-if="activeRequest && activeRequest.status === 'completed'"
                 class="rounded-xl border border-slate-200 bg-slate-50 p-4"
             >
                 <div
@@ -492,10 +490,7 @@ const historyIcon = (action) => {
             </section>
 
             <div
-                v-if="
-                    activeRequest.status ===
-                    'ready_for_exit'
-                "
+                v-if="activeRequest && activeRequest.status === 'ready_for_exit'"
                 class="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4"
             >
                 <div
