@@ -644,12 +644,15 @@ const submitForm = () => {
 };
 
 const handleSubmit = async () => {
+    if (isProcessing.value) return;
     paymentError.value = "";
 
     if (!validateBeforeSubmit()) {
         await showValidationSummary();
         return;
     }
+
+    isProcessing.value = true;
 
     if (form.payment_method === "razorpay") {
         initRazorpay();
