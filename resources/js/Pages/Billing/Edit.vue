@@ -146,7 +146,7 @@ const form = useForm({
     deposit_amount: depositInitial.value,
     registration_amount: registrationInitial.value,
     short_stay_amount: shortStayInitial.value,
-
+    fee_type: feeType.value,
     donation_amount: donationInitial.value,
     donation_items: (props.invoice.items || [])
         .filter((i) => i.item_type === "donation")
