@@ -1273,17 +1273,19 @@ class BillingController extends Controller
 
             // Donation — multi-item
             'donation_items' => [
-                'nullable',
+                'required_if:fee_type,donation',
                 'array',
                 'min:1',
             ],
+
             'donation_items.*.description' => [
-                'required',
+                'required_if:fee_type,donation',
                 'string',
                 'max:255',
             ],
+
             'donation_items.*.amount' => [
-                'required',
+                'required_if:fee_type,donation',
                 'numeric',
                 'min:0.01',
             ],
