@@ -736,7 +736,7 @@ const toggleRoom = (roomId) => {
                                         {{ b.name }}
                                     </p>
                                     <div
-                                        class="flex gap-4 mt-1.5 text-xs text-gray-700"
+                                        class="flex gap-4 mt-1.5 text-xs text-gray-700 text-center"
                                     >
                                         <span
                                             >{{ b.capacity }}<br /><span
@@ -748,6 +748,12 @@ const toggleRoom = (roomId) => {
                                             >{{ b.vacant }}<br /><span
                                                 class="text-[10px] text-gray-600"
                                                 >Vacant</span
+                                            ></span
+                                        >
+                                        <span
+                                            >{{ b.occupied }}<br /><span
+                                                class="text-[10px] text-gray-600"
+                                                >Occupied</span
                                             ></span
                                         >
                                     </div>

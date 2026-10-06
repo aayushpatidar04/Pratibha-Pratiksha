@@ -424,6 +424,78 @@ const updatePaymentMode = (payment) => {
         },
     );
 };
+
+const residentSearch = ref("");
+const showResidentDropdown = ref(false);
+
+const applicationSearch = ref("");
+const showApplicationDropdown = ref(false);
+
+const filteredResidents = computed(() => {
+    if (!residentSearch.value) return props.residents;
+
+    const q = residentSearch.value.toLowerCase();
+
+    return props.residents.filter((r) =>
+        [
+            r.first_name,
+            r.last_name,
+            r.resident_code,
+            r.active_stay?.room?.floor?.building?.name,
+            r.active_stay?.room?.room_number,
+        ]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase()
+            .includes(q),
+    );
+});
+
+const filteredApplications = computed(() => {
+    if (!applicationSearch.value) return props.applications;
+
+    const q = applicationSearch.value.toLowerCase();
+
+    return props.applications.filter((a) =>
+        [a.application_no, a.student_name, a.room_type]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase()
+            .includes(q),
+    );
+});
+
+const selectedResidentLabel = computed(() => {
+    const resident = props.residents.find(
+        (r) => r.id == createForm.resident_id,
+    );
+
+    if (!resident) return "";
+
+    return `${resident.first_name} ${resident.last_name} (${resident.resident_code})`;
+});
+
+const selectedApplicationLabel = computed(() => {
+    const application = props.applications.find(
+        (a) => a.id == createForm.application_id,
+    );
+
+    if (!application) return "";
+
+    return `${application.application_no} - ${application.student_name}`;
+});
+
+function selectResident(id) {
+    createForm.resident_id = id;
+    showResidentDropdown.value = false;
+    residentSearch.value = "";
+}
+
+function selectApplication(id) {
+    createForm.application_id = id;
+    showApplicationDropdown.value = false;
+    applicationSearch.value = "";
+}
 </script>
 
 <template>
@@ -1195,7 +1267,7 @@ const updatePaymentMode = (payment) => {
                 </div>
 
                 <!-- Existing Resident -->
-                <div v-if="createForm.invoice_for === 'resident'">
+                <!-- <div v-if="createForm.invoice_for === 'resident'">
                     <InputLabel value="Resident *" />
 
                     <select
@@ -1222,10 +1294,105 @@ const updatePaymentMode = (payment) => {
                     </select>
 
                     <InputError :message="createForm.errors.resident_id" />
+                </div> -->
+
+                <div v-if="createForm.invoice_for === 'resident'">
+                    <InputLabel value="Resident *" />
+
+                    <div class="relative">
+                        <button
+                            type="button"
+                            @click="
+                                showResidentDropdown = !showResidentDropdown
+                            "
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-left bg-white flex justify-between items-center"
+                        >
+                            <span>
+                                {{ selectedResidentLabel || "Select Resident" }}
+                            </span>
+
+                            <svg
+                                class="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M19 9l-7 7-7-7"
+                                />
+                            </svg>
+                        </button>
+
+                        <div
+                            v-if="showResidentDropdown"
+                            class="absolute z-50 mt-1 w-full bg-white border border-gray-300 rounded-lg shadow-xl max-h-96 flex flex-col"
+                        >
+                            <div class="p-2 border-b">
+                                <input
+                                    v-model="residentSearch"
+                                    type="text"
+                                    placeholder="Search resident..."
+                                    class="w-full border rounded px-3 py-2 text-sm"
+                                />
+                            </div>
+
+                            <div class="overflow-y-auto">
+                                <div
+                                    v-for="resident in filteredResidents"
+                                    :key="resident.id"
+                                    @click="selectResident(resident.id)"
+                                    class="p-3 cursor-pointer hover:bg-gray-50 border-b"
+                                >
+                                    <div class="font-medium">
+                                        {{ resident.first_name }}
+                                        {{ resident.last_name }}
+                                    </div>
+
+                                    <div class="text-xs text-gray-500">
+                                        {{ resident.resident_code }}
+                                    </div>
+
+                                    <div class="text-xs text-gray-400 mt-1">
+                                        {{
+                                            resident.active_stay?.room?.floor
+                                                ?.building?.name
+                                        }}
+                                        →
+                                        {{
+                                            resident.active_stay?.room?.floor
+                                                ?.name
+                                        }}
+                                        →
+                                        {{
+                                            resident.active_stay?.room
+                                                ?.room_number
+                                        }}
+                                        →
+                                        {{
+                                            resident.active_stay?.bed
+                                                ?.bed_number
+                                        }}
+                                    </div>
+                                </div>
+
+                                <div
+                                    v-if="!filteredResidents.length"
+                                    class="text-center py-4 text-gray-500 text-sm"
+                                >
+                                    No residents found
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <InputError :message="createForm.errors.resident_id" />
                 </div>
 
                 <!-- Pre-Booking Application -->
-                <div v-if="createForm.invoice_for === 'application'">
+                <!-- <div v-if="createForm.invoice_for === 'application'">
                     <InputLabel value="Pre-Booking Application *" />
 
                     <select
@@ -1246,6 +1413,86 @@ const updatePaymentMode = (payment) => {
                             ({{ application.room_type }})
                         </option>
                     </select>
+
+                    <InputError :message="createForm.errors.application_id" />
+                </div> -->
+
+                <div v-if="createForm.invoice_for === 'application'">
+                    <InputLabel value="Pre-Booking Application *" />
+
+                    <div class="relative">
+                        <button
+                            type="button"
+                            @click="
+                                showApplicationDropdown =
+                                    !showApplicationDropdown
+                            "
+                            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-left bg-white flex justify-between items-center"
+                        >
+                            <span>
+                                {{
+                                    selectedApplicationLabel ||
+                                    "Select Application"
+                                }}
+                            </span>
+
+                            <svg
+                                class="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M19 9l-7 7-7-7"
+                                />
+                            </svg>
+                        </button>
+
+                        <div
+                            v-if="showApplicationDropdown"
+                            class="absolute z-50 mt-1 w-full bg-white border border-gray-300 rounded-lg shadow-xl max-h-96 flex flex-col"
+                        >
+                            <div class="p-2 border-b">
+                                <input
+                                    v-model="applicationSearch"
+                                    type="text"
+                                    placeholder="Search application..."
+                                    class="w-full border rounded px-3 py-2 text-sm"
+                                />
+                            </div>
+
+                            <div class="overflow-y-auto">
+                                <div
+                                    v-for="application in filteredApplications"
+                                    :key="application.id"
+                                    @click="selectApplication(application.id)"
+                                    class="p-3 cursor-pointer hover:bg-gray-50 border-b"
+                                >
+                                    <div class="font-medium">
+                                        {{ application.application_no }}
+                                    </div>
+
+                                    <div class="text-sm text-gray-600">
+                                        {{ application.student_name }}
+                                    </div>
+
+                                    <div class="text-xs text-gray-400">
+                                        {{ application.room_type }}
+                                    </div>
+                                </div>
+
+                                <div
+                                    v-if="!filteredApplications.length"
+                                    class="text-center py-4 text-gray-500 text-sm"
+                                >
+                                    No applications found
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
                     <InputError :message="createForm.errors.application_id" />
                 </div>
