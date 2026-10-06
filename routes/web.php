@@ -80,6 +80,7 @@ Route::middleware(['auth', 'user.active'])->group(function () {
 
     Route::put('/residents/{resident}', [ResidentController::class, 'update'])->name('residents.update')->middleware('permission:residents,edit');
     Route::delete('/residents/{resident}', [ResidentController::class, 'destroy'])->name('residents.destroy')->middleware('permission:residents,delete');
+    Route::post('/residents/{resident}/rejoin', [ResidentController::class, 'rejoin'])->name('residents.rejoin')->middleware('permission:residents,edit');
 
     Route::get('/residents/birthdays', [ResidentController::class, 'birthdays'])->name('residents.birthdays')->middleware('permission:residents,view');
     

@@ -53,6 +53,7 @@ import {
     Mail,
     MessageCircle,
     ChevronDown,
+    RefreshCw,
 } from "lucide-vue-next";
 
 const props = defineProps({
@@ -170,6 +171,62 @@ const statusColor = {
     upcoming: "amber",
 };
 const genderColor = { male: "blue", female: "pink", other: "purple" };
+
+// ------------------------------------------------------------------
+// Rejoin state
+// ------------------------------------------------------------------
+const rejoinOpen = ref(false);
+const rejoinLoading = ref(false);
+const rejoinTarget = ref(null);
+const rejoinForm = reactive({
+    registration_fee_amount: 300,
+    rejoin_notes: "",
+});
+
+const openRejoinModal = (resident) => {
+    openActionsFor.value = null;
+    rejoinTarget.value = resident;
+    rejoinForm.registration_fee_amount = 300;
+    rejoinForm.rejoin_notes = "";
+    rejoinOpen.value = true;
+};
+
+const submitRejoin = async () => {
+    if (!rejoinTarget.value?.id) return;
+    rejoinLoading.value = true;
+    try {
+        const csrf =
+            document.querySelector('meta[name="csrf-token"]')?.content || "";
+        const response = await fetch(
+            `/residents/${rejoinTarget.value.id}/rejoin`,
+            {
+                method: "POST",
+                headers: {
+                    "X-CSRF-TOKEN": csrf,
+                    "Content-Type": "application/json",
+                    Accept: "application/json",
+                },
+                body: JSON.stringify(rejoinForm),
+            },
+        );
+        if (!response.ok) {
+            const data = await response.json().catch(() => ({}));
+            throw new Error(
+                data.message ||
+                    (data.errors
+                        ? Object.values(data.errors).flat().join(" ")
+                        : "Rejoin failed"),
+            );
+        }
+        rejoinOpen.value = false;
+        // Refresh the page data
+        router.reload();
+    } catch (err) {
+        alert(err.message);
+    } finally {
+        rejoinLoading.value = false;
+    }
+};
 
 // ------------------------------------------------------------------
 // Row actions dropdown
@@ -1705,6 +1762,14 @@ const exportResidents = () => {
                                             ><LogOutIcon class="h-3.5 w-3.5" />
                                             Check-Out</Link
                                         >
+                                        <button
+                                            v-if="r.status === 'left' || r.status === 'left_out'"
+                                            class="w-full flex items-center gap-2 px-3 py-2 text-xs text-emerald-600 hover:bg-emerald-50"
+                                            @click.stop="openRejoinModal(r)"
+                                        >
+                                            <RefreshCw class="h-3.5 w-3.5" />
+                                            Rejoin
+                                        </button>
                                         <div
                                             class="border-t border-gray-200 my-1"
                                         ></div>
@@ -5825,6 +5890,99 @@ const exportResidents = () => {
                     >
                         <Download class="h-4 w-4" />
                         Export CSV
+                    </button>
+                </div>
+            </div>
+        </Modal>
+
+        <!-- Rejoin Modal -->
+        <Modal :show="rejoinOpen" @close="rejoinOpen = false" max-width="md">
+            <div v-if="rejoinTarget" class="p-6">
+                <div class="flex items-center gap-3 mb-4">
+                    <div
+                        class="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center"
+                    >
+                        <RefreshCw class="h-5 w-5 text-emerald-600" />
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900">
+                            Rejoin Resident
+                        </h3>
+                        <p class="text-sm text-gray-500">
+                            {{
+                                rejoinTarget.first_name +
+                                " " +
+                                (rejoinTarget.last_name || "")
+                            }}
+                            ({{ rejoinTarget.resident_code }})
+                        </p>
+                    </div>
+                </div>
+
+                <div
+                    class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700 mb-4"
+                >
+                    This will set the resident back to
+                    <span class="font-semibold">Upcoming</span> status (room allotment pending)
+                    and generate a registration fee slip.
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label
+                            class="block text-sm font-medium text-gray-700 mb-1"
+                        >
+                            Registration Fee Amount (₹)
+                            <span class="text-red-500">*</span>
+                        </label>
+                        <input
+                            v-model.number="rejoinForm.registration_fee_amount"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            class="w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
+                        />
+                    </div>
+
+                    <div>
+                        <label
+                            class="block text-sm font-medium text-gray-700 mb-1"
+                        >
+                            Rejoin Notes (optional)
+                        </label>
+                        <textarea
+                            v-model="rejoinForm.rejoin_notes"
+                            rows="3"
+                            maxlength="500"
+                            placeholder="Reason for rejoining..."
+                            class="w-full rounded-lg border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
+                        ></textarea>
+                    </div>
+                </div>
+
+                <div class="mt-6 flex justify-end gap-3">
+                    <button
+                        type="button"
+                        class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                        @click="rejoinOpen = false"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        type="button"
+                        :disabled="rejoinLoading"
+                        class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+                        @click="submitRejoin"
+                    >
+                        <RefreshCw
+                            v-if="rejoinLoading"
+                            class="h-4 w-4 animate-spin"
+                        />
+                        {{
+                            rejoinLoading
+                                ? "Processing..."
+                                : "Confirm Rejoin"
+                        }}
                     </button>
                 </div>
             </div>

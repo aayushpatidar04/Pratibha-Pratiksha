@@ -43,6 +43,7 @@ class Resident extends Authenticatable
         'mother_name',
         'mother_phone',
         'status',
+        'rejoin_notes',
         'portal_enabled',
         'photo_url',
         'created_by',
@@ -232,5 +233,31 @@ class Resident extends Authenticatable
                 CheckoutRequest::STATUS_EXPIRED,
             ])
             ->latestOfMany();
+    }
+
+    // Status scopes
+    public function scopeActive($query)
+    {
+        return $query->where('status', 'active');
+    }
+
+    public function scopeLeftOut($query)
+    {
+        return $query->where('status', 'left_out');
+    }
+
+    public function scopeLeft($query)
+    {
+        return $query->where('status', 'left');
+    }
+
+    public function scopeUpcoming($query)
+    {
+        return $query->where('status', 'upcoming');
+    }
+
+    public function scopeSuspended($query)
+    {
+        return $query->where('status', 'left_out');
     }
 }

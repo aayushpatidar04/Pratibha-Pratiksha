@@ -444,6 +444,103 @@ class ResidentController extends Controller
     }
 
     /**
+     * Rejoin: resident was left_out or left — mark them back as upcoming
+     * so they can be re-allotted a room, and create a registration_fee invoice
+     * (the "registration slip").
+     */
+    public function rejoin(Request $request, Resident $resident): RedirectResponse
+    {
+        if (!in_array($resident->status, ['suspended', 'left'], true)) {
+            return back()->with('error', 'Only suspended or left residents can rejoin.');
+        }
+
+        $validated = $request->validate([
+            'rejoin_notes' => 'nullable|string|max:500',
+            'registration_fee_amount' => 'required|numeric|min:0',
+        ]);
+
+        DB::beginTransaction();
+
+        try {
+            // 1. End any active/upcoming stays
+            ResidentStay::where('resident_id', $resident->id)
+                ->whereIn('status', ['active', 'upcoming'])
+                ->update([
+                    'status' => 'cancelled',
+                    'actual_check_out_date' => now(),
+                ]);
+
+            // 2. Free the bed if currently occupied
+            if ($resident->currentStay?->bed_id) {
+                Bed::where('id', $resident->currentStay->bed_id)
+                    ->update(['status' => 'vacant', 'resident_id' => null]);
+            }
+
+            // 3. Set resident back to upcoming (room allotment pending)
+            $resident->update([
+                'status' => 'upcoming',
+                'rejoin_notes' => $validated['rejoin_notes'] ?? null,
+            ]);
+
+            // 4. Create the registration_fee invoice (registration slip)
+            $now = now();
+            $invoice = FeeInvoice::create([
+                'resident_id' => $resident->id,
+                'fee_type' => 'registration_fee',
+                'invoice_number' => $this->generateInvoiceNumber(),
+                'amount' => $validated['registration_fee_amount'],
+                'paid_amount' => 0,
+                'status' => 'pending',
+                'due_date' => $now->addDays(7),
+                'description' => 'Re-registration Fee (Rejoin)',
+            ]);
+
+            $invoice->items()->updateOrCreate(
+                [
+                    'item_type' => 'registration_fee',
+                ],
+                [
+                    'amenity_type' => null,
+                    'title' => 'Registration Fee',
+                    'amount' => $validated['registration_fee_amount'],
+                    'description' => "Re-registration Fee (Rejoin)",
+                    'is_late_fee' => false,
+                ]
+            );
+
+            DB::commit();
+
+            return back()->with('success', 'Resident rejoined successfully. Status set to Upcoming. Registration slip created.');
+        } catch (Throwable $e) {
+            DB::rollBack();
+            report($e);
+            return back()->with('error', 'Rejoin failed: ' . $e->getMessage());
+        }
+    }
+
+    private function generateInvoiceNumber(): string
+    {
+        // Get the latest invoice including trashed ones
+        $lastInvoice = FeeInvoice::withTrashed()
+            ->orderBy('id', 'desc')
+            ->first();
+
+        // Default start number
+        $nextNumber = 1;
+
+        if ($lastInvoice) {
+            // Extract the numeric part from invoice_number
+            // Assuming format: INV-YYYYMM-00001
+            $parts = explode('-', $lastInvoice->invoice_number);
+            $lastNumeric = isset($parts[2]) ? (int)$parts[2] : 0;
+
+            $nextNumber = $lastNumeric + 1;
+        }
+
+        return 'INV-' . now()->format('Ym') . '-' . str_pad((string) $nextNumber, 5, '0', STR_PAD_LEFT);
+    }
+
+    /**
      * Bulk-create residents from an uploaded CSV (headers: first_name,last_name,
      * phone,email,gender,course,institute,batch,year,roll_number,father_name,
      * father_phone). No photo/room allotment via this path — those still need to
