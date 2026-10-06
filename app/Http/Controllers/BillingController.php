@@ -1273,19 +1273,19 @@ class BillingController extends Controller
 
             // Donation — multi-item
             'donation_items' => [
-                'required_if:fee_type,donation',
+                'required_if:invoice_for,donation',
                 'array',
                 'min:1',
             ],
 
             'donation_items.*.description' => [
-                'required_if:fee_type,donation',
+                'required_if:invoice_for,donation',
                 'string',
                 'max:255',
             ],
 
             'donation_items.*.amount' => [
-                'required_if:fee_type,donation',
+                'required_if:invoice_for,donation',
                 'numeric',
                 'min:0.01',
             ],
@@ -1294,21 +1294,21 @@ class BillingController extends Controller
                 'nullable',
                 'string',
                 'max:255',
-                'required_if:fee_type,donation',
+                'required_if:invoice_for,donation',
             ],
 
             'donator_address' => [
                 'nullable',
                 'string',
                 'max:500',
-                'required_if:fee_type,donation',
+                'required_if:invoice_for,donation',
             ],
 
             'donator_phone' => [
                 'nullable',
                 'string',
                 'max:20',
-                'required_if:fee_type,donation',
+                'required_if:invoice_for,donation',
             ],
 
             // Common fields
