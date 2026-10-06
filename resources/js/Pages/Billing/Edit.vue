@@ -134,7 +134,11 @@ const donationInitial = computed(() => {
 
 // ─── Form ────────────────────────────────────────────────────────
 const form = useForm({
-    invoice_for: isForResident.value ? "resident" : feeType.value === "donation" ? "donation" : "application",
+    invoice_for: isForResident.value
+        ? "resident"
+        : feeType.value === "donation"
+          ? "donation"
+          : "application",
     resident_id: props.invoice.resident_id ?? "",
     application_id: props.invoice.application_id ?? "",
     stay_id: props.invoice.stay_id ?? "",
@@ -161,6 +165,39 @@ const form = useForm({
     late_fee_per_day: Number(props.invoice.late_fee_per_day ?? 0),
 });
 
+const toast = ref({
+    show: false,
+    type: "success",
+    message: "",
+});
+
+let toastTimer = null;
+
+function showToast(message, type = "success", duration = 4000) {
+    toast.value = {
+        show: true,
+        type,
+        message,
+    };
+
+    if (toastTimer) {
+        clearTimeout(toastTimer);
+    }
+
+    toastTimer = setTimeout(() => {
+        toast.value.show = false;
+    }, duration);
+}
+
+function closeToast() {
+    toast.value.show = false;
+
+    if (toastTimer) {
+        clearTimeout(toastTimer);
+        toastTimer = null;
+    }
+}
+
 watch(
     editableItems,
     (newItems) => {
@@ -177,8 +214,30 @@ watch(
 );
 
 const submit = () => {
+    form.clearErrors();
+
     form.put(`/billing/${props.invoice.id}`, {
         preserveScroll: true,
+
+        onSuccess: () => {
+            showToast("Invoice updated successfully.", "success");
+        },
+
+        onError: (errors) => {
+            console.error("Invoice update validation errors:", errors);
+
+            const firstError = Object.values(errors)[0];
+
+            showToast(
+                firstError || "Please correct the errors and try again.",
+                "error",
+                6000,
+            );
+        },
+
+        onFinish: () => {
+            // Nothing required here currently.
+        },
     });
 };
 
@@ -226,6 +285,76 @@ const total = computed(() => {
     <Head :title="`Edit Invoice ${invoice.invoice_number}`" />
 
     <AuthenticatedLayout>
+        <Transition
+            enter-active-class="transition ease-out duration-300"
+            enter-from-class="opacity-0 translate-y-2"
+            enter-to-class="opacity-100 translate-y-0"
+            leave-active-class="transition ease-in duration-200"
+            leave-from-class="opacity-100 translate-y-0"
+            leave-to-class="opacity-0 translate-y-2"
+        >
+            <div
+                v-if="toast.show"
+                class="fixed top-5 right-5 z-[9999] w-full max-w-sm"
+            >
+                <div
+                    class="rounded-lg shadow-lg border p-4 flex items-start gap-3"
+                    :class="
+                        toast.type === 'success'
+                            ? 'bg-green-50 border-green-200 text-green-800'
+                            : 'bg-red-50 border-red-200 text-red-800'
+                    "
+                >
+                    <!-- Icon -->
+                    <div class="flex-shrink-0">
+                        <svg
+                            v-if="toast.type === 'success'"
+                            class="w-5 h-5 text-green-600"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                d="M5 13l4 4L19 7"
+                            />
+                        </svg>
+    
+                        <svg
+                            v-else
+                            class="w-5 h-5 text-red-600"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                d="M6 18L18 6M6 6l12 12"
+                            />
+                        </svg>
+                    </div>
+    
+                    <!-- Message -->
+                    <div class="flex-1 text-sm font-medium">
+                        {{ toast.message }}
+                    </div>
+    
+                    <!-- Close -->
+                    <button
+                        type="button"
+                        @click="closeToast"
+                        class="flex-shrink-0 opacity-60 hover:opacity-100"
+                    >
+                        ×
+                    </button>
+                </div>
+            </div>
+        </Transition>
+    
         <template #header>
             <div class="flex items-center justify-between">
                 <div class="flex items-center gap-3">
