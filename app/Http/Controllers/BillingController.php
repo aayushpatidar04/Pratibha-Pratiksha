@@ -1001,19 +1001,19 @@ class BillingController extends Controller
             ],
 
             'donation_items' => [
-                'required_if:fee_type,donation',
+                'nullable',
                 'array',
-                'min:1',
+                'min:0',
             ],
 
             'donation_items.*.description' => [
-                'required_if:fee_type,donation',
+                'required',
                 'string',
                 'max:255',
             ],
 
             'donation_items.*.amount' => [
-                'required_if:fee_type,donation',
+                'required',
                 'numeric',
                 'min:0.01',
             ],
@@ -1273,19 +1273,17 @@ class BillingController extends Controller
 
             // Donation — multi-item
             'donation_items' => [
-                'required_if:fee_type,donation',
+                'nullable',
                 'array',
-                'min:1',
+                'min:0',
             ],
-
             'donation_items.*.description' => [
-                'required_if:fee_type,donation',
+                'required',
                 'string',
                 'max:255',
             ],
-
             'donation_items.*.amount' => [
-                'required_if:fee_type,donation',
+                'required',
                 'numeric',
                 'min:0.01',
             ],
@@ -1424,7 +1422,7 @@ class BillingController extends Controller
 
             foreach ($donationItems as $dItem) {
                 $desc = trim((string) ($dItem['description'] ?? ''));
-                $amt = (float) ($dItem['amount'] ?? 0);
+                $amt  = (float) ($dItem['amount'] ?? 0);
 
                 if ($amt > 0 && $desc !== '') {
                     $itemsToCreate[] = [
