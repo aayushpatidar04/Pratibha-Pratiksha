@@ -980,7 +980,7 @@
 
                     jsPDF: {
                         unit: "mm",
-                        format: [104.8, 241.3], // #10 Envelope
+                        format: [104, 148],
                         orientation: "portrait",
                         compress: true,
                     },
