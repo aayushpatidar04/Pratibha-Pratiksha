@@ -1,6 +1,7 @@
 <script setup>
 import { Head, useForm } from "@inertiajs/vue3";
 import { ref, computed, nextTick, watch } from "vue";
+
 import {
     User,
     Phone,
@@ -430,6 +431,140 @@ const form = useForm({
     razorpay_signature: "",
     registration_payment_proof: null,
 });
+
+const courses = ref([
+    "B.Tech",
+    "B.A.",
+    "B.A. Psychology",
+    "B.A. Yoga",
+    "B.A. LL.B.",
+    "B.A. + B.Ed.",
+    "B.A. LL.B. (Hons.)",
+    "B.B.A.",
+    "B.Com.",
+    "B.Com. with ACCA",
+    "B.P.T.",
+    "B.Pharm.",
+    "B.Sc.",
+    "BCA",
+    "Banking",
+    "CA Internship/AUDIT",
+    "CA Foundation",
+    "CA Intermediate",
+    "CA Final",
+    "CAF",
+    "CAT",
+    "CMAT",
+    "CS",
+    "CS Training",
+    "Data Analyst",
+    "INTERIOR Designing",
+    "Fashion Designing",
+    "Fine Art Coaching",
+    "CMA",
+    "JEE",
+    "Job",
+    "MBA",
+    "MCA",
+    "MPPSC",
+    "NEET",
+    "NEET PG",
+    "Product Design",
+    "SSC",
+    "UPSC",
+    "Digital Marketing",
+]);
+
+const showOtherCourse = ref(false);
+const courseOther = ref("");
+
+const selectCourse = () => {
+    if (form.course_name === "__OTHER__") {
+        showOtherCourse.value = true;
+        form.course_name = "";
+    } else {
+        showOtherCourse.value = false;
+        courseOther.value = "";
+    }
+};
+
+const addOtherCourse = () => {
+    const value = courseOther.value.trim();
+
+    if (!value) {
+        form.course_name = "";
+        return;
+    }
+
+    // Add custom course to dropdown if it doesn't already exist
+    if (!courses.value.includes(value)) {
+        courses.value.push(value);
+    }
+
+    // Select the newly added course
+    form.course_name = value;
+
+    // Hide custom input
+    showOtherCourse.value = false;
+};
+
+let convertTimer = null;
+
+const convertToHindi = (field) => {
+    clearTimeout(convertTimer);
+
+    convertTimer = setTimeout(async () => {
+        const textToConvert = form[field];
+
+        if (!textToConvert || !textToConvert.trim()) return;
+
+        try {
+            // Split address by comma
+            const parts = textToConvert.split(",");
+
+            const convertedParts = await Promise.all(
+                parts.map(async (part) => {
+                    const trimmedPart = part.trim();
+
+                    // If the complete part is numeric, don't convert it
+                    if (/^\d+$/.test(trimmedPart)) {
+                        return trimmedPart;
+                    }
+
+                    // Otherwise convert the part to Hindi
+                    try {
+                        const response = await fetch(
+                            `https://inputtools.google.com/request?text=${encodeURIComponent(trimmedPart)}&itc=hi-t-i0-und&num=5&cp=0&cs=1&ie=utf-8&oe=utf-8&app=test`,
+                        );
+
+                        const data = await response.json();
+
+                        if (
+                            data &&
+                            data[0] === "SUCCESS" &&
+                            data[1]?.[0]?.[1]?.[0]
+                        ) {
+                            return data[1][0][1][0];
+                        }
+                    } catch (error) {
+                        console.error(
+                            `Failed to transliterate "${trimmedPart}":`,
+                            error,
+                        );
+                    }
+
+                    // If API fails, keep original text
+                    return trimmedPart;
+                }),
+            );
+
+            // Join all parts back with comma + space
+            form[field] = convertedParts.join(", ");
+        } catch (error) {
+            console.error("Transliteration failed:", error);
+        }
+    }, 500);
+};
 
 const photoPreviews = ref({
     student_photo: null,
@@ -968,6 +1103,7 @@ const copyToClipboard = (text) => {
                             <input
                                 id="student_name"
                                 v-model="form.student_name"
+                                @input="convertToHindi('student_name')"
                                 type="text"
                                 class="w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
                                 required
@@ -988,6 +1124,7 @@ const copyToClipboard = (text) => {
                             <input
                                 id="father_name"
                                 v-model="form.father_name"
+                                @input="convertToHindi('father_name')"
                                 type="text"
                                 class="w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
                                 required
@@ -1008,6 +1145,7 @@ const copyToClipboard = (text) => {
                             <input
                                 id="mother_name"
                                 v-model="form.mother_name"
+                                @input="convertToHindi('mother_name')"
                                 type="text"
                                 class="w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
                                 required
@@ -1173,6 +1311,7 @@ const copyToClipboard = (text) => {
                         <textarea
                             id="permanent_address"
                             v-model="form.permanent_address"
+                            @input="convertToHindi('permanent_address')"
                             rows="3"
                             class="w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
                             required
@@ -1316,30 +1455,71 @@ const copyToClipboard = (text) => {
                             <textarea
                                 id="institution_address"
                                 v-model="form.institution_address"
+                                @input="convertToHindi('institution_address')"
                                 rows="2"
                                 class="w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
                             ></textarea>
                         </div>
+<div>
+    <label
+        for="course_name"
+        class="block text-sm font-medium text-gray-700 mb-1"
+    >
+        {{ t.courseName }}
+    </label>
 
-                        <div>
-                            <label
-                                class="block text-sm font-medium text-gray-700 mb-1"
-                                >{{ t.courseName }}</label
-                            >
-                            <input
-                                id="course_name"
-                                v-model="form.course_name"
-                                type="text"
-                                class="w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
-                                required
-                            />
-                            <p
-                                v-if="form.errors.course_name"
-                                class="mt-1 text-xs text-red-500"
-                            >
-                                {{ form.errors.course_name }}
-                            </p>
-                        </div>
+    <select
+        id="course_name"
+        v-model="form.course_name"
+        @change="selectCourse"
+        class="w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
+        required
+    >
+        <option value="" disabled>
+            Select Course
+        </option>
+
+        <option
+            v-for="course in courses"
+            :key="course"
+            :value="course"
+        >
+            {{ course }}
+        </option>
+
+        <option value="__OTHER__">
+            Others
+        </option>
+    </select>
+
+    <!-- Custom course input -->
+    <div
+        v-if="showOtherCourse"
+        class="mt-2 flex gap-2"
+    >
+        <input
+            v-model="courseOther"
+            type="text"
+            placeholder="Enter course name"
+            class="flex-1 rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
+        />
+
+        <button
+            type="button"
+            @click="addOtherCourse"
+            class="px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700"
+        >
+            Add
+        </button>
+    </div>
+
+    <p
+        v-if="form.errors.course_name"
+        class="mt-1 text-xs text-red-500"
+    >
+        {{ form.errors.course_name }}
+    </p>
+</div>
 
                         <div>
                             <label
@@ -1623,6 +1803,7 @@ const copyToClipboard = (text) => {
                                 <input
                                     id="guardian1_name"
                                     v-model="form.guardian1_name"
+                                    @input="convertToHindi('guardian1_name')"
                                     type="text"
                                     class="w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
                                 />
@@ -1659,6 +1840,7 @@ const copyToClipboard = (text) => {
                                 <textarea
                                     id="guardian1_address"
                                     v-model="form.guardian1_address"
+                                    @input="convertToHindi('guardian1_address')"
                                     rows="2"
                                     class="w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
                                 ></textarea>
@@ -1680,6 +1862,7 @@ const copyToClipboard = (text) => {
                                 <input
                                     id="guardian2_name"
                                     v-model="form.guardian2_name"
+                                    @input="convertToHindi('guardian2_name')"
                                     type="text"
                                     class="w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
                                 />
@@ -1716,6 +1899,7 @@ const copyToClipboard = (text) => {
                                 <textarea
                                     id="guardian2_address"
                                     v-model="form.guardian2_address"
+                                    @input="convertToHindi('guardian2_address')"
                                     rows="2"
                                     class="w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
                                 ></textarea>

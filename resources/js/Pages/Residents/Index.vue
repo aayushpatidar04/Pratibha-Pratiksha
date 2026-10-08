@@ -1150,6 +1150,7 @@ const exportResidents = () => {
 
     exportOpen.value = false;
 };
+
 </script>
 
 <template>
