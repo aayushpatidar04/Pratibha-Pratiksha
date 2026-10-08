@@ -146,7 +146,7 @@
             left: 0mm;
             right: 0mm;
             bottom: 0mm;
-            border: 1.2mm solid #15803d;      /* ← thick green inner border */
+            border: 1.5mm solid #15803d;      /* ← thick green inner border */
             border-radius: 0.8mm;             /* ← outer radius (2mm) minus border (1.2mm) */
             pointer-events: none;
         }
@@ -980,7 +980,7 @@
 
                     jsPDF: {
                         unit: "mm",
-                        format: [105, 148],
+                        format: [104.8, 241.3], // #10 Envelope
                         orientation: "portrait",
                         compress: true,
                     },
@@ -989,6 +989,7 @@
                         mode: ["css", "legacy"],
                     },
                 };
+                
                 status.textContent =
                     "PDF डाउनलोड की जा रही है...";
 
