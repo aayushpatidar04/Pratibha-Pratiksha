@@ -8,21 +8,7 @@
     <title>{{ $invoice->invoice_number }} - दानदाता रसीद</title>
 
     <style>
-        @font-face {
-            font-family: "Aparajita";
-            src: url("{{ asset('assets/fonts/Aparajita-Regular.ttf') }}") format("truetype");
-            font-style: normal;
-            font-weight: 400;
-            font-display: swap;
-        }
-
-        @font-face {
-            font-family: "Aparajita";
-            src: url("{{ asset('assets/fonts/Aparajita-Bold.ttf') }}") format("truetype");
-            font-style: normal;
-            font-weight: 700;
-            font-display: swap;
-        }
+        @import url('https://googleapis.com');
 
         * {
             box-sizing: border-box;
@@ -37,7 +23,7 @@
         body {
             background: #eef1f5;
             color: #111;
-            font-family: "Aparajita", "Nirmala UI", "Mangal", serif;
+            font-family: "Noto Serif Devanagari", "Nirmala UI", "Mangal", serif !important;
             font-size: 10px;
             line-height: 1.25;
         }
