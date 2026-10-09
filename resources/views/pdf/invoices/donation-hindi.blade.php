@@ -100,7 +100,7 @@
         ------------------------- */
 
         .receipt-wrapper {
-            padding: 20px;
+            /* padding: 20px; */
         }
 
         /*
@@ -110,16 +110,21 @@
          * 6 x 8 inch approximately.
          */
         .receipt-page {
-            width: 100mm;
+            width: 105mm;
+            /* Change from 100mm to exact A6 width */
             height: 148mm;
-            margin: 1.5mm auto;
+            /* Exact A6 height */
+            margin: 0 auto;
+            /* Remove the 1.5mm top/bottom margin */
             padding: 3mm 3.5mm;
             background: #fff;
-            border: 1.2mm solid #1e3a8a;      /* ← thick dark blue outer border */
+            border: 1.2mm solid #1e3a8a;
             border-radius: 2mm;
             box-shadow: 0 5px 22px rgba(0, 0, 0, 0.15);
             position: relative;
             overflow: hidden;
+            box-sizing: border-box;
+            /* Ensures padding & border stay inside the 105x148mm box */
         }
 
         /*
@@ -132,8 +137,10 @@
             left: 0mm;
             right: 0mm;
             bottom: 0mm;
-            border: 1.5mm solid #15803d;      /* ← thick green inner border */
-            border-radius: 0.8mm;             /* ← outer radius (2mm) minus border (1.2mm) */
+            border: 1.5mm solid #15803d;
+            /* ← thick green inner border */
+            border-radius: 0.8mm;
+            /* ← outer radius (2mm) minus border (1.2mm) */
             pointer-events: none;
         }
 
@@ -383,6 +390,7 @@
         .signature {
             text-align: end;
         }
+
         .signature-line {
             display: block;
             width: 25mm;
@@ -411,7 +419,7 @@
         @media (max-width: 600px) {
             .receipt-wrapper {
                 overflow-x: auto;
-                padding: 10px;
+                /* padding: 10px; */
             }
 
             .preview-toolbar {
@@ -425,8 +433,16 @@
         }
 
         @media print {
+            @page {
+                size: A6 portrait;
+                margin: 0;
+                /* Removes browser headers, footers, and margins */
+            }
+
             body {
                 background: #fff;
+                margin: 0;
+                padding: 0;
             }
 
             .preview-toolbar {
@@ -435,10 +451,15 @@
 
             .receipt-wrapper {
                 padding: 0;
+                margin: 0;
             }
 
             .receipt-page {
-                box-shadow: none;
+                margin: 0 !important;
+                box-shadow: none !important;
+                border: 1.2mm solid #1e3a8a !important;
+                /* Forces border visualization */
+                page-break-inside: avoid;
             }
         }
     </style>
@@ -794,7 +815,7 @@
                         <tr>
 
                             <td class="payment-label">
-                                ट्रांजेक्शन आईडी: 
+                                ट्रांजेक्शन आईडी:
                             </td>
 
                             <td class="payment-value2" colspan="3">
@@ -954,7 +975,7 @@
                     },
 
                     html2canvas: {
-                        scale: 3,
+                        scale: 2,
                         useCORS: true,
                         allowTaint: false,
                         backgroundColor: "#ffffff",
@@ -966,7 +987,7 @@
 
                     jsPDF: {
                         unit: "mm",
-                        format: [104, 148],
+                        format: "a6",
                         orientation: "portrait",
                         compress: true,
                     },
@@ -975,7 +996,7 @@
                         mode: ["css", "legacy"],
                     },
                 };
-                
+
                 status.textContent =
                     "PDF डाउनलोड की जा रही है...";
 

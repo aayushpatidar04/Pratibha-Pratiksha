@@ -33,7 +33,7 @@
             background: var(--background);
             color: #111;
             font-family: "Noto Serif Devanagari", "Nirmala UI", "Mangal", serif !important;
-            font-size: 14px;
+            font-size: 12px;
             line-height: 1.3;
         }
 
@@ -102,10 +102,10 @@
          * Internal padding acts as the page margin.
          */
         .receipt-page {
-            width: 100mm;
+            width: 104mm;
             min-height: 148mm;
             margin: 0 auto;
-            padding: 0mm 2mm;
+            padding: 2mm;
             overflow: hidden;
             background: #fff;
             box-shadow: 0 5px 22px rgba(0, 0, 0, 0.15);
@@ -132,7 +132,7 @@
 
         .subtitle {
             margin-top: 2px;
-            font-size: 13.5px;
+            font-size: 12px;
             line-height: 1.35;
             text-align: center;
         }
@@ -182,7 +182,7 @@
             border: 1px solid var(--border);
             padding: 2.5px 3px;
             vertical-align: top;
-            font-size: 13.5px;
+            font-size: 12px;
         }
 
         .items-table th {
@@ -225,7 +225,7 @@
 
         .summary {
             margin-top: 5px;
-            font-size: 13px;
+            font-size: 12px;
         }
 
         .summary p {
@@ -265,7 +265,7 @@
 
         @media (max-width: 600px) {
             .receipt-wrapper {
-                /* padding: 10px; */
+                margin: 0 auto;
                 overflow-x: auto;
             }
 
@@ -405,8 +405,7 @@
                 <img src="{{ $logoUrl }}" class="logo" alt="प्रतिभा प्रतिष्ठान" crossorigin="anonymous">
 
                 <div class="subtitle">
-                    श्री चंद्रप्रभ दिगंबर जैन मंदिर 11-12, उदयनगर बिचौली मर्दाना रोड,<br>
-                    फीनिक्स अस्पताल के पीछे इंदौर-452016 म.प्र
+                    कन्या छात्रावास 13 ,उदय नगर इंदौर-452016 (म. प्र.)
                 </div>
             </div>
 
@@ -453,13 +452,13 @@
 
                 @if (!$isRegistrationInvoice && $resident)
                     <tr>
-                        <td class="info-label">कमरा / बेड</td>
+                        <td class="info-label">कमरा - बेड</td>
                         <td class="info-value">
                             @if ($invoice->stay)
                                 {{ $invoice->stay->room?->room_number ?? '-' }}
 
                                 @if ($invoice->stay->bed)
-                                            /
+                                            -
                                             {{ $invoice->stay->bed->bed_number
                                     ?? $invoice->stay->bed->id }}
                                 @endif
@@ -733,12 +732,7 @@
             <div class="summary">
                 <table>
                     <tr>
-                        <td>
-                            <p>
-                                <strong>In Words:</strong>
-                                {{ $amountInWords }} Rupees Only
-                            </p>
-            
+                        <td>            
                             <p>
                                 <strong>Remarks:</strong>
                                 {{ $invoice->description ?? '-' }}
@@ -761,6 +755,9 @@
                                 <img src="/assets/images/PAID.jpg" style="width: auto; height: 50px;" alt="PAID">
                             @endif
                         </td>
+                        <td class="signature">
+                            अधिकृत हस्ताक्षर
+                        </td>
                     </tr>
                 </table>
             </div>
@@ -773,10 +770,6 @@
                         <br>
                         यह कंप्यूटर द्वारा तैयार की गई रसीद है।
                     </td>
-
-                    <td class="signature">
-                        अधिकृत हस्ताक्षर
-                    </td>
                 </tr>
             </table>
 
@@ -786,7 +779,7 @@
                     (float) $invoice->late_fee_amount > 0 &&
                     !$invoice->late_fee_waived
                 )
-                <p style="font-size:13px; margin-top:6px;">
+                <p style="font-size:12px; margin-top:6px;">
                     <strong>नोट:</strong>
                     यदि भुगतान
                     {{ optional($invoice->due_date)->format('d-m-Y') }}
