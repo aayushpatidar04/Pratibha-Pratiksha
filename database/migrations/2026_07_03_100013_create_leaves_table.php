@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('leaves', function (Blueprint $table) {
             $table->id();
             $table->foreignId('resident_id')->constrained('residents')->cascadeOnDelete();
-            $table->enum('leave_type', ['home_leave', 'medical_leave', 'emergency_leave', 'day_out', 'night_pass']);
+            $table->enum('leave_type', ['home_leave', 'medical_leave', 'emergency_leave', 'day_out', 'night_pass', 'monthly_leave']);
             $table->date('from_date');
             $table->date('to_date');
             $table->text('reason');

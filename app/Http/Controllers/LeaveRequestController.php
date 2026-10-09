@@ -18,6 +18,9 @@ class LeaveRequestController extends Controller
         if ($status = $request->string('final_status')->toString()) {
             $query->where('final_status', $status);
         }
+        if ($leave_type = $request->string('leave_type')->toString()) {
+            $query->where('leave_type', $leave_type);
+        }
 
         $leaves = $query->orderByDesc('created_at')->paginate(20)->withQueryString();
 
@@ -30,7 +33,7 @@ class LeaveRequestController extends Controller
         return Inertia::render('Support/Leaves', [
             'leaves' => $leaves,
             'stats' => $stats,
-            'filters' => $request->only('final_status'),
+            'filters' => $request->only('final_status', 'leave_type'),
             'residents' => Resident::where('status', 'active')->orderBy('first_name')->get(['id', 'first_name', 'last_name', 'resident_code']),
         ]);
     }
@@ -39,7 +42,7 @@ class LeaveRequestController extends Controller
     {
         $validated = $request->validate([
             'resident_id' => 'required|exists:residents,id',
-            'leave_type' => 'required|in:home_leave,medical_leave,emergency_leave,day_out,night_pass',
+            'leave_type' => 'required|in:home_leave,medical_leave,emergency_leave,day_out,night_pass,monthly_leave',
             'from_date' => 'required|date',
             'to_date' => 'required|date|after_or_equal:from_date',
             'reason' => 'required|string',

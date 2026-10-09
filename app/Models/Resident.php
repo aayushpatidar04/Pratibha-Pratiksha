@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Hash;
 
 
 class Resident extends Authenticatable
@@ -68,6 +70,17 @@ class Resident extends Authenticatable
             'must_change_password' => 'boolean',
             'password' => 'hashed',
         ];
+    }
+
+    protected static function booted()
+    {
+        static::creating(function ($resident) {
+            if (empty($resident->password) && !empty($resident->date_of_birth) && $resident->date_of_birth !== '0000-00-00') {
+                // Converts '2007-06-27' into '27062007'
+                $formattedDate = Carbon::parse($resident->date_of_birth)->format('dmy');
+                $resident->password = Hash::make($formattedDate);
+            }
+        });
     }
 
     public function getAuthIdentifierName(): string

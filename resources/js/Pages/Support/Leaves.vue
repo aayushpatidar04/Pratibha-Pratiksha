@@ -2,6 +2,7 @@
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout.vue";
 import Modal from "@/Components/Modal.vue";
 import LeaveDetail from "@/Components/LeaveDetail.vue";
+import InputError from "@/Components/InputError.vue";
 import InputLabel from "@/Components/InputLabel.vue";
 import TextInput from "@/Components/TextInput.vue";
 import PrimaryButton from "@/Components/PrimaryButton.vue";
@@ -28,6 +29,7 @@ const statusColor = {
 
 const filters = reactive({
     final_status: props.filters?.final_status || "all",
+    leave_type: props.filters?.leave_type || "all",
 });
 const applyFilters = () =>
     router.get(
@@ -36,6 +38,11 @@ const applyFilters = () =>
             final_status:
                 filters.final_status !== "all"
                     ? filters.final_status
+                    : undefined,
+
+            leave_type:
+                filters.leave_type !== "all"
+                    ? filters.leave_type
                     : undefined,
         },
         { preserveState: true, replace: true },
@@ -72,8 +79,9 @@ const formatStatus = (status) => {
     if (!status) return "-";
 
     return status
-        .replace(/_/g, " ")
-        .replace(/\b\w/g, (char) => char.toUpperCase());
+        .split("_")
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()) // .toLowerCase() ensures "PENDING" becomes "Pending"
+        .join(" ");
 };
 
 const residentName = (resident) => {
@@ -177,6 +185,20 @@ const destroy = (l) => {
                 <option value="expired">Expired</option>
             </select>
 
+            <select
+                v-model="filters.leave_type"
+                @change="applyFilters"
+                class="rounded-lg border-gray-300 text-sm w-52 ml-2"
+            >
+                <option value="all">All Types</option>
+                <option value="home_leave">Home Leave</option>
+                <option value="medical_leave">Medical Leave</option>
+                <option value="emergency_leave">Emergency Leave</option>
+                <option value="day_out">Day Out</option>
+                <option value="night_pass">Night Pass</option>
+                <option value="monthly_leave">Monthly Leave</option>
+            </select>
+
             <div
                 class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden"
             >
@@ -204,7 +226,7 @@ const destroy = (l) => {
                             </td>
                             <td class="px-4 py-3">
                                 <Badge :color="statusColor[l.final_status]">{{
-                                    l.final_status.replace("_", " ")
+                                    formatStatus(l.final_status)
                                 }}</Badge>
                             </td>
                             <td class="px-4 py-3 text-right space-x-1">
@@ -299,6 +321,7 @@ const destroy = (l) => {
                             {{ r.first_name }} {{ r.last_name }}
                         </option>
                     </select>
+                    <InputError :message="createForm.errors.resident_id" class="mt-1" />
                 </div>
                 <div>
                     <InputLabel value="Leave Type *" />
@@ -311,7 +334,9 @@ const destroy = (l) => {
                         <option value="emergency_leave">Emergency Leave</option>
                         <option value="day_out">Day Out</option>
                         <option value="night_pass">Night Pass</option>
+                        <option value="monthly_leave">Monthly Leave</option>
                     </select>
+                    <InputError :message="createForm.errors.leave_type" class="mt-1" />
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
@@ -320,6 +345,7 @@ const destroy = (l) => {
                             v-model="createForm.from_date"
                             required
                         />
+                        <InputError :message="createForm.errors.from_date" class="mt-1" />
                     </div>
                     <div>
                         <InputLabel value="To *" /><TextInput
@@ -327,12 +353,14 @@ const destroy = (l) => {
                             v-model="createForm.to_date"
                             required
                         />
+                        <InputError :message="createForm.errors.to_date" class="mt-1" />
                     </div>
                 </div>
                 <div>
                     <InputLabel value="Destination" /><TextInput
                         v-model="createForm.destination"
                     />
+                    <InputError :message="createForm.errors.destination" class="mt-1" />
                 </div>
                 <div>
                     <InputLabel value="Reason *" /><textarea
@@ -341,6 +369,7 @@ const destroy = (l) => {
                         required
                         class="w-full rounded-lg border-gray-300 text-sm"
                     ></textarea>
+                    <InputError :message="createForm.errors.reason" class="mt-1" />
                 </div>
                 <div class="flex justify-end gap-2 pt-2">
                     <button
